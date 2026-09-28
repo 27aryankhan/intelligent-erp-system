@@ -132,7 +132,7 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> _initializeBackgroundVideo() async {
     try {
       const String cdnVideoUrl =
-          'https://github.com/bhargavi-builds/intelligent-erp-system/releases/download/v1.0.0-assets/hitam_bg.mp4';
+          'https://bhargavi-builds.github.io/intelligent-erp-system/hitam_bg.mp4';
       _videoController = VideoPlayerController.networkUrl(
         Uri.parse(cdnVideoUrl),
       );
