@@ -1,6 +1,6 @@
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html_parser;
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'crypto_service.dart';
 
 enum UserRole { faculty, student, parent }
@@ -11,7 +11,6 @@ class HitamAuthService {
   HitamAuthService._internal();
 
   static const String baseUrl = 'https://www.webprosindia.com/hitam/default.aspx';
-  final _secureStorage = const FlutterSecureStorage();
 
   // Stores session cookies for subsequent authenticated requests
   Map<String, String> sessionCookies = {};
@@ -106,13 +105,14 @@ class HitamAuthService {
       if (isSuccess) {
         activeUserId = userId;
         activeRole = role;
-        // Securely store credentials for background sync on phone
+        // Store credentials for background sync
         try {
-          await _secureStorage.write(key: 'hitam_user_id', value: userId);
-          await _secureStorage.write(key: 'hitam_user_pwd', value: password);
-          await _secureStorage.write(key: 'hitam_user_role', value: role.name);
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('hitam_user_id', userId);
+          await prefs.setString('hitam_user_pwd', password);
+          await prefs.setString('hitam_user_role', role.name);
         } catch (_) {
-          // Graceful fallback for environments without platform keystore
+          // Graceful ignore
         }
         return true;
       }
@@ -143,6 +143,11 @@ class HitamAuthService {
     sessionCookies.clear();
     activeUserId = null;
     activeRole = null;
-    await _secureStorage.deleteAll();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('hitam_user_id');
+      await prefs.remove('hitam_user_pwd');
+      await prefs.remove('hitam_user_role');
+    } catch (_) {}
   }
 }

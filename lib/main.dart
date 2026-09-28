@@ -175,33 +175,45 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       final authService = HitamAuthService();
+      final String inputId = email.trim();
+      final String rollNo = inputId.contains('@') ? inputId : inputId.toUpperCase();
 
-      // Step 1: Direct WebPros Authentication for students (Roll No like 23E51A05E8)
-      final bool webprosStudentSuccess = await authService.login(
-        userId: email,
+      // Step 1: Direct WebPros Authentication for students (Roll No like 23E51A05E8 or 23e51a05e8)
+      bool webprosStudentSuccess = await authService.login(
+        userId: rollNo,
         password: password,
         role: UserRole.student,
       );
 
+      // If uppercase failed and original input was different, attempt original
+      if (!webprosStudentSuccess && rollNo != inputId) {
+        webprosStudentSuccess = await authService.login(
+          userId: inputId,
+          password: password,
+          role: UserRole.student,
+        );
+      }
+
       if (webprosStudentSuccess) {
+        final activeRoll = authService.activeUserId ?? rollNo;
         final scraper = HitamScraperService(auth: authService);
         // Fetch real-time student attendance report
-        final report = await scraper.fetchStudentAttendanceReport(email);
+        final report = await scraper.fetchStudentAttendanceReport(activeRoll);
         if (report != null && report.subjects.isNotEmpty) {
           try {
-            await DatabaseService().cacheAttendance(email, report.subjects);
-            await DatabaseService().saveAccount(email, 'student');
+            await DatabaseService().cacheAttendance(activeRoll, report.subjects);
+            await DatabaseService().saveAccount(activeRoll, 'student');
           } catch (_) {}
         }
 
         // Pre-fetch marks & fees in background
-        unawaited(scraper.fetchStudentMarks(email));
-        unawaited(scraper.fetchStudentFees(email));
+        unawaited(scraper.fetchStudentMarks(activeRoll));
+        unawaited(scraper.fetchStudentFees(activeRoll));
 
         NotificationService().setUserSession(
           role: 'student',
-          userId: email,
-          email: email,
+          userId: activeRoll,
+          email: activeRoll,
         );
 
         if (!mounted) return;
@@ -210,7 +222,7 @@ class _LoginPageState extends State<LoginPage> {
           MaterialPageRoute(
             builder: (context) => StudentDashboard(
               initialReport: report,
-              studentId: email,
+              studentId: activeRoll,
             ),
           ),
         );
