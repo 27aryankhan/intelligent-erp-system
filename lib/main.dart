@@ -131,8 +131,11 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _initializeBackgroundVideo() async {
     try {
-      _videoController =
-          VideoPlayerController.asset('assets/videos/hitam_bg.mp4');
+      const String cdnVideoUrl =
+          'https://github.com/bhargavi-builds/intelligent-erp-system/releases/download/v1.0.0-assets/hitam_bg.mp4';
+      _videoController = VideoPlayerController.networkUrl(
+        Uri.parse(cdnVideoUrl),
+      );
       await _videoController.initialize();
       await _videoController.setLooping(true);
       await _videoController.setVolume(0.0); // Muted audio and sound as requested
