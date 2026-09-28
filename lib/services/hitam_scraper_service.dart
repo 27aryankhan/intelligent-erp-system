@@ -150,11 +150,65 @@ class StudentFeeReport {
   });
 }
 
-class HitamScraperService {
-  final HitamAuthService authService;
+class StudentAttendanceReport {
+  final String rollNo;
+  final String studentName;
+  final String course;
+  final String branch;
+  final String semester;
+  final int totalHeld;
+  final int totalAttended;
+  final double overallPercentage;
+  final List<SubjectAttendance> subjects;
 
-  HitamScraperService({HitamAuthService? auth})
-      : authService = auth ?? HitamAuthService();
+  StudentAttendanceReport({
+    required this.rollNo,
+    required this.studentName,
+    required this.course,
+    required this.branch,
+    required this.semester,
+    required this.totalHeld,
+    required this.totalAttended,
+    required this.overallPercentage,
+    required this.subjects,
+  });
+
+  /// Overall Safe Bunks
+  int get safeBunks {
+    final double surplus = totalAttended - (0.75 * totalHeld);
+    if (surplus <= 0) return 0;
+    return (surplus / 0.75).floor();
+  }
+
+  /// Overall Recovery Classes
+  int get classesNeeded {
+    final double shortage = (0.75 * totalHeld) - totalAttended;
+    if (shortage <= 0) return 0;
+    return (shortage / 0.25).ceil();
+  }
+
+  String get academicStatus {
+    if (overallPercentage >= 75.0) return 'GOOD STANDING';
+    if (overallPercentage >= 65.0) return 'CONDONATION WARNING';
+    return 'CRITICAL ATTENDANCE';
+  }
+}
+
+class HitamScraperService {
+  static final HitamScraperService _instance = HitamScraperService._internal();
+  factory HitamScraperService({HitamAuthService? auth}) {
+    if (auth != null) {
+      _instance.authService = auth;
+    }
+    return _instance;
+  }
+  HitamScraperService._internal() : authService = HitamAuthService();
+
+  HitamAuthService authService;
+
+  StudentAttendanceReport? latestAttendanceReport;
+  StudentMarksReport? latestMarksReport;
+  StudentFeeReport? latestFeeReport;
 
   static const String attendancePageUrl =
       'https://www.webprosindia.com/hitam/Academics/StudentAttendance.aspx?showtype=SA';
@@ -177,8 +231,8 @@ class HitamScraperService {
         .replaceAll(r'\n', '\n');
   }
 
-  /// 1. Fetches real-time student attendance using the AjaxPro backend RPC endpoint
-  Future<List<SubjectAttendance>> fetchStudentAttendance(String rollNo) async {
+  /// 1. Fetches full real-time student attendance report
+  Future<StudentAttendanceReport?> fetchStudentAttendanceReport(String rollNo) async {
     try {
       String ashxUrl =
           '/hitam/ajax/StudentAttendance,App_Web_studentattendance.aspx.a2a1b31c.ashx';
@@ -228,41 +282,106 @@ class HitamScraperService {
       );
 
       if (response.statusCode != 200 || response.body.trim().isEmpty) {
-        return [];
+        return null;
       }
 
       final rawHtml = _cleanAjaxProHtml(response.body);
       final document = html_parser.parse(rawHtml);
       final List<SubjectAttendance> results = [];
 
+      String parsedStudentName = '';
+      String parsedBranch = '';
+      String parsedSemester = '';
+      String parsedCourse = 'B.Tech';
+      int overallHeld = 0;
+      int overallAttended = 0;
+      double overallPct = 0.0;
+
       final rows = document.querySelectorAll('table tr');
       for (var row in rows) {
         final cells = row.querySelectorAll('td');
-        if (cells.length >= 6) {
-          final code = cells[1].text.trim();
-          final subject = cells[2].text.trim();
-          final held = int.tryParse(cells[3].text.trim()) ?? 0;
-          final attended = int.tryParse(cells[4].text.trim()) ?? 0;
-          final pctStr = cells[5].text.trim().replaceAll('%', '');
-          final pct = double.tryParse(pctStr) ??
-              (held > 0 ? (attended / held) * 100 : 0.0);
+        if (cells.length == 3 && cells[1].text.trim() == ':') {
+          final label = cells[0].text.trim().toLowerCase();
+          final val = cells[2].text.trim();
+          if (label.contains('student name')) parsedStudentName = val;
+          if (label.contains('course')) parsedCourse = val;
+          if (label.contains('branch')) parsedBranch = val;
+          if (label.contains('semester')) parsedSemester = val;
+        } else if (cells.length >= 5) {
+          final sl = cells[0].text.trim();
+          if (RegExp(r'^\d+$').hasMatch(sl)) {
+            final subject = cells[1].text.trim();
+            final held = int.tryParse(cells[2].text.trim()) ?? 0;
+            final attended = int.tryParse(cells[3].text.trim()) ?? 0;
+            final pctStr = cells[4].text.trim().replaceAll('%', '');
+            final pct = double.tryParse(pctStr) ??
+                (held > 0 ? (attended / held) * 100 : 0.0);
 
-          if (held > 0 && subject.isNotEmpty) {
-            results.add(SubjectAttendance(
-              subjectCode: code,
-              subjectName: subject,
-              classesHeld: held,
-              classesAttended: attended,
-              percentage: double.parse(pct.toStringAsFixed(1)),
-            ));
+            if (held > 0 && subject.isNotEmpty) {
+              results.add(SubjectAttendance(
+                subjectCode: subject,
+                subjectName: subject,
+                classesHeld: held,
+                classesAttended: attended,
+                percentage: double.parse(pct.toStringAsFixed(1)),
+              ));
+            }
+          } else if (cells.length >= 6) {
+            // Alternate table layout with Code and Subject separate
+            final code = cells[1].text.trim();
+            final subject = cells[2].text.trim();
+            final held = int.tryParse(cells[3].text.trim()) ?? 0;
+            final attended = int.tryParse(cells[4].text.trim()) ?? 0;
+            final pctStr = cells[5].text.trim().replaceAll('%', '');
+            final pct = double.tryParse(pctStr) ??
+                (held > 0 ? (attended / held) * 100 : 0.0);
+
+            if (held > 0 && subject.isNotEmpty) {
+              results.add(SubjectAttendance(
+                subjectCode: code,
+                subjectName: subject,
+                classesHeld: held,
+                classesAttended: attended,
+                percentage: double.parse(pct.toStringAsFixed(1)),
+              ));
+            }
           }
+        } else if (cells.length >= 4 && cells[0].text.trim().toUpperCase() == 'TOTAL') {
+          overallHeld = int.tryParse(cells[1].text.trim()) ?? 0;
+          overallAttended = int.tryParse(cells[2].text.trim()) ?? 0;
+          overallPct = double.tryParse(cells[3].text.trim().replaceAll('%', '')) ?? 0.0;
         }
       }
 
-      return results;
+      if (overallHeld == 0 && results.isNotEmpty) {
+        overallHeld = results.fold(0, (sum, s) => sum + s.classesHeld);
+        overallAttended = results.fold(0, (sum, s) => sum + s.classesAttended);
+        overallPct = overallHeld > 0 ? (overallAttended / overallHeld) * 100 : 0.0;
+      }
+
+      final report = StudentAttendanceReport(
+        rollNo: rollNo,
+        studentName: parsedStudentName.isNotEmpty ? parsedStudentName : 'HITAM Student',
+        course: parsedCourse,
+        branch: parsedBranch.isNotEmpty ? parsedBranch : 'Engineering',
+        semester: parsedSemester.isNotEmpty ? parsedSemester : 'Semester',
+        totalHeld: overallHeld,
+        totalAttended: overallAttended,
+        overallPercentage: double.parse(overallPct.toStringAsFixed(1)),
+        subjects: results,
+      );
+
+      latestAttendanceReport = report;
+      return report;
     } catch (_) {
-      return [];
+      return null;
     }
+  }
+
+  /// Fetches real-time student attendance subject list
+  Future<List<SubjectAttendance>> fetchStudentAttendance(String rollNo) async {
+    final report = await fetchStudentAttendanceReport(rollNo);
+    return report?.subjects ?? [];
   }
 
   /// 2. Fetches student CIE internal marks and semester-wise SGPA history
@@ -397,11 +516,13 @@ class HitamScraperService {
         }
       }
 
-      return StudentMarksReport(
+      final report = StudentMarksReport(
         exams: exams,
         cieMarks: cieMarks,
         sgpaHistory: sgpaHistory,
       );
+      latestMarksReport = report;
+      return report;
     } catch (_) {
       return null;
     }
@@ -496,13 +617,15 @@ class HitamScraperService {
         }
       }
 
-      return StudentFeeReport(
+      final report = StudentFeeReport(
         items: items,
         totalPayable: totalPayable,
         totalPaid: totalPaid,
         totalDue: totalDue,
         balanceText: balanceText,
       );
+      latestFeeReport = report;
+      return report;
     } catch (_) {
       return null;
     }

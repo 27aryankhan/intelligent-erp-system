@@ -94,19 +94,26 @@ class HitamAuthService {
       }
 
       final location = postResponse.headers['location']?.toLowerCase() ?? '';
-      final isSuccess = (postResponse.statusCode == 302 &&
-              (location.contains('studentmaster') ||
-                  location.contains('staffmaster') ||
-                  location.contains('parentmaster'))) ||
-          sessionCookies.containsKey('ASP.NET_SessionId');
+      final hasAuthCookie = sessionCookies.containsKey('frmAuth');
+      final isRedirectSuccess = postResponse.statusCode == 302 &&
+          (location.contains('studentmaster') ||
+              location.contains('staffmaster') ||
+              location.contains('parentmaster') ||
+              location.contains('master'));
+
+      final isSuccess = isRedirectSuccess || hasAuthCookie;
 
       if (isSuccess) {
         activeUserId = userId;
         activeRole = role;
         // Securely store credentials for background sync on phone
-        await _secureStorage.write(key: 'hitam_user_id', value: userId);
-        await _secureStorage.write(key: 'hitam_user_pwd', value: password);
-        await _secureStorage.write(key: 'hitam_user_role', value: role.name);
+        try {
+          await _secureStorage.write(key: 'hitam_user_id', value: userId);
+          await _secureStorage.write(key: 'hitam_user_pwd', value: password);
+          await _secureStorage.write(key: 'hitam_user_role', value: role.name);
+        } catch (_) {
+          // Graceful fallback for environments without platform keystore
+        }
         return true;
       }
 
