@@ -15,6 +15,7 @@ const adminRoutes = require("./src/routes/adminRoutes");
 const announcementRoutes = require("./src/routes/announcementRoutes");
 const notificationRoutes = require("./src/routes/notificationRoutes");
 const authRoutes = require("./src/routes/authRoutes");
+const aiRoutes = require("./src/routes/aiRoutes");
 const { authRateLimiter, generalApiLimiter } = require("./src/middleware/authMiddleware");
 
 const app = express();
@@ -47,7 +48,8 @@ app.get("/", (req, res) => {
             parent: "/api/parent",
             admin: "/api/admin/summary",
             announcements: "/api/announcements",
-            notifications: "/api/notifications"
+            notifications: "/api/notifications",
+            aiChat: "/api/ai/chat"
         }
     });
 });
@@ -64,6 +66,7 @@ app.use("/api/parent", parentRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/announcements", announcementRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/ai", aiRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {
