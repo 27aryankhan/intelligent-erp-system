@@ -650,9 +650,6 @@ class _LoginPageState extends State<LoginPage> {
                                 labelText: 'Roll Number / User ID / Email',
                                 labelStyle: TextStyle(
                                     color: Colors.white.withOpacity(0.80)),
-                                hintText: 'e.g. 23E51A05E8 or student@hitam.edu',
-                                hintStyle: TextStyle(
-                                    color: Colors.white.withOpacity(0.45)),
                                 prefixIcon: const Icon(Icons.person_outline,
                                     color: Color(0xFF38BDF8)),
                                 filled: true,
