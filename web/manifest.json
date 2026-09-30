@@ -1,6 +1,6 @@
 {
-    "name": "intelligent_erp",
-    "short_name": "intelligent_erp",
+    "name": "Intelligent ERP",
+    "short_name": "Intelligent ERP",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
