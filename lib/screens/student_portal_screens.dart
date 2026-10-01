@@ -1953,6 +1953,12 @@ class _StudentAcademicRegisterScreenState
 
     // Cleaned student meta
     final r = report;
+    final rollNo = (r != null &&
+            r.rollNo.isNotEmpty &&
+            !r.rollNo.contains('Sl.No'))
+        ? r.rollNo
+        : (HitamAuthService().activeUserId ?? 'Student');
+
     final studentName = (r != null &&
             r.studentName.isNotEmpty &&
             !r.studentName.contains('Sl.No') &&
@@ -1962,13 +1968,7 @@ class _StudentAcademicRegisterScreenState
         ? r.studentName
         : (HitamScraperService().latestProfile?.name.trim() ??
             HitamScraperService().latestAttendanceReport?.studentName.trim() ??
-            'SAGI PRITESH VARMA');
-
-    final rollNo = (r != null &&
-            r.rollNo.isNotEmpty &&
-            !r.rollNo.contains('Sl.No'))
-        ? r.rollNo
-        : (HitamAuthService().activeUserId ?? '23E51A05E8');
+            rollNo);
 
     final sem = (r != null &&
             r.semester.isNotEmpty &&

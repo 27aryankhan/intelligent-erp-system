@@ -210,8 +210,8 @@ class NotificationService {
 
   // Active User Session State for Role-Based Targeting
   String _currentRole = 'student';
-  String _currentUserId = 'STU001';
-  String _currentEmail = 'student@hitam.edu';
+  String _currentUserId = '';
+  String _currentEmail = '';
 
   String get currentRole => _currentRole;
   String get currentUserId => _currentUserId;
@@ -361,7 +361,7 @@ class NotificationService {
         case 'attendance':
           title = 'Ward Attendance: Present in All Lectures';
           body =
-              'Bhargavi (22K91A0501) was marked Present for all scheduled classes today. Overall: 85%.';
+              'Your ward was marked Present for all scheduled classes today. Overall: 85%.';
           type = 'attendance';
           screen = 'attendance';
           break;
@@ -383,7 +383,7 @@ class NotificationService {
         default:
           title = 'Mid-Term Academic Progress: 8.65 SGPA';
           body =
-              'Bhargavi secured 8.65 SGPA with grade A+ in Data Structures in Semester 6.';
+              'Your ward secured 8.65 SGPA with grade A+ in Data Structures in Semester 6.';
           type = 'academic';
           screen = 'academic';
           break;
@@ -407,7 +407,7 @@ class NotificationService {
         case 'leave':
           title = 'Student Medical Leave Request';
           body =
-              'Rahul (22K91A0503) submitted a medical leave application for 3 days awaiting review.';
+              'A student submitted a medical leave application for 3 days awaiting review.';
           type = 'system';
           screen = 'dashboard';
           break;

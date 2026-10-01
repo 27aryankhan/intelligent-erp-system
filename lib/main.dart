@@ -14,6 +14,7 @@ import 'services/hitam_auth_service.dart';
 import 'services/hitam_scraper_service.dart';
 import 'services/database_service.dart';
 import 'screens/student_portal_screens.dart';
+import 'services/update_service.dart';
 
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -121,31 +122,38 @@ class _LoginPageState extends State<LoginPage> {
   bool _isLoading = false;
   String? _errorMessage;
 
-  late VideoPlayerController _videoController;
+  VideoPlayerController? _videoController;
   bool _isVideoInitialized = false;
 
   @override
   void initState() {
     super.initState();
     _initializeBackgroundVideo();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      UpdateService().promptUpdateIfAvailable(context, silent: true);
+    });
   }
 
-  Future<void> _initializeBackgroundVideo() async {
+  void _initializeBackgroundVideo() {
     try {
       const String cdnVideoUrl =
           'https://res.cloudinary.com/wgolqrq5/video/upload/v1790642904/hitam_bg_optimized_22mb.mp4';
-      _videoController = VideoPlayerController.networkUrl(
+      final controller = VideoPlayerController.networkUrl(
         Uri.parse(cdnVideoUrl),
+        videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
       );
-      await _videoController.initialize();
-      await _videoController.setLooping(true);
-      await _videoController.setVolume(0.0); // Muted audio and sound as requested
-      await _videoController.play();
-      if (mounted) {
+      _videoController = controller;
+      controller.initialize().then((_) {
+        if (!mounted) return;
+        controller.setLooping(true);
+        controller.setVolume(0.0); // Muted audio as requested
+        controller.play();
         setState(() {
           _isVideoInitialized = true;
         });
-      }
+      }).catchError((e) {
+        debugPrint('Background video initialization error: $e');
+      });
     } catch (e) {
       debugPrint('Background video initialization: $e');
     }
@@ -155,8 +163,66 @@ class _LoginPageState extends State<LoginPage> {
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
-    _videoController.dispose();
+    _videoController?.dispose();
     super.dispose();
+  }
+
+  void _showLoginWarningDialog({required String title, required String message}) {
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: const Color(0xFF1E293B),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade900.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.amber.shade500.withOpacity(0.5)),
+              ),
+              child: const Icon(Icons.warning_amber_rounded, color: Color(0xFFFBBF24), size: 24),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          message,
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.85),
+            fontSize: 14,
+            height: 1.5,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            style: TextButton.styleFrom(
+              backgroundColor: const Color(0xFF38BDF8),
+              foregroundColor: const Color(0xFF0F172A),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+            ),
+            child: const Text(
+              'Try Again',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _handleLogin() async {
@@ -165,8 +231,12 @@ class _LoginPageState extends State<LoginPage> {
 
     if (email.isEmpty || password.isEmpty) {
       setState(() {
-        _errorMessage = 'Please enter Roll Number / Email and Password';
+        _errorMessage = 'Please enter your Roll Number / User ID and Password';
       });
+      _showLoginWarningDialog(
+        title: 'Missing Credentials',
+        message: 'Please enter both your Roll Number / User ID and Password to sign in to HITAM ERP.',
+      );
       return;
     }
 
@@ -180,7 +250,7 @@ class _LoginPageState extends State<LoginPage> {
       final String inputId = email.trim();
       final String rollNo = inputId.contains('@') ? inputId : inputId.toUpperCase();
 
-      // Step 1: Direct WebPros Authentication for students (Roll No like 23E51A05E8 or 23e51a05e8)
+      // Step 1: Direct WebPros Authentication for students (Roll No like 23E51A05E8)
       bool webprosStudentSuccess = await authService.login(
         userId: rollNo,
         password: password,
@@ -208,9 +278,11 @@ class _LoginPageState extends State<LoginPage> {
           } catch (_) {}
         }
 
-        // Pre-fetch marks & fees in background
+        // Pre-fetch profile, marks, fees & academic register in background
+        unawaited(scraper.fetchStudentProfile(activeRoll));
         unawaited(scraper.fetchStudentMarks(activeRoll));
         unawaited(scraper.fetchStudentFees(activeRoll));
+        unawaited(scraper.fetchStudentAcademicRegister(activeRoll));
 
         NotificationService().setUserSession(
           role: 'student',
@@ -232,147 +304,70 @@ class _LoginPageState extends State<LoginPage> {
       }
 
       // Step 2: Try WebPros Faculty or Parent login if applicable
-      final bool webprosFacultySuccess = await authService.login(
-        userId: email,
-        password: password,
-        role: UserRole.faculty,
-      );
-      if (webprosFacultySuccess) {
-        NotificationService().setUserSession(
-          role: 'faculty',
+      if (inputId.toUpperCase().startsWith('FAC') ||
+          inputId.toUpperCase().startsWith('PAR') ||
+          inputId.contains('@')) {
+        final bool webprosFacultySuccess = await authService.login(
           userId: email,
-          email: email,
+          password: password,
+          role: UserRole.faculty,
         );
-        if (!mounted) return;
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const FacultyClassSelectionScreen()),
-        );
-        return;
-      }
-
-      final bool webprosParentSuccess = await authService.login(
-        userId: email,
-        password: password,
-        role: UserRole.parent,
-      );
-      if (webprosParentSuccess) {
-        NotificationService().setUserSession(
-          role: 'parent',
-          userId: email,
-          email: email,
-        );
-        if (!mounted) return;
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const ParentDashboard()),
-        );
-        return;
-      }
-
-      // Step 3: Check Render/Local backend or Demo accounts
-      try {
-        final response = await http.post(
-          ApiConfig.loginUrl,
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'email': email,
-            'password': password,
-          }),
-        ).timeout(const Duration(seconds: 3));
-
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body);
-          final role = data['user']?['role']?.toString().toLowerCase() ?? 'student';
-          final userId = data['user']?['id']?.toString() ?? 'STU001';
-          final userEmail = data['user']?['email']?.toString() ?? email;
-
+        if (webprosFacultySuccess) {
           NotificationService().setUserSession(
-            role: role,
-            userId: userId,
-            email: userEmail,
+            role: 'faculty',
+            userId: email,
+            email: email,
           );
-
           if (!mounted) return;
-
-          Widget targetDashboard;
-          switch (role) {
-            case 'faculty':
-              targetDashboard = const FacultyClassSelectionScreen();
-              break;
-            case 'parent':
-              targetDashboard = const ParentDashboard();
-              break;
-            case 'admin':
-              targetDashboard = const AdminDashboard();
-              break;
-            case 'student':
-            default:
-              targetDashboard = const StudentDashboard();
-              break;
-          }
-
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => targetDashboard),
+            MaterialPageRoute(builder: (_) => const FacultyClassSelectionScreen()),
           );
           return;
         }
-      } catch (_) {
-        // Backend offline or paused
-      }
 
-      // Step 4: Demo fallback for known sample emails
-      final lowerEmail = email.toLowerCase();
-      if (lowerEmail.contains('bhargavi') ||
-          lowerEmail.contains('student') ||
-          lowerEmail.contains('faculty') ||
-          lowerEmail.contains('parent') ||
-          lowerEmail.contains('admin')) {
-        Widget targetDashboard;
-        String role = 'student';
-        if (lowerEmail.contains('faculty')) {
-          role = 'faculty';
-          targetDashboard = const FacultyClassSelectionScreen();
-        } else if (lowerEmail.contains('parent')) {
-          role = 'parent';
-          targetDashboard = const ParentDashboard();
-        } else if (lowerEmail.contains('admin')) {
-          role = 'admin';
-          targetDashboard = const AdminDashboard();
-        } else {
-          targetDashboard = const StudentDashboard();
-        }
-
-        NotificationService().setUserSession(
-          role: role,
+        final bool webprosParentSuccess = await authService.login(
           userId: email,
-          email: email,
+          password: password,
+          role: UserRole.parent,
         );
-
-        if (!mounted) return;
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => targetDashboard),
-        );
-        return;
+        if (webprosParentSuccess) {
+          NotificationService().setUserSession(
+            role: 'parent',
+            userId: email,
+            email: email,
+          );
+          if (!mounted) return;
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ParentDashboard()),
+          );
+          return;
+        }
       }
 
-      // If invalid credentials on WebPros
+      // If invalid credentials on WebPros - Display prominent warning!
       setState(() {
         _errorMessage = 'Invalid credentials. Please verify your Roll Number and Password.';
+        _isLoading = false;
       });
+      _showLoginWarningDialog(
+        title: 'Login Warning',
+        message: 'The Roll Number or Password you entered was rejected by the HITAM WebPros Portal.\n\n'
+            '• Please ensure your Roll Number is typed correctly as registered with HITAM\n'
+            '• Please ensure your password is typed correctly\n'
+            '• Verify that your account is active on https://www.webprosindia.com/hitam/',
+      );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Opening demo mode...'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const RolePage()),
+      setState(() {
+        _errorMessage = 'Network connection error. Please check your internet connection.';
+        _isLoading = false;
+      });
+      _showLoginWarningDialog(
+        title: 'Connection Error',
+        message: 'Unable to communicate with the HITAM WebPros Portal.\n\n'
+            'Please verify your internet connection and try again.',
       );
     } finally {
       if (mounted) {
@@ -406,40 +401,42 @@ class _LoginPageState extends State<LoginPage> {
           return Stack(
             fit: StackFit.expand,
             children: [
-              // 1. FULLSCREEN RESPONSIVE VIDEO BACKGROUND (Zero distortion, Edge-to-edge on every device)
-              if (_isVideoInitialized && _videoController.value.isInitialized)
-                SizedBox.expand(
-                  child: FittedBox(
-                    fit: BoxFit.cover,
-                    alignment: videoAlignment,
-                    child: SizedBox(
-                      width: _videoController.value.size.width > 0
-                          ? _videoController.value.size.width
-                          : 3840,
-                      height: _videoController.value.size.height > 0
-                          ? _videoController.value.size.height
-                          : 2160,
-                      child: VideoPlayer(_videoController),
-                    ),
-                  ),
-                )
-              else
-                // Fallback gradient while video initializes
-                Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Color(0xFF0F172A),
-                        Color(0xFF1E293B),
-                        Color(0xFF0284C7),
-                      ],
+              // 1. FULLSCREEN RESPONSIVE HITAM LOGO BACKDROP (Fills the entire display on mobile & desktop)
+              // Renders in 0.00 seconds locally, providing a gorgeous edge-to-edge branded cover while the video prepares.
+              SizedBox.expand(
+                child: Image.asset(
+                  'assets/images/hitam_logo.png',
+                  fit: BoxFit.cover,
+                  alignment: Alignment.center,
+                  filterQuality: FilterQuality.high,
+                ),
+              ),
+
+              // 2. FULLSCREEN RESPONSIVE VIDEO BACKGROUND (Pre-mounted for instant playback without texture lag)
+              if (_videoController != null)
+                AnimatedOpacity(
+                  opacity: (_isVideoInitialized && _videoController!.value.isInitialized)
+                      ? 1.0
+                      : 0.0,
+                  duration: const Duration(milliseconds: 250),
+                  child: SizedBox.expand(
+                    child: FittedBox(
+                      fit: BoxFit.cover,
+                      alignment: videoAlignment,
+                      child: SizedBox(
+                        width: _videoController!.value.size.width > 0
+                            ? _videoController!.value.size.width
+                            : 3840,
+                        height: _videoController!.value.size.height > 0
+                            ? _videoController!.value.size.height
+                            : 2160,
+                        child: VideoPlayer(_videoController!),
+                      ),
                     ),
                   ),
                 ),
 
-              // 2. CINEMATIC VIGNETTE OVERLAY (Smooth lighting letting video shine through glass)
+              // 3. CINEMATIC VIGNETTE OVERLAY (Smooth lighting letting video shine through glass)
               Positioned.fill(
                 child: Container(
                   decoration: BoxDecoration(
@@ -447,9 +444,9 @@ class _LoginPageState extends State<LoginPage> {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        Colors.black.withOpacity(0.35),
-                        Colors.black.withOpacity(0.15),
-                        const Color(0xFF090D16).withOpacity(0.60),
+                        Colors.black.withValues(alpha: 0.35),
+                        Colors.black.withValues(alpha: 0.15),
+                        const Color(0xFF090D16).withValues(alpha: 0.60),
                       ],
                     ),
                   ),
@@ -616,26 +613,56 @@ class _LoginPageState extends State<LoginPage> {
 
                             if (_errorMessage != null)
                               Container(
-                                padding: const EdgeInsets.all(12),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 12),
                                 margin: const EdgeInsets.only(bottom: 20),
                                 decoration: BoxDecoration(
-                                  color: Colors.red.withOpacity(0.25),
+                                  color: const Color(0xFF7F1D1D).withOpacity(0.45),
                                   borderRadius: BorderRadius.circular(14),
                                   border: Border.all(
-                                      color: Colors.redAccent.withOpacity(0.6)),
+                                      color: const Color(0xFFEF4444).withOpacity(0.8),
+                                      width: 1.2),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.red.withOpacity(0.18),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
                                 ),
                                 child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Icon(Icons.error_outline,
-                                        color: Colors.redAccent, size: 20),
-                                    const SizedBox(width: 8),
+                                    const Padding(
+                                      padding: EdgeInsets.only(top: 2),
+                                      child: Icon(Icons.warning_amber_rounded,
+                                          color: Color(0xFFFCA5A5), size: 22),
+                                    ),
+                                    const SizedBox(width: 10),
                                     Expanded(
-                                      child: Text(
-                                        _errorMessage!,
-                                        style: const TextStyle(
-                                            color: Colors.redAccent,
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w600),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'LOGIN WARNING',
+                                            style: TextStyle(
+                                              color: Color(0xFFFCA5A5),
+                                              fontSize: 11.5,
+                                              fontWeight: FontWeight.w800,
+                                              letterSpacing: 0.8,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 3),
+                                          Text(
+                                            _errorMessage!,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 13,
+                                              height: 1.35,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ],
@@ -764,42 +791,7 @@ class _LoginPageState extends State<LoginPage> {
                               ),
                             ),
 
-                            const SizedBox(height: 16),
 
-                            // Quick Role Selector Demo Mode (Frosted Glass Button)
-                            SizedBox(
-                              width: double.infinity,
-                              child: OutlinedButton.icon(
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const RolePage(),
-                                    ),
-                                  );
-                                },
-                                icon: const Icon(Icons.touch_app_outlined,
-                                    size: 18, color: Colors.white),
-                                label: const Text(
-                                  'Quick Role Selector (Demo Mode)',
-                                  style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600),
-                                ),
-                                style: OutlinedButton.styleFrom(
-                                  backgroundColor:
-                                      Colors.white.withOpacity(0.08),
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 14),
-                                  side: BorderSide(
-                                      color: Colors.white.withOpacity(0.30)),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                ),
-                              ),
-                            ),
                           ],
                         ),
                       ),
@@ -861,10 +853,11 @@ class RolePage extends StatelessWidget {
               icon: Icons.school,
               title: 'Student',
               onPressed: () {
+                final activeRoll = HitamAuthService().activeUserId ?? '';
                 NotificationService().setUserSession(
                   role: 'student',
-                  userId: 'STU001',
-                  email: 'bhargavi@hitam.edu',
+                  userId: activeRoll,
+                  email: activeRoll.isNotEmpty ? '$activeRoll@hitam.edu' : '',
                 );
                 Navigator.push(
                   context,
@@ -1012,6 +1005,9 @@ class _StudentDashboardState extends State<StudentDashboard> {
       isLoading = false;
     }
     fetchStudentData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      UpdateService().promptUpdateIfAvailable(context, silent: true);
+    });
   }
 
   Future<void> fetchStudentData() async {
@@ -1070,13 +1066,26 @@ class _StudentDashboardState extends State<StudentDashboard> {
       if (mounted) {
         setState(() {
           if (studentName.isEmpty) {
-            studentName = 'Bhargavi';
-            department = 'CSE';
-            year = '4th Year';
-            attendance = 84.77;
-            assignmentsPending = 2;
-            upcomingExams = 1;
-            newAnnouncements = 3;
+            final latestProf = HitamScraperService().latestProfile;
+            final latestAtt = HitamScraperService().latestAttendanceReport;
+            studentName = latestProf?.name ??
+                latestAtt?.studentName ??
+                HitamAuthService().activeUserId ??
+                'Student';
+            department = latestProf?.branch.isNotEmpty == true
+                ? latestProf!.branch
+                : (latestAtt?.branch.isNotEmpty == true
+                    ? latestAtt!.branch
+                    : 'Engineering');
+            year = latestProf?.semester.isNotEmpty == true
+                ? latestProf!.semester
+                : (latestAtt?.semester.isNotEmpty == true
+                    ? latestAtt!.semester
+                    : '');
+            attendance = latestAtt?.overallPercentage ?? 0.0;
+            assignmentsPending = 0;
+            upcomingExams = 0;
+            newAnnouncements = 0;
           }
           isLoading = false;
           errorMessage = '';
@@ -1091,6 +1100,13 @@ class _StudentDashboardState extends State<StudentDashboard> {
       appBar: AppBar(
         title: const Text('Student Dashboard'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.system_update_rounded),
+            tooltip: 'Check for Updates',
+            onPressed: () {
+              UpdateService().promptUpdateIfAvailable(context, silent: false);
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.download_rounded),
             tooltip: 'Downloads',
@@ -1542,8 +1558,11 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
   bool isLoading = true;
   String errorMessage = '';
 
-  String studentName = 'Bhargavi';
-  String studentId = '22K91A0501';
+  String studentName = HitamScraperService().latestProfile?.name ??
+      HitamScraperService().latestAttendanceReport?.studentName ??
+      HitamAuthService().activeUserId ??
+      'Student';
+  String studentId = HitamAuthService().activeUserId ?? 'Student';
   String department = 'CSE - 4th Year';
   String semester = 'Semester 7';
   double overallAttendance = 84.77;
@@ -1654,8 +1673,14 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
         final data = jsonDecode(response.body);
 
         setState(() {
-          studentName = data['studentName']?.toString() ?? 'Bhargavi';
-          studentId = data['studentId']?.toString() ?? '22K91A0501';
+          studentName = data['studentName']?.toString() ??
+              HitamScraperService().latestProfile?.name ??
+              HitamScraperService().latestAttendanceReport?.studentName ??
+              HitamAuthService().activeUserId ??
+              'Student';
+          studentId = data['studentId']?.toString() ??
+              HitamAuthService().activeUserId ??
+              'Student';
           department = data['department']?.toString() ?? 'CSE - 4th Year';
           semester = data['semester']?.toString() ?? 'Semester 7';
 
@@ -1731,8 +1756,11 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
       if (!mounted) return;
       // Fallback with realistic HITAM mock data
       setState(() {
-        studentName = 'Bhargavi';
-        studentId = '22K91A0501';
+        studentName = HitamScraperService().latestProfile?.name ??
+            HitamScraperService().latestAttendanceReport?.studentName ??
+            HitamAuthService().activeUserId ??
+            'Student';
+        studentId = HitamAuthService().activeUserId ?? 'Student';
         department = 'CSE - 4th Year';
         semester = 'Semester 7';
         overallAttendance = 84.77;
@@ -2800,87 +2828,42 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
   }
 
   Widget _buildActionBar() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final bool isNarrow = constraints.maxWidth < 650;
+    final marginBtn = SizedBox(
+      height: 48,
+      child: OutlinedButton.icon(
+        onPressed: () => _showMarginCalculator(context),
+        icon: const Icon(Icons.calculate_outlined),
+        label: const FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text('Margin Calc'),
+        ),
+        style: OutlinedButton.styleFrom(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      ),
+    );
 
-        final applyBtn = SizedBox(
-          height: 48,
-          child: ElevatedButton.icon(
-            onPressed: () => _showLeaveModal(context),
-            icon: const Icon(Icons.edit_calendar),
-            label: const FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                'Apply for Leave / On-Duty (OD)',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-              ),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue.shade700,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-          ),
-        );
+    final transcriptBtn = SizedBox(
+      height: 48,
+      child: OutlinedButton.icon(
+        onPressed: () => _showTranscriptDialog(context),
+        icon: const Icon(Icons.receipt_long),
+        label: const FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text('Transcript'),
+        ),
+        style: OutlinedButton.styleFrom(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      ),
+    );
 
-        final marginBtn = SizedBox(
-          height: 48,
-          child: OutlinedButton.icon(
-            onPressed: () => _showMarginCalculator(context),
-            icon: const Icon(Icons.calculate_outlined),
-            label: const FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text('Margin Calc'),
-            ),
-            style: OutlinedButton.styleFrom(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-          ),
-        );
-
-        final transcriptBtn = SizedBox(
-          height: 48,
-          child: OutlinedButton.icon(
-            onPressed: () => _showTranscriptDialog(context),
-            icon: const Icon(Icons.receipt_long),
-            label: const FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text('Transcript'),
-            ),
-            style: OutlinedButton.styleFrom(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-          ),
-        );
-
-        if (isNarrow) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              applyBtn,
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(child: marginBtn),
-                  const SizedBox(width: 10),
-                  Expanded(child: transcriptBtn),
-                ],
-              ),
-            ],
-          );
-        } else {
-          return Row(
-            children: [
-              Expanded(flex: 2, child: applyBtn),
-              const SizedBox(width: 12),
-              Expanded(flex: 1, child: marginBtn),
-              const SizedBox(width: 12),
-              Expanded(flex: 1, child: transcriptBtn),
-            ],
-          );
-        }
-      },
+    return Row(
+      children: [
+        Expanded(child: marginBtn),
+        const SizedBox(width: 12),
+        Expanded(child: transcriptBtn),
+      ],
     );
   }
 
@@ -3143,7 +3126,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   final List<Map<String, dynamic>> _fallbackNotifications = [
     {
       'id': 'NOTIF_STU_001',
-      'userId': 'STU001',
+      'userId': '',
       'targetRole': 'student',
       'title': 'Daily Attendance Recorded: Present',
       'body':
@@ -3158,7 +3141,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     },
     {
       'id': 'NOTIF_STU_002',
-      'userId': 'STU001',
+      'userId': '',
       'targetRole': 'student',
       'title': 'Assignment Due in 24 Hours',
       'body':
@@ -3173,7 +3156,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     },
     {
       'id': 'NOTIF_STU_003',
-      'userId': 'STU001',
+      'userId': '',
       'targetRole': 'student',
       'title': 'Tuition Fee Due Reminder: ₹25,000',
       'body':
@@ -3192,7 +3175,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       'targetRole': 'parent',
       'title': 'Ward Daily Attendance: Present in All Classes',
       'body':
-          'Bhargavi (22K91A0501) was marked Present for all 4 lectures today. Aggregate attendance: 85%.',
+          'Your ward was marked Present for all 4 lectures today. Aggregate attendance: 85%.',
       'type': 'attendance',
       'targetScreen': 'attendance',
       'priority': 'normal',
@@ -3283,7 +3266,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
     return {
       'id': id,
-      'userId': item['userId'] ?? item['user_id'] ?? 'STU001',
+      'userId': item['userId'] ?? item['user_id'] ?? (HitamAuthService().activeUserId ?? ''),
       'targetRole': targetRole,
       'senderRole': senderRole,
       'senderName': senderName,
@@ -6293,8 +6276,9 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
 
   void _showSubmitDialog(BuildContext context, Map<String, dynamic> assignment) {
     final commentsController = TextEditingController();
+    final activeRoll = HitamAuthService().activeUserId ?? 'submission';
     String selectedFile =
-        '${assignment['title'].toString().toLowerCase().replaceAll(' ', '_')}_22K91A0501.pdf';
+        '${assignment['title'].toString().toLowerCase().replaceAll(' ', '_')}_$activeRoll.pdf';
 
     showDialog(
       context: context,
@@ -7067,7 +7051,7 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                'Roll No: 22K91A0501 • B.Tech CSE (Year 4, Sem 7)',
+                'Roll No: ${HitamAuthService().activeUserId ?? "Student"} • ${HitamScraperService().latestAttendanceReport?.branch ?? "B.Tech CSE"} (${HitamScraperService().latestAttendanceReport?.semester ?? "Academic Year 2026"})',
                 style: TextStyle(
                   color: Colors.white.withOpacity(0.75),
                   fontSize: isMobile ? 12 : 13,
@@ -7744,9 +7728,11 @@ class _ExaminationDetailsScreenState
   String _errorMessage = '';
   bool _isOfflineFallback = false;
 
-  final String _studentName = 'Bhargavi K';
-  final String _rollNumber = '22K91A0501';
-  final String _hallTicketNo = 'HT-2026-22K91A0501';
+  late final String _studentName = HitamScraperService().latestProfile?.name ??
+      HitamScraperService().latestAttendanceReport?.studentName ??
+      (HitamAuthService().activeUserId ?? 'Student');
+  late final String _rollNumber = HitamAuthService().activeUserId ?? 'Student';
+  late final String _hallTicketNo = 'HT-2026-${HitamAuthService().activeUserId ?? "STU"}';
   final String _semester = 'Semester 6';
   final String _academicYear = '2025-2026';
 
@@ -8175,7 +8161,7 @@ class _ExaminationDetailsScreenState
                         type: 'Admit Card',
                         description: 'Official End-Semester Examination Hall Ticket & Verified Seating Plan.',
                         contentSummary:
-                            'Hall Ticket Number: $_hallTicketNo\nStudent: Bhargavi K (22K91A0501)\nProgram: B.Tech Computer Science & Engineering\nExamination: Autonomous End-Semester Exams 2026\nCenter: Main Block - Examination Wing (HITAM)\nVerification Status: Digitally Authenticated & Approved',
+                            'Hall Ticket Number: $_hallTicketNo\nStudent: $_studentName ($_rollNumber)\nProgram: B.Tech Computer Science & Engineering\nExamination: Autonomous End-Semester Exams 2026\nCenter: Main Block - Examination Wing (HITAM)\nVerification Status: Digitally Authenticated & Approved',
                       ),
                     );
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -9283,9 +9269,11 @@ class _StudentResultsScreenState extends State<StudentResultsScreen> {
   String _errorMessage = '';
   bool _isOfflineFallback = false;
 
-  String _studentName = 'Bhargavi K';
-  String _rollNumber = '22K91A0501';
-  String _department = 'Computer Science & Engineering';
+  String _studentName = HitamScraperService().latestProfile?.name ??
+      HitamScraperService().latestAttendanceReport?.studentName ??
+      (HitamAuthService().activeUserId ?? 'Student');
+  String _rollNumber = HitamAuthService().activeUserId ?? 'Student';
+  String _department = HitamScraperService().latestAttendanceReport?.branch ?? 'Computer Science & Engineering';
 
   List<Map<String, dynamic>> _semestersList = [];
   int _selectedSemesterIndex = 0;
@@ -9924,7 +9912,7 @@ class _StudentResultsScreenState extends State<StudentResultsScreen> {
           type: 'Grade Card',
           description: 'Certified End-Semester Grade Card and Credit Completion Audit.',
           contentSummary:
-              'Institution: Hyderabad Institute of Technology & Management (Autonomous)\nStudent: Bhargavi K (22K91A0501)\nSemester: $semesterName\nSGPA: $sgpa / 10.0\nCumulative CGPA: $cgpa / 10.0\nCredits Earned: $totalCredits\nResult Status: PASSED (First Class with Distinction)\nDigitally Signed by Controller of Examinations',
+              'Institution: Hyderabad Institute of Technology & Management (Autonomous)\nStudent: $_studentName ($_rollNumber)\nSemester: $semesterName\nSGPA: $sgpa / 10.0\nCumulative CGPA: $cgpa / 10.0\nCredits Earned: $totalCredits\nResult Status: PASSED (First Class with Distinction)\nDigitally Signed by Controller of Examinations',
         ),
       );
       ScaffoldMessenger.of(context).showSnackBar(
@@ -11088,30 +11076,35 @@ class DownloadsService {
   List<DownloadItem> _downloads = [];
   bool _initialized = false;
 
-  List<DownloadItem> get fallbackDownloads => [
+  List<DownloadItem> get fallbackDownloads {
+    final curName = HitamScraperService().latestProfile?.name ??
+        HitamScraperService().latestAttendanceReport?.studentName ??
+        (HitamAuthService().activeUserId ?? 'Student');
+    final curRoll = HitamAuthService().activeUserId ?? 'Student';
+    return [
         DownloadItem(
           id: 'EXM_001',
           title: 'Digital Hall Ticket - Autonomous Exams 2026',
           category: 'Examinations',
-          fileName: 'HITAM_Hall_Ticket_HT-2026-22K91A0501.pdf',
+          fileName: 'HITAM_Hall_Ticket_HT-2026-$curRoll.pdf',
           fileSize: '380 KB',
           date: '18 Sep 2026, 05:40 PM',
           type: 'Admit Card',
           description: 'Official Autonomous Session Admit Card with QR verification and assigned seating.',
           contentSummary:
-              'Candidate: Bhargavi K (22K91A0501)\nDegree: B.Tech Computer Science & Engineering\nHall Ticket No: HT-2026-22K91A0501\nExamination Center: HITAM Autonomous Center\nStatus: Admitted & Verified',
+              'Candidate: $curName ($curRoll)\nDegree: B.Tech Computer Science & Engineering\nHall Ticket No: HT-2026-$curRoll\nExamination Center: HITAM Autonomous Center\nStatus: Admitted & Verified',
         ),
         DownloadItem(
           id: 'RES_001',
           title: 'Certified Grade Memo - Semester 6',
           category: 'Results',
-          fileName: 'HITAM_Grade_Memo_Sem6_22K91A0501.pdf',
+          fileName: 'HITAM_Grade_Memo_Sem6_$curRoll.pdf',
           fileSize: '420 KB',
           date: '18 Sep 2026, 02:45 PM',
           type: 'Grade Card',
           description: 'Digitally Certified Cumulative Grade Performance Transcript (SGPA 8.65, CGPA 8.42).',
           contentSummary:
-              'Student: Bhargavi K (22K91A0501)\nSemester 6 SGPA: 8.65 / 10.0\nCumulative CGPA: 8.42 / 10.0\nStanding: First Class with Distinction\nCleared Credits: 16 / 16 (100% Passed)',
+              'Student: $curName ($curRoll)\nSemester 6 SGPA: 8.65 / 10.0\nCumulative CGPA: 8.42 / 10.0\nStanding: First Class with Distinction\nCleared Credits: 16 / 16 (100% Passed)',
         ),
         DownloadItem(
           id: 'FEE_001',
@@ -11123,7 +11116,7 @@ class DownloadsService {
           type: 'Receipt',
           description: 'Official College Accounts Challan & Fee Cleared Acknowledgment.',
           contentSummary:
-              'Receipt No: RCP-2026-0941\nStudent: Bhargavi K (22K91A0501)\nAmount Paid: ₹1,25,000\nPayment Mode: NetBanking / UPI\nBalance Due: ₹0.00 (All Cleared)',
+              'Receipt No: RCP-2026-0941\nStudent: $curName ($curRoll)\nAmount Paid: ₹1,25,000\nPayment Mode: NetBanking / UPI\nBalance Due: ₹0.00 (All Cleared)',
         ),
         DownloadItem(
           id: 'ASG_001',
@@ -11147,9 +11140,10 @@ class DownloadsService {
           type: 'Transcript',
           description: 'Biometric Attendance Audit with Subject-wise Percentage and Margin.',
           contentSummary:
-              'Student: Bhargavi K (22K91A0501)\nOverall Attendance: 85.0%\nTotal Sessions: 320\nAttended Sessions: 272\nCondonation Requirement: None (Eligible for Exams)',
+              'Student: $curName ($curRoll)\nOverall Attendance: 85.0%\nTotal Sessions: 320\nAttended Sessions: 272\nCondonation Requirement: None (Eligible for Exams)',
         ),
       ];
+  }
 
   Future<List<DownloadItem>> getDownloads() async {
     if (!_initialized) {
@@ -13476,7 +13470,7 @@ class _FacultyAssignmentsScreenState extends State<FacultyAssignmentsScreen> {
       'submissions': [
         {
           'studentId': 'STU001',
-          'studentName': 'Bhargavi',
+          'studentName': 'Bhavani K',
           'rollNo': '22K91A0501',
           'department': 'B.Tech CSE - Sec A',
           'status': 'Submitted',
@@ -13600,7 +13594,7 @@ class _FacultyAssignmentsScreenState extends State<FacultyAssignmentsScreen> {
       'submissions': [
         {
           'studentId': 'STU001',
-          'studentName': 'Bhargavi',
+          'studentName': 'Bhavani K',
           'rollNo': '22K91A0501',
           'department': 'B.Tech CSE - Sec A',
           'status': 'Submitted',
@@ -13685,7 +13679,7 @@ class _FacultyAssignmentsScreenState extends State<FacultyAssignmentsScreen> {
         },
         {
           'studentId': 'STU001',
-          'studentName': 'Bhargavi',
+          'studentName': 'Bhavani K',
           'rollNo': '22K91A0501',
           'department': 'B.Tech CSE - Sec A',
           'status': 'Pending',
@@ -13730,7 +13724,7 @@ class _FacultyAssignmentsScreenState extends State<FacultyAssignmentsScreen> {
       'submissions': [
         {
           'studentId': 'STU001',
-          'studentName': 'Bhargavi',
+          'studentName': 'Bhavani K',
           'rollNo': '22K91A0501',
           'department': 'B.Tech CSE - Sec A',
           'status': 'Submitted',
@@ -14261,7 +14255,7 @@ class _FacultyAssignmentsScreenState extends State<FacultyAssignmentsScreen> {
       'submissions': [
         {
           'studentId': 'STU001',
-          'studentName': 'Bhargavi',
+          'studentName': 'Bhavani K',
           'rollNo': '22K91A0501',
           'department': 'B.Tech CSE - Sec A',
           'status': 'Pending',
@@ -16057,7 +16051,7 @@ class _FacultyAttendanceScreenState extends State<FacultyAttendanceScreen> {
     }
 
     final namesPool = [
-      'Bhargavi',
+      'Bhavani K',
       'Anjali Sharma',
       'Rahul Varma',
       'Sneha Reddy',
@@ -18406,8 +18400,8 @@ class _ParentDashboardState
 
         setState(() {
           parentName = data['parentName']?.toString() ?? 'Parent';
-          studentName = data['studentName']?.toString() ?? 'Bhargavi';
-          studentId = (data['studentId'] ?? data['rollNo'])?.toString() ?? '22K91A0501';
+          studentName = data['studentName']?.toString() ?? 'Student';
+          studentId = (data['studentId'] ?? data['rollNo'])?.toString() ?? 'HITAM Student';
           attendance = (data['attendance'] is num)
               ? (data['attendance'] as num).toDouble()
               : double.tryParse(data['attendance']?.toString() ?? '') ?? 84.77;
@@ -19063,8 +19057,8 @@ class _ParentFeeDetailsScreenState
   bool isLoading = true;
   String errorMessage = '';
 
-  String studentName = 'Bhargavi';
-  String studentId = '22K91A0501';
+  String studentName = 'Student';
+  String studentId = 'HITAM Student';
   String department = 'CSE - 4th Year';
   String academicYear = '2025 - 2026';
   int totalFee = 117500;
@@ -19121,13 +19115,14 @@ class _ParentFeeDetailsScreenState
         studentId = activeRoll;
       }
 
+      final report = feeReport;
       setState(() {
-        totalFee = feeReport!.totalPayable.round();
-        paidFee = feeReport!.totalPaid.round();
-        pendingFee = feeReport!.totalDue.round();
-        status = pendingFee > 0 ? 'Pending (${feeReport!.balanceText})' : 'Paid';
+        totalFee = report.totalPayable.round();
+        paidFee = report.totalPaid.round();
+        pendingFee = report.totalDue.round();
+        status = pendingFee > 0 ? 'Pending (${report.balanceText})' : 'Paid';
         dueDate = 'Academic Year 2025-2026';
-        breakdown = feeReport!.items.map((item) => {
+        breakdown = report.items.map((item) => {
           "feeType": item.feeName,
           "totalAmount": item.payable.round(),
           "paidAmount": item.paid.round(),
@@ -19152,8 +19147,8 @@ class _ParentFeeDetailsScreenState
         final data = jsonDecode(response.body);
 
         setState(() {
-          studentName = data['studentName']?.toString() ?? 'Bhargavi';
-          studentId = data['studentId']?.toString() ?? '22K91A0501';
+          studentName = data['studentName']?.toString() ?? 'Student';
+          studentId = data['studentId']?.toString() ?? 'HITAM Student';
           department = data['department']?.toString() ?? 'CSE - 4th Year';
           academicYear = data['academicYear']?.toString() ?? '2025 - 2026';
 

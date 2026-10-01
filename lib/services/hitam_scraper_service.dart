@@ -1193,7 +1193,7 @@ class HitamScraperService {
             '';
       }
       if (studentName.isEmpty) {
-        studentName = 'SAGI PRITESH VARMA';
+        studentName = rollNo.isNotEmpty ? rollNo : 'Student';
       }
 
       if (sem.isEmpty || sem.contains('Sl.No') || sem.contains('Subject') || sem.length > 50) {

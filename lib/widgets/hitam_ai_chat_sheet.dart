@@ -56,7 +56,7 @@ class _HitamAiChatSheetState extends State<HitamAiChatSheet> {
   Future<void> _loadContextAndGreet() async {
     final userId = widget.initialRollNo ??
         HitamAuthService().activeUserId ??
-        'STU001';
+        '';
 
     // Retrieve cached attendance from SQLite for context injection
     final records = await DatabaseService().getCachedAttendance(userId);
