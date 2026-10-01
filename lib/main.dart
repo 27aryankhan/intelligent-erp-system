@@ -13,6 +13,7 @@ import 'services/notification_service.dart';
 import 'services/hitam_auth_service.dart';
 import 'services/hitam_scraper_service.dart';
 import 'services/database_service.dart';
+import 'screens/student_portal_screens.dart';
 
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -991,7 +992,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
   String department = '';
   String year = '';
 
-  int attendance = 0;
+  double attendance = 0.0;
   int assignmentsPending = 0;
   int upcomingExams = 0;
   int newAnnouncements = 0;
@@ -1004,7 +1005,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
       studentName = rep.studentName;
       department = rep.branch;
       year = rep.semester;
-      attendance = rep.overallPercentage.round();
+      attendance = rep.overallPercentage;
       assignmentsPending = 2;
       upcomingExams = 1;
       newAnnouncements = 3;
@@ -1027,7 +1028,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
         studentName = report!.studentName;
         department = report!.branch;
         year = report!.semester;
-        attendance = report!.overallPercentage.round();
+        attendance = report!.overallPercentage;
         assignmentsPending = 2;
         upcomingExams = 1;
         newAnnouncements = 3;
@@ -1052,7 +1053,9 @@ class _StudentDashboardState extends State<StudentDashboard> {
               studentName = data['name'] ?? studentName;
               department = data['department'] ?? department;
               year = data['year'] ?? year;
-              attendance = data['attendance'] ?? attendance;
+              attendance = (data['attendance'] is num)
+                  ? (data['attendance'] as num).toDouble()
+                  : double.tryParse(data['attendance']?.toString() ?? '') ?? attendance;
             }
             assignmentsPending = data['assignmentsPending'] ?? assignmentsPending;
             upcomingExams = data['upcomingExams'] ?? upcomingExams;
@@ -1070,7 +1073,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
             studentName = 'Bhargavi';
             department = 'CSE';
             year = '4th Year';
-            attendance = 85;
+            attendance = 84.77;
             assignmentsPending = 2;
             upcomingExams = 1;
             newAnnouncements = 3;
@@ -1166,7 +1169,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
                             child: DashboardCard(
                               icon: Icons.calendar_month,
                               title: 'Attendance',
-                              value: '$attendance%',
+                              value: attendance > 0 ? '${attendance.toStringAsFixed(2)}%' : '0.00%',
                             ),
                           ),
 
@@ -1206,175 +1209,316 @@ class _StudentDashboardState extends State<StudentDashboard> {
                         ],
                       ),
 
-                      const SizedBox(height: 30),
-
-                      // ATTENDANCE DETAILS
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => AttendanceDetailsScreen(
-                                  report: HitamScraperService().latestAttendanceReport ??
-                                      widget.initialReport,
-                                ),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.bar_chart),
-                          label: const Text(
-                            'View Attendance Details',
+                      // ======================================================
+                      // WEBPROS PORTAL SERVICES (7 CORE FEATURES)
+                      // ======================================================
+                      const SizedBox(height: 24),
+                      Row(
+                        children: [
+                          Container(
+                            width: 4,
+                            height: 18,
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade700,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
                           ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 12),
-
-                      // ASSIGNMENTS
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    const AssignmentsScreen(),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.assignment),
-                          label: const Text(
-                            'View Assignments',
+                          const SizedBox(width: 8),
+                          const Text(
+                            'ACADEMIC PORTAL SERVICES',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.8,
+                              color: Color(0xFF475569),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
+                      const SizedBox(height: 14),
 
-                      const SizedBox(height: 12),
-
-                      // EXAMINATIONS
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    const ExaminationDetailsScreen(),
+                      // 1. ATTENDANCE
+                      _buildPortalServiceCard(
+                        context: context,
+                        icon: Icons.pie_chart_rounded,
+                        iconColor: const Color(0xFF2563EB),
+                        iconBgColor: const Color(0xFFEFF6FF),
+                        title: 'Attendance',
+                        subtitle: 'Live subject-wise & overall attendance percentage',
+                        trailingBadge: '${attendance.toStringAsFixed(2)}%',
+                        badgeColor: attendance >= 75
+                            ? const Color(0xFF10B981)
+                            : (attendance >= 65
+                                ? const Color(0xFFF59E0B)
+                                : const Color(0xFFEF4444)),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => AttendanceDetailsScreen(
+                                report: HitamScraperService().latestAttendanceReport ??
+                                    widget.initialReport,
                               ),
-                            );
-                          },
-                          icon: const Icon(Icons.event),
-                          label: const Text(
-                            'View Examination Details',
-                          ),
-                        ),
+                            ),
+                          );
+                        },
                       ),
+                      const SizedBox(height: 10),
 
-                      const SizedBox(height: 12),
+                      // 2. BACKLOGS
+                      _buildPortalServiceCard(
+                        context: context,
+                        icon: Icons.assignment_late_rounded,
+                        iconColor: const Color(0xFFDC2626),
+                        iconBgColor: const Color(0xFFFEF2F2),
+                        title: 'Backlogs',
+                        subtitle: 'Active arrears, subject history & exam schedule',
+                        trailingBadge: HitamScraperService().latestBacklogs != null
+                            ? (HitamScraperService().latestBacklogs!.totalCount == 0
+                                ? 'Clear'
+                                : '${HitamScraperService().latestBacklogs!.totalCount}')
+                            : null,
+                        badgeColor: const Color(0xFFEF4444),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const StudentBacklogsScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 10),
 
+                      // 3. FEE DETAILS
+                      _buildPortalServiceCard(
+                        context: context,
+                        icon: Icons.account_balance_wallet_rounded,
+                        iconColor: const Color(0xFF059669),
+                        iconBgColor: const Color(0xFFECFDF5),
+                        title: 'Fee Details',
+                        subtitle: 'Academic fee ledger, dues & payment receipts',
+                        trailingBadge: HitamScraperService().latestFeeReport != null
+                            ? '₹${HitamScraperService().latestFeeReport!.totalDue.toStringAsFixed(0)}'
+                            : null,
+                        badgeColor: const Color(0xFF059669),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const StudentFeeDetailsScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 10),
 
-                      // ANNOUNCEMENTS BUTTON
-SizedBox(
-  width: double.infinity,
-  child: ElevatedButton.icon(
-    onPressed: () {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const AnnouncementsScreen(),
-        ),
-      );
-    },
-    icon: const Icon(Icons.notifications),
-    label: const Text('View Announcements'),
-  ),
-),
+                      // 4. MARKS
+                      _buildPortalServiceCard(
+                        context: context,
+                        icon: Icons.auto_graph_rounded,
+                        iconColor: const Color(0xFF7C3AED),
+                        iconBgColor: const Color(0xFFF5F3FF),
+                        title: 'Marks',
+                        subtitle: 'CIE internal exams & semester SGPA / CGPA',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const StudentMarksScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 10),
 
-const SizedBox(height: 12),
+                      // 5. PROFILE
+                      _buildPortalServiceCard(
+                        context: context,
+                        icon: Icons.person_rounded,
+                        iconColor: const Color(0xFF0284C7),
+                        iconBgColor: const Color(0xFFF0F9FF),
+                        title: 'Profile',
+                        subtitle: 'Personal bio-data, academic records & contact info',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const StudentProfileScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 10),
 
+                      // 6. TIME TABLE
+                      _buildPortalServiceCard(
+                        context: context,
+                        icon: Icons.calendar_today_rounded,
+                        iconColor: const Color(0xFFD97706),
+                        iconBgColor: const Color(0xFFFFFBEB),
+                        title: 'Time table',
+                        subtitle: 'Weekly day-wise period timings & faculty allocation',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const StudentTimeTableScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 10),
 
-// RESULTS
-SizedBox(
-  width: double.infinity,
-  child: ElevatedButton.icon(
-    onPressed: () {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) =>
-              const StudentResultsScreen(),
-        ),
-      );
-    },
-    icon: const Icon(Icons.grade),
-    label: const Text(
-      'View Results',
-    ),
-  ),
-),
-
-const SizedBox(height: 12),
-
-// DOWNLOADS
-SizedBox(
-  width: double.infinity,
-  child: ElevatedButton.icon(
-    onPressed: () {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const DownloadsScreen(),
-        ),
-      );
-    },
-    icon: const Icon(Icons.download_rounded),
-    label: const Text(
-      'Downloads',
-    ),
-  ),
-),
-
-const SizedBox(height: 12),
-
-// FEES & DUES
-SizedBox(
-  width: double.infinity,
-  child: ElevatedButton.icon(
-    onPressed: () {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const ParentFeeDetailsScreen(),
-        ),
-      );
-    },
-    icon: const Icon(Icons.account_balance_wallet_rounded),
-    label: const Text(
-      'View Fee Details',
-    ),
-  ),
-),
-
-const SizedBox(height: 12),
+                      // 7. ACADEMIC REGISTER
+                      _buildPortalServiceCard(
+                        context: context,
+                        icon: Icons.menu_book_rounded,
+                        iconColor: const Color(0xFF0D9488),
+                        iconBgColor: const Color(0xFFF0FDFA),
+                        title: 'Academic Register',
+                        subtitle: 'Comprehensive day-by-day attendance & CIE register',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const StudentAcademicRegisterScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 16),
 
                       // REFRESH
                       SizedBox(
                         width: double.infinity,
-                        child: ElevatedButton.icon(
+                        child: OutlinedButton.icon(
                           onPressed: fetchStudentData,
-                          icon: const Icon(Icons.refresh),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            side: const BorderSide(color: Color(0xFFCBD5E1)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          icon: const Icon(Icons.refresh_rounded, size: 20),
                           label: const Text(
-                            'Refresh Data',
+                            'Refresh Portal Data',
+                            style: TextStyle(fontWeight: FontWeight.w700),
                           ),
                         ),
                       ),
                     ],
                   ),
                 ),
+    );
+  }
+
+  Widget _buildPortalServiceCard({
+    required BuildContext context,
+    required IconData icon,
+    required Color iconColor,
+    required Color iconBgColor,
+    required String title,
+    required String subtitle,
+    String? trailingBadge,
+    Color? badgeColor,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.02),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: iconBgColor,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: iconColor, size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (trailingBadge != null) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: (badgeColor ?? Colors.blue).withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    trailingBadge,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: badgeColor ?? Colors.blue,
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(width: 8),
+              Container(
+                width: 28,
+                height: 28,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF1F5F9),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 13,
+                  color: Color(0xFF64748B),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -1402,7 +1546,7 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
   String studentId = '22K91A0501';
   String department = 'CSE - 4th Year';
   String semester = 'Semester 7';
-  int overallAttendance = 85;
+  double overallAttendance = 84.77;
   int totalClasses = 120;
   int attendedClasses = 103;
   int marginClasses = 16;
@@ -1423,7 +1567,7 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
     studentId = rep.rollNo;
     department = rep.branch;
     semester = rep.semester;
-    overallAttendance = rep.overallPercentage.round();
+    overallAttendance = rep.overallPercentage;
     totalClasses = rep.totalHeld;
     attendedClasses = rep.totalAttended;
     marginClasses = rep.safeBunks;
@@ -1433,7 +1577,7 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
       "faculty": "HITAM Faculty",
       "attended": s.classesAttended,
       "total": s.classesHeld,
-      "percentage": s.percentage.round(),
+      "percentage": s.percentage,
       "safe_bunks": s.safeBunks,
       "classes_needed": s.classesNeeded,
       "status": s.status,
@@ -1472,7 +1616,7 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
           final pct = totalHeld > 0 ? (totalAttended / totalHeld) * 100 : 0.0;
           setState(() {
             studentId = activeRoll;
-            overallAttendance = pct.round();
+            overallAttendance = double.parse(pct.toStringAsFixed(2));
             totalClasses = totalHeld;
             attendedClasses = totalAttended;
             subjects = cached.map((s) => {
@@ -1481,7 +1625,7 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
               "faculty": "HITAM Faculty",
               "attended": s.classesAttended,
               "total": s.classesHeld,
-              "percentage": s.percentage.round(),
+              "percentage": s.percentage,
               "safe_bunks": s.safeBunks,
               "classes_needed": s.classesNeeded,
               "status": s.status,
@@ -1516,8 +1660,8 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
           semester = data['semester']?.toString() ?? 'Semester 7';
 
           overallAttendance = (data['overallAttendance'] is num)
-              ? (data['overallAttendance'] as num).toInt()
-              : int.tryParse(data['overallAttendance']?.toString() ?? '') ?? 85;
+              ? (data['overallAttendance'] as num).toDouble()
+              : double.tryParse(data['overallAttendance']?.toString() ?? '') ?? 84.77;
 
           totalClasses = (data['totalClasses'] is num)
               ? (data['totalClasses'] as num).toInt()
@@ -1591,7 +1735,7 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
         studentId = '22K91A0501';
         department = 'CSE - 4th Year';
         semester = 'Semester 7';
-        overallAttendance = 85;
+        overallAttendance = 84.77;
         totalClasses = 120;
         attendedClasses = 103;
         marginClasses = 16;
@@ -2034,10 +2178,12 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
                       children: [
                         Text('${s['subject']} (${s['code'] ?? 'CS'})'),
                         Text(
-                          '${s['attended']} / ${s['total']} (${s['percentage']}%)',
+                          '${s['attended']} / ${s['total']} (${s['percentage'] is num ? (s['percentage'] as num).toStringAsFixed(2) : s['percentage']}%)',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: (s['percentage'] as int) >= 75 ? Colors.green.shade800 : Colors.orange.shade800,
+                            color: ((s['percentage'] as num?)?.toDouble() ?? 0.0) >= 75
+                                ? Colors.green.shade800
+                                : Colors.orange.shade800,
                           ),
                         ),
                       ],
@@ -2053,7 +2199,7 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
                   children: [
                     const Text('Aggregate Attendance:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                     Text(
-                      '$overallAttendance% (EXAM ELIGIBLE)',
+                      '${overallAttendance.toStringAsFixed(2)}% (EXAM ELIGIBLE)',
                       style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green.shade800, fontSize: 14),
                     ),
                   ],
@@ -2076,7 +2222,7 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
                             type: 'Transcript',
                             description: 'Official Attendance Audit & Aggregate Report.',
                             contentSummary:
-                                'Student: $studentName ($studentId)\nProgram: $department\nSemester: $semester\nAggregate Attendance: $overallAttendance%\nAttended: $attendedClasses / $totalClasses Classes\nMargin: $marginClasses Classes to maintain minimum 75%\nStatus: Eligible for End-Semester Examinations\nIssued by Dean of Academics, HITAM.',
+                                'Student: $studentName ($studentId)\nProgram: $department\nSemester: $semester\nAggregate Attendance: ${overallAttendance.toStringAsFixed(2)}%\nAttended: $attendedClasses / $totalClasses Classes\nMargin: $marginClasses Classes to maintain minimum 75%\nStatus: Eligible for End-Semester Examinations\nIssued by Dean of Academics, HITAM.',
                           ),
                         );
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -2217,7 +2363,9 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
                   const SizedBox(width: 6),
                   Flexible(
                     child: Text(
-                      isEligible ? 'Exam Eligible ($overallAttendance% Aggregate)' : 'Shortage ($overallAttendance%)',
+                      isEligible
+                          ? 'Exam Eligible (${overallAttendance.toStringAsFixed(2)}% Aggregate)'
+                          : 'Shortage (${overallAttendance.toStringAsFixed(2)}%)',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
@@ -2322,7 +2470,7 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
                 icon: Icons.donut_large,
                 color: Colors.blue.shade700,
                 title: 'Overall Attendance',
-                value: '$overallAttendance.0%',
+                value: '${overallAttendance.toStringAsFixed(2)}%',
                 subtitle: '+10% above university cutoff',
               ),
               const SizedBox(width: 12),
@@ -2360,7 +2508,7 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
                     icon: Icons.donut_large,
                     color: Colors.blue.shade700,
                     title: 'Overall Attendance',
-                    value: '$overallAttendance%',
+                    value: '${overallAttendance.toStringAsFixed(2)}%',
                     subtitle: 'Safe Zone',
                   ),
                   const SizedBox(width: 12),
@@ -2424,7 +2572,7 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  '$overallAttendance% (Target: 75%)',
+                  '${overallAttendance.toStringAsFixed(2)}% (Target: 75%)',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: overallAttendance >= 75 ? Colors.green.shade800 : Colors.red.shade800,
@@ -2483,11 +2631,11 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
     final String faculty = item['faculty']?.toString() ?? 'Department Faculty';
     final int attended = (item['attended'] is num) ? (item['attended'] as num).toInt() : 0;
     final int total = (item['total'] is num) ? (item['total'] as num).toInt() : 0;
-    final int percentage = (item['percentage'] is num)
-        ? (item['percentage'] as num).toInt()
-        : (total > 0 ? ((attended / total) * 100).round() : 0);
+    final double percentage = (item['percentage'] is num)
+        ? (item['percentage'] as num).toDouble()
+        : (total > 0 ? double.parse(((attended / total) * 100).toStringAsFixed(2)) : 0.0);
 
-    final bool isSafe = percentage >= 75;
+    final bool isSafe = percentage >= 75.0;
     final int bufferOrNeeded = isSafe
         ? ((attended - (0.75 * total)) / 0.75).floor().clamp(0, 99)
         : (((0.75 * total) - attended) / 0.25).ceil().clamp(1, 99);
@@ -2539,7 +2687,7 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    '$percentage%',
+                    '${percentage.toStringAsFixed(2)}%',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
@@ -18229,7 +18377,7 @@ class _ParentDashboardState
   String studentName = '';
   String studentId = '';
 
-  int attendance = 0;
+  double attendance = 0.0;
   int assignmentsPending = 0;
   int upcomingExams = 0;
 
@@ -18261,8 +18409,8 @@ class _ParentDashboardState
           studentName = data['studentName']?.toString() ?? 'Bhargavi';
           studentId = (data['studentId'] ?? data['rollNo'])?.toString() ?? '22K91A0501';
           attendance = (data['attendance'] is num)
-              ? (data['attendance'] as num).toInt()
-              : int.tryParse(data['attendance']?.toString() ?? '') ?? 85;
+              ? (data['attendance'] as num).toDouble()
+              : double.tryParse(data['attendance']?.toString() ?? '') ?? 84.77;
           assignmentsPending = (data['assignmentsPending'] is num)
               ? (data['assignmentsPending'] as num).toInt()
               : int.tryParse(data['assignmentsPending']?.toString() ?? '') ?? 3;
@@ -18389,7 +18537,7 @@ class _ParentDashboardState
                                   child: DashboardCard(
                                     icon: Icons.calendar_month,
                                     title: 'Attendance (View)',
-                                    value: '$attendance%',
+                                    value: attendance > 0 ? '${attendance.toStringAsFixed(2)}%' : '0.00%',
                                   ),
                                 ),
                               ),

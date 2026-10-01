@@ -1,6 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'dart:io';
 import 'package:intelligent_erp/services/hitam_auth_service.dart';
 import 'package:intelligent_erp/services/hitam_scraper_service.dart';
+import 'package:html/parser.dart' as html_parser;
+import 'package:http/http.dart' as http;
 
 void main() {
   test('Live WebPros authentication & attendance verification with real credentials', () async {
@@ -16,7 +19,9 @@ void main() {
     expect(success, isTrue);
 
     final scraper = HitamScraperService(auth: authService);
-    final attendance = await scraper.fetchStudentAttendance('23E51A05E8');
+    final report = await scraper.fetchStudentAttendanceReport('23E51A05E8');
+    print('Overall: Held=${report?.totalHeld}, Attended=${report?.totalAttended}, Pct=${report?.overallPercentage}');
+    final attendance = report?.subjects ?? [];
     print('Scraped attendance count: ${attendance.length}');
     for (var a in attendance) {
       print('${a.subjectCode} | ${a.subjectName} | ${a.percentage}% | safe bunks: ${a.safeBunks}');

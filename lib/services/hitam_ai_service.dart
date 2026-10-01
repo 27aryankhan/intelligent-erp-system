@@ -103,7 +103,7 @@ TONE & PERSONALITY:
 
       final buffer = StringBuffer();
       buffer.writeln('📊 **HITAM Academic Attendance Summary**\n');
-      buffer.writeln('• **Aggregate Attendance:** ${aggregate.toStringAsFixed(1)}%');
+      buffer.writeln('• **Aggregate Attendance:** ${aggregate.toStringAsFixed(2)}%');
       buffer.writeln(aggregate >= 75.0
           ? '✅ You are safely above the mandatory 75% threshold!'
           : aggregate >= 65.0
