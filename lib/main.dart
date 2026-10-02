@@ -15,6 +15,7 @@ import 'services/hitam_scraper_service.dart';
 import 'services/database_service.dart';
 import 'screens/student_portal_screens.dart';
 import 'services/update_service.dart';
+import 'widgets/github_attendance_heatmap.dart';
 
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -1583,6 +1584,17 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
       _applyAttendanceReport(widget.report!);
     }
     fetchAttendanceData();
+    _prefetchAcademicRegister();
+  }
+
+  void _prefetchAcademicRegister() {
+    final scraper = HitamScraperService();
+    final activeRoll = HitamAuthService().activeUserId ?? '';
+    if (scraper.latestAcademicRegister == null && activeRoll.isNotEmpty) {
+      scraper.fetchStudentAcademicRegister(activeRoll).then((_) {
+        if (mounted) setState(() {});
+      }).catchError((_) {});
+    }
   }
 
   void _applyAttendanceReport(StudentAttendanceReport rep) {
@@ -1779,6 +1791,7 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
         errorMessage = subjects.isEmpty ? 'Attendance data not available offline.' : '';
       });
     }
+    _prefetchAcademicRegister();
   }
 
   void _showLeaveModal(BuildContext context) {
@@ -2976,6 +2989,14 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
                           _buildOverallProgressCard(),
                           const SizedBox(height: 24),
                           _buildActionBar(),
+                          const SizedBox(height: 24),
+                          GithubAttendanceHeatmap(
+                            academicRegister: HitamScraperService().latestAcademicRegister,
+                            overallAttendance: overallAttendance,
+                            totalClasses: totalClasses,
+                            attendedClasses: attendedClasses,
+                            subjects: subjects,
+                          ),
                           const SizedBox(height: 28),
                           _buildSubjectGrid(),
                           const SizedBox(height: 28),
