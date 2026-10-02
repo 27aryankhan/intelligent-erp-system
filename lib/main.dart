@@ -2308,8 +2308,9 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildStudentHeroCard() {
     final bool isEligible = overallAttendance >= 75;
