@@ -375,74 +375,43 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
   }
 
   Widget _buildTitle() {
-    IconData icon;
-    Color iconColor;
-    Color iconBg;
+    Color subtitleColor;
     String titleText;
     String subtitleText;
 
     if (_isComplete) {
-      icon = Icons.check_circle_rounded;
-      iconColor = const Color(0xFF10B981);
-      iconBg = const Color(0xFF10B981).withOpacity(0.2);
+      subtitleColor = const Color(0xFF10B981);
       titleText = 'Ready to Install';
-      subtitleText = 'Update Package Verified (${_totalSize})';
+      subtitleText = 'Update Package Verified ($_totalSize)';
     } else if (_isDownloading) {
-      icon = Icons.downloading_rounded;
-      iconColor = const Color(0xFF38BDF8);
-      iconBg = const Color(0xFF0284C7).withOpacity(0.2);
+      subtitleColor = const Color(0xFF38BDF8);
       titleText = 'Downloading Update';
       subtitleText = 'Intelligent ERP v${widget.info.latestVersion}';
     } else {
-      icon = Icons.system_update_rounded;
-      iconColor = const Color(0xFF38BDF8);
-      iconBg = const Color(0xFF0284C7).withOpacity(0.2);
+      subtitleColor = const Color(0xFF38BDF8);
       titleText = 'Update Available';
       subtitleText =
           'v${UpdateService.currentVersion} ➔ v${widget.info.latestVersion}';
     }
 
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: iconBg,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: iconColor.withOpacity(0.4),
-              width: 1.5,
-            ),
-          ),
-          child: Icon(
-            icon,
-            color: iconColor,
-            size: 26,
+        Text(
+          titleText,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                titleText,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                subtitleText,
-                style: TextStyle(
-                  color: iconColor,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
+        const SizedBox(height: 3),
+        Text(
+          subtitleText,
+          style: TextStyle(
+            color: subtitleColor,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ],
