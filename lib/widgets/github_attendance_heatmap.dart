@@ -682,29 +682,6 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
   }
 
   Widget _buildSelectedDayDetail(_DayAttendanceRecord r) {
-    final isFuture = r.date.isAfter(DateTime.now());
-
-    String statusText;
-    Color statusColor;
-
-    if (isFuture) {
-      statusText = 'Future Session Date';
-      statusColor = _textMuted;
-    } else if (!r.hasClasses) {
-      statusText = 'No recorded lectures';
-      statusColor = _textMuted;
-    } else if (r.attended == r.held) {
-      statusText = '${r.attended}/${r.held} Lectures Attended • 100% Present';
-      statusColor = _greenL4;
-    } else if (r.attended > 0) {
-      statusText =
-          '${r.attended}/${r.held} Attended • ${r.held - r.attended} Missed';
-      statusColor = const Color(0xFFF59E0B);
-    } else {
-      statusText = '0/${r.held} Attended • Absent';
-      statusColor = const Color(0xFFEF4444);
-    }
-
     // Deduplicate and aggregate multiple session hours per course
     final Map<String, List<bool>> subjSessionMap = {};
     for (var s in r.subjects) {
@@ -776,41 +753,12 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: double.infinity,
-            child: Wrap(
-              alignment: WrapAlignment.spaceBetween,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: 8,
-              runSpacing: 6,
-              children: [
-                Text(
-                  _formatDisplayDate(r.date),
-                  style: const TextStyle(
-                    color: _textBright,
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(5),
-                    border: Border.all(
-                        color: statusColor.withOpacity(0.35), width: 0.8),
-                  ),
-                  child: Text(
-                    statusText,
-                    style: TextStyle(
-                      color: statusColor,
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
+          Text(
+            _formatDisplayDate(r.date),
+            style: const TextStyle(
+              color: _textBright,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
             ),
           ),
           if (subjectBadges.isNotEmpty) ...[
