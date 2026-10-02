@@ -49,7 +49,7 @@ class AppUpdateInfo {
           int.tryParse(json['min_supported_version_code']?.toString() ?? '1') ??
               1,
       downloadUrl: json['download_url']?.toString() ??
-          'https://github.com/bhargavi-builds/intelligent-erp-system/releases/latest/download/Intelligent.ERP.apk',
+          'https://github.com/27aryankhan/intelligent-erp-system/releases/latest/download/Intelligent.ERP.apk',
       fileSize: json['file_size']?.toString() ?? '21.9 MB',
       releaseNotes: notes,
       isCritical: json['is_critical'] == true,
@@ -68,7 +68,7 @@ class UpdateService {
 
   /// Primary 100% Free CDN URL on GitHub
   static const String primaryUpdateUrl =
-      'https://raw.githubusercontent.com/bhargavi-builds/intelligent-erp-system/main/version.json';
+      'https://raw.githubusercontent.com/27aryankhan/intelligent-erp-system/main/version.json';
 
   bool _hasPromptedThisSession = false;
 
@@ -150,7 +150,7 @@ class UpdateService {
   static String resolveDirectDownloadUrl(String url) {
     if (url.endsWith('.apk')) return url;
     if (url.contains('github.com') && url.contains('/releases')) {
-      return 'https://github.com/bhargavi-builds/intelligent-erp-system/releases/latest/download/Intelligent.ERP.apk';
+      return 'https://github.com/27aryankhan/intelligent-erp-system/releases/latest/download/Intelligent.ERP.apk';
     }
     return url;
   }

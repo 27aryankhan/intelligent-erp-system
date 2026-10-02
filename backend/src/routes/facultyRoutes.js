@@ -1,6 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const facultyController = require("../controllers/facultyController");
+const { verifyAuth } = require("../middleware/authMiddleware");
+
+// Enforce Faculty or Admin role
+router.use(verifyAuth(["faculty", "admin"]));
 
 router.get("/", facultyController.getFacultyOverview);
 router.get("/students", facultyController.getFacultyStudents);

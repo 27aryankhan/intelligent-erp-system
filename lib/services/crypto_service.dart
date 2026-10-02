@@ -17,7 +17,8 @@ class CryptoService {
       final encrypted = encrypter.encrypt(plainPassword, iv: _iv);
       return encrypted.base64;
     } catch (e) {
-      return plainPassword;
+      // Never fall back to leaking plainPassword in plaintext
+      return '';
     }
   }
 }

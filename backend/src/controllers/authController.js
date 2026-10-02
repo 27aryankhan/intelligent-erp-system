@@ -17,29 +17,42 @@ exports.login = async (req, res) => {
                 password
             });
 
-            if (authData && authData.user && !authError) {
-                // Fetch profile to get role
-                const { data: profile } = await supabase
-                    .from("profiles")
-                    .select("full_name, role, department")
-                    .eq("id", authData.user.id)
-                    .single();
-
-                return res.json({
-                    message: "Login successful!",
-                    token: authData.session.access_token,
-                    user: {
-                        id: authData.user.id,
-                        email: authData.user.email,
-                        name: profile?.full_name || authData.user.email.split("@")[0],
-                        role: profile?.role || role || "student",
-                        department: profile?.department || "CSE"
-                    }
+            if (authError || !authData?.user) {
+                return res.status(401).json({
+                    error: "Unauthorized",
+                    message: "Invalid email/User ID or password. Please verify your credentials."
                 });
             }
+
+            // Fetch profile to get role
+            const { data: profile } = await supabase
+                .from("profiles")
+                .select("full_name, role, department")
+                .eq("id", authData.user.id)
+                .single();
+
+            return res.json({
+                message: "Login successful!",
+                token: authData.session.access_token,
+                user: {
+                    id: authData.user.id,
+                    email: authData.user.email,
+                    name: profile?.full_name || authData.user.email.split("@")[0],
+                    role: profile?.role || role || "student",
+                    department: profile?.department || "CSE"
+                }
+            });
         }
 
-        // 2. Mock Role-Based Fallback for Rapid Testing
+        // In production, reject any unconfigured / mock auth attempts
+        if (process.env.NODE_ENV === "production") {
+            return res.status(500).json({
+                error: "Configuration Error",
+                message: "Authentication service is not properly configured in production."
+            });
+        }
+
+        // 2. Mock Role-Based Fallback for Local Development Only
         let userRole = role || "student";
         let userName = "Bhargavi";
         let userId = "STU001";

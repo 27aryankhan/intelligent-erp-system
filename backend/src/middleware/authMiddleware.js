@@ -41,9 +41,11 @@ function verifyAuth(allowedRoles = []) {
             const authHeader = req.headers["authorization"];
             const token = authHeader && authHeader.split(" ")[1];
 
-            // In development fallback mode without auth token, allow mock requests
+            const isProduction = process.env.NODE_ENV === "production";
+
+            // In development fallback mode without auth token, allow mock requests only if not configured & not production
             if (!token) {
-                if (!isConfigured) {
+                if (!isConfigured && !isProduction) {
                     req.user = { id: "DEV_USER", role: "admin", name: "Development Mode" };
                     return next();
                 }
@@ -53,11 +55,26 @@ function verifyAuth(allowedRoles = []) {
                 });
             }
 
-            // Mock development token
+            // Mock development token (Strictly disabled in production)
             if (token.startsWith("mock-jwt-token-")) {
+                if (isProduction) {
+                    return res.status(401).json({
+                        error: "Unauthorized",
+                        message: "Mock tokens are disabled in production environment."
+                    });
+                }
+
+                const role = req.headers["x-user-role"] || "student";
+                if (allowedRoles.length > 0 && !allowedRoles.includes(role)) {
+                    return res.status(403).json({
+                        error: "Forbidden",
+                        message: `Access denied. Requires one of roles: [${allowedRoles.join(", ")}]`
+                    });
+                }
+
                 req.user = {
                     id: "DEV_USER",
-                    role: req.headers["x-user-role"] || "admin",
+                    role,
                     name: "Local Dev User"
                 };
                 return next();
@@ -67,8 +84,8 @@ function verifyAuth(allowedRoles = []) {
             if (isConfigured && supabase) {
                 const { data: { user }, error } = await supabase.auth.getUser(token);
                 if (error || !user) {
-                    return res.status(403).json({
-                        error: "Forbidden",
+                    return res.status(401).json({
+                        error: "Unauthorized",
                         message: "Invalid or expired session token."
                     });
                 }
@@ -91,6 +108,17 @@ function verifyAuth(allowedRoles = []) {
 
                 req.user = { id: user.id, email: user.email, role };
                 return next();
+            }
+
+            // If Supabase is not configured and token is not mock, verify role
+            if (allowedRoles.length > 0) {
+                const role = req.headers["x-user-role"] || "student";
+                if (!allowedRoles.includes(role)) {
+                    return res.status(403).json({
+                        error: "Forbidden",
+                        message: `Access denied. Requires one of roles: [${allowedRoles.join(", ")}]`
+                    });
+                }
             }
 
             next();
