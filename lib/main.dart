@@ -1405,6 +1405,30 @@ class _StudentDashboardState extends State<StudentDashboard> {
                           );
                         },
                       ),
+                      const SizedBox(height: 10),
+
+                      // 8. SPF BAND PERFORMANCE
+                      _buildPortalServiceCard(
+                        context: context,
+                        icon: Icons.military_tech_rounded,
+                        iconColor: const Color(0xFF6366F1),
+                        iconBgColor: const Color(0xFFEEF2FF),
+                        title: 'SPF Band',
+                        subtitle: 'Student Performance Framework cycle bands & tier rating',
+                        trailingBadge: HitamScraperService().latestSpfBands != null &&
+                                HitamScraperService().latestSpfBands!.isNotEmpty
+                            ? 'Band ${HitamScraperService().latestSpfBands!.last.band}'
+                            : null,
+                        badgeColor: const Color(0xFF6366F1),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const StudentSpfBandScreen(),
+                            ),
+                          );
+                        },
+                      ),
                       const SizedBox(height: 16),
 
                       // REFRESH

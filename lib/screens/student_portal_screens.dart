@@ -1486,8 +1486,164 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                     _buildInfoRow('Mother Mobile', p?.motherMobile ?? '', Icons.phone_outlined),
                     _buildInfoRow('Mother Occupation', p?.motherOccupation ?? '', Icons.work_outline),
                   ]),
+
+                  // SPF Band Performance
+                  if (p?.spfBands.isNotEmpty ?? false)
+                    _buildCardSection('SPF BAND PERFORMANCE', [
+                      Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 10),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF0F172A),
+                                borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(11)),
+                              ),
+                              child: const Row(
+                                children: [
+                                  Expanded(
+                                    flex: 5,
+                                    child: Text(
+                                      'Semester',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    flex: 2,
+                                    child: Center(
+                                      child: Text(
+                                        'Cycle',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    flex: 2,
+                                    child: Center(
+                                      child: Text(
+                                        'Band',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            ...p!.spfBands.asMap().entries.map((entry) {
+                              final idx = entry.key;
+                              final item = entry.value;
+                              final isEven = idx % 2 == 0;
+                              return Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 9),
+                                decoration: BoxDecoration(
+                                  color: isEven
+                                      ? Colors.white
+                                      : const Color(0xFFF8FAFC),
+                                  border: Border(
+                                    bottom: BorderSide(
+                                      color: idx == p.spfBands.length - 1
+                                          ? Colors.transparent
+                                          : const Color(0xFFF1F5F9),
+                                    ),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      flex: 5,
+                                      child: Text(
+                                        item.semester,
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF1E293B),
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      flex: 2,
+                                      child: Center(
+                                        child: Text(
+                                          item.cycle,
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                            color: Color(0xFF64748B),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      flex: 2,
+                                      child: Center(
+                                        child: _buildBandBadge(item.band),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }),
+                          ],
+                        ),
+                      ),
+                    ]),
                 ],
               ),
+      ),
+    );
+  }
+
+  Widget _buildBandBadge(String band) {
+    Color bg;
+    Color fg;
+    final b = band.trim().toUpperCase();
+    if (b == 'A' || b == 'O') {
+      bg = const Color(0xFFDCFCE7);
+      fg = const Color(0xFF16A34A);
+    } else if (b == 'B') {
+      bg = const Color(0xFFDBEAFE);
+      fg = const Color(0xFF2563EB);
+    } else if (b == 'C') {
+      bg = const Color(0xFFFEF3C7);
+      fg = const Color(0xFFD97706);
+    } else {
+      bg = const Color(0xFFFEE2E2);
+      fg = const Color(0xFFDC2626);
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: fg.withOpacity(0.3)),
+      ),
+      child: Text(
+        band,
+        style: TextStyle(
+          color: fg,
+          fontWeight: FontWeight.w800,
+          fontSize: 12,
+        ),
       ),
     );
   }
@@ -3093,5 +3249,573 @@ class _StudentAcademicRegisterScreenState
         ),
       ),
     );
+  }
+}
+
+// ============================================================================
+// 8. STUDENT SPF BAND SCREEN
+// ============================================================================
+class StudentSpfBandScreen extends StatefulWidget {
+  const StudentSpfBandScreen({super.key});
+
+  @override
+  State<StudentSpfBandScreen> createState() => _StudentSpfBandScreenState();
+}
+
+class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
+  bool _isLoading = true;
+  String? _errorMessage;
+  List<SpfBandEntry> _spfBands = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSpfBands();
+  }
+
+  Future<void> _loadSpfBands() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final scraper = HitamScraperService();
+      final bands = await scraper.fetchStudentSpfBands();
+      if (mounted) {
+        setState(() {
+          _spfBands = bands;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Failed to load SPF Band performance.';
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Color _getBandColor(String band) {
+    final b = band.trim().toUpperCase();
+    if (b == 'A' || b == 'O') {
+      return const Color(0xFF10B981);
+    } else if (b == 'B') {
+      return const Color(0xFF3B82F6);
+    } else if (b == 'C') {
+      return const Color(0xFFF59E0B);
+    } else {
+      return const Color(0xFFEF4444);
+    }
+  }
+
+  Color _getBandBgColor(String band) {
+    final b = band.trim().toUpperCase();
+    if (b == 'A' || b == 'O') {
+      return const Color(0xFFECFDF5);
+    } else if (b == 'B') {
+      return const Color(0xFFEFF6FF);
+    } else if (b == 'C') {
+      return const Color(0xFFFFFBEB);
+    } else {
+      return const Color(0xFFFEF2F2);
+    }
+  }
+
+  String _getBandDescription(String band) {
+    final b = band.trim().toUpperCase();
+    if (b == 'A' || b == 'O') {
+      return 'Excellent Academic Agility & Consistency';
+    } else if (b == 'B') {
+      return 'Good Performance & Regular Engagement';
+    } else if (b == 'C') {
+      return 'Satisfactory - Buffer Needed for High Marks';
+    } else {
+      return 'Needs Remedial Focus & Attendance Recovery';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Group SPF Bands by Semester
+    final Map<String, List<SpfBandEntry>> grouped = {};
+    for (final entry in _spfBands) {
+      grouped.putIfAbsent(entry.semester, () => []).add(entry);
+    }
+
+    // Latest evaluated band
+    final latestBand = _spfBands.isNotEmpty ? _spfBands.last : null;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        title: const Text(
+          'SPF Band Performance',
+          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
+        ),
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF0F172A),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded),
+            onPressed: _loadSpfBands,
+            tooltip: 'Refresh',
+          ),
+        ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: _loadSpfBands,
+        color: const Color(0xFF6366F1),
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _errorMessage != null
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.error_outline_rounded,
+                              size: 48, color: Colors.red.shade400),
+                          const SizedBox(height: 12),
+                          Text(
+                            _errorMessage!,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              color: Color(0xFF64748B),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton.icon(
+                            onPressed: _loadSpfBands,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Retry'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF6366F1),
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : _spfBands.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24.0),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.stars_rounded,
+                                  size: 54, color: Colors.grey.shade400),
+                              const SizedBox(height: 14),
+                              const Text(
+                                'No SPF Band Records',
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF1E293B),
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              const Text(
+                                'SPF Band performance evaluation has not been published yet.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : ListView(
+                        padding: const EdgeInsets.all(16),
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        children: [
+                          // Top Hero Banner
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF312E81), Color(0xFF4338CA), Color(0xFF4F46E5)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF4338CA).withOpacity(0.3),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.15),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: const Icon(
+                                        Icons.military_tech_rounded,
+                                        color: Colors.white,
+                                        size: 26,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'SPF Performance',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            'Student Performance Framework',
+                                            style: TextStyle(
+                                              color: Colors.white.withOpacity(0.8),
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    if (latestBand != null)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 14, vertical: 8),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(12),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withOpacity(0.1),
+                                              blurRadius: 6,
+                                            ),
+                                          ],
+                                        ),
+                                        child: Column(
+                                          children: [
+                                            const Text(
+                                              'LATEST',
+                                              style: TextStyle(
+                                                fontSize: 9,
+                                                fontWeight: FontWeight.w800,
+                                                letterSpacing: 0.5,
+                                                color: Color(0xFF64748B),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 1),
+                                            Text(
+                                              'Band ${latestBand.band}',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w900,
+                                                color: _getBandColor(latestBand.band),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(height: 18),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.12),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceAround,
+                                    children: [
+                                      _buildHeroStat('Evaluations', '${_spfBands.length} Cycles'),
+                                      Container(
+                                        width: 1,
+                                        height: 24,
+                                        color: Colors.white.withOpacity(0.2),
+                                      ),
+                                      _buildHeroStat('Semesters', '${grouped.length} Recorded'),
+                                      Container(
+                                        width: 1,
+                                        height: 24,
+                                        color: Colors.white.withOpacity(0.2),
+                                      ),
+                                      _buildHeroStat(
+                                        'Top Rating',
+                                        _getTopBand(_spfBands),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Header
+                          Row(
+                            children: [
+                              Container(
+                                width: 4,
+                                height: 18,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF6366F1),
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'SEMESTER-WISE CYCLE BANDS',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.8,
+                                  color: Color(0xFF475569),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Semester Group Cards
+                          ...grouped.entries.map((group) {
+                            final semName = group.key;
+                            final cycles = group.value;
+
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 14),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.02),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Semester Header
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 12),
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFF0F172A),
+                                      borderRadius: BorderRadius.vertical(
+                                          top: Radius.circular(15)),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.calendar_month_rounded,
+                                          color: Color(0xFF818CF8),
+                                          size: 16,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            semName,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 13.5,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+
+                                  // Cycles list
+                                  Padding(
+                                    padding: const EdgeInsets.all(14),
+                                    child: Row(
+                                      children: cycles.map((cycleItem) {
+                                        final color = _getBandColor(cycleItem.band);
+                                        final bgColor = _getBandBgColor(cycleItem.band);
+
+                                        return Expanded(
+                                          child: Container(
+                                            margin: const EdgeInsets.symmetric(
+                                                horizontal: 4),
+                                            padding: const EdgeInsets.all(12),
+                                            decoration: BoxDecoration(
+                                              color: bgColor,
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              border: Border.all(
+                                                  color: color.withOpacity(0.3)),
+                                            ),
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.center,
+                                              children: [
+                                                Text(
+                                                  'CYCLE ${cycleItem.cycle}',
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w800,
+                                                    letterSpacing: 0.5,
+                                                    color: color,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 6),
+                                                Container(
+                                                  width: 44,
+                                                  height: 44,
+                                                  decoration: BoxDecoration(
+                                                    color: color,
+                                                    shape: BoxShape.circle,
+                                                    boxShadow: [
+                                                      BoxShadow(
+                                                        color:
+                                                            color.withOpacity(0.3),
+                                                        blurRadius: 6,
+                                                        offset:
+                                                            const Offset(0, 2),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  alignment: Alignment.center,
+                                                  child: Text(
+                                                    cycleItem.band,
+                                                    style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 20,
+                                                      fontWeight:
+                                                          FontWeight.w900,
+                                                    ),
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 8),
+                                                Text(
+                                                  _getBandDescription(
+                                                      cycleItem.band),
+                                                  textAlign: TextAlign.center,
+                                                  maxLines: 2,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: TextStyle(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.w500,
+                                                    color: Colors.grey.shade700,
+                                                    height: 1.25,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }),
+
+                          const SizedBox(height: 10),
+
+                          // Explanatory Information Card
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: const Color(0xFFCBD5E1)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Row(
+                                  children: [
+                                    Icon(Icons.info_outline_rounded,
+                                        size: 18, color: Color(0xFF475569)),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'About SPF Band Performance',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFF1E293B),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'The Student Performance Framework (SPF) evaluates regular academic agility, lecture presence, and continuous internal assessment across two cycles per semester. Band A/O represents top-tier mastery, followed by Band B, C, and D.',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    height: 1.4,
+                                    color: Colors.grey.shade700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+                      ),
+      ),
+    );
+  }
+
+  Widget _buildHeroStat(String title, String val) {
+    return Column(
+      children: [
+        Text(
+          val,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          title,
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.75),
+            fontSize: 11,
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _getTopBand(List<SpfBandEntry> bands) {
+    final order = ['O', 'A', 'B', 'C', 'D'];
+    for (final tier in order) {
+      if (bands.any((b) => b.band.trim().toUpperCase() == tier)) {
+        return 'Band $tier';
+      }
+    }
+    return bands.isNotEmpty ? 'Band ${bands.first.band}' : '-';
   }
 }

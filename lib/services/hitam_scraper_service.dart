@@ -255,6 +255,7 @@ class StudentProfileDetails {
   final String percentage;
   final String? photoUrl;
   final Map<String, String> extraDetails;
+  final List<SpfBandEntry> spfBands;
 
   StudentProfileDetails({
     required this.rollNo,
@@ -290,6 +291,19 @@ class StudentProfileDetails {
     required this.percentage,
     this.photoUrl,
     required this.extraDetails,
+    this.spfBands = const [],
+  });
+}
+
+class SpfBandEntry {
+  final String semester;
+  final String cycle;
+  final String band;
+
+  SpfBandEntry({
+    required this.semester,
+    required this.cycle,
+    required this.band,
   });
 }
 
@@ -386,6 +400,7 @@ class HitamScraperService {
   StudentProfileDetails? latestProfile;
   StudentTimeTableReport? latestTimeTable;
   StudentAcademicRegisterReport? latestAcademicRegister;
+  List<SpfBandEntry>? latestSpfBands;
 
   static const String attendancePageUrl =
       'https://www.webprosindia.com/hitam/Academics/StudentAttendance.aspx?showtype=SA';
@@ -1044,6 +1059,43 @@ class HitamScraperService {
       final pctMatch = RegExp(r'([\d\.]+)\s*%').firstMatch(fullText);
       if (pctMatch != null) percentage = pctMatch.group(1) ?? '';
 
+      // Parse SPF Band Performance table
+      final List<SpfBandEntry> parsedSpfBands = [];
+      for (final table in doc.querySelectorAll('table')) {
+        final tText = table.text.toLowerCase();
+        if (tText.contains('semester') && tText.contains('cycle') && tText.contains('band')) {
+          final rows = table.querySelectorAll('tr');
+          String currentSem = '';
+          for (final row in rows) {
+            final cells =
+                row.querySelectorAll('td, th').map((c) => c.text.trim()).toList();
+            if (cells.isEmpty) continue;
+            if (cells.any((c) =>
+                c.toLowerCase() == 'semester' || c.toLowerCase() == 'cycle')) {
+              continue;
+            }
+            if (cells.length >= 3) {
+              currentSem = cells[0];
+              final cycle = cells[1];
+              final band = cells[2];
+              if (currentSem.isNotEmpty && cycle.isNotEmpty && band.isNotEmpty) {
+                parsedSpfBands.add(SpfBandEntry(
+                    semester: currentSem, cycle: cycle, band: band));
+              }
+            } else if (cells.length == 2 && currentSem.isNotEmpty) {
+              final cycle = cells[0];
+              final band = cells[1];
+              if (cycle.isNotEmpty && band.isNotEmpty) {
+                parsedSpfBands.add(SpfBandEntry(
+                    semester: currentSem, cycle: cycle, band: band));
+              }
+            }
+          }
+          if (parsedSpfBands.isNotEmpty) break;
+        }
+      }
+      latestSpfBands = parsedSpfBands;
+
       final profile = StudentProfileDetails(
         rollNo: kv['rollno'] ?? kv['roll no'] ?? rollNo,
         name: studentName.isNotEmpty ? studentName : (kv['name'] ?? ''),
@@ -1078,12 +1130,28 @@ class HitamScraperService {
         percentage: percentage,
         photoUrl: photoUrl,
         extraDetails: kv,
+        spfBands: parsedSpfBands,
       );
       latestProfile = profile;
       return profile;
     } catch (_) {
       return null;
     }
+  }
+
+  /// Fetches SPF Band performance entries
+  Future<List<SpfBandEntry>> fetchStudentSpfBands([String? rollNo]) async {
+    final targetRoll = rollNo ?? authService.activeUserId ?? '';
+    if (latestSpfBands != null && latestSpfBands!.isNotEmpty) {
+      return latestSpfBands!;
+    }
+    if (targetRoll.isNotEmpty) {
+      final p = await fetchStudentProfile(targetRoll);
+      if (p != null && p.spfBands.isNotEmpty) {
+        return p.spfBands;
+      }
+    }
+    return latestSpfBands ?? [];
   }
 
   /// 6. Fetches student weekly period timetable and faculty allocation

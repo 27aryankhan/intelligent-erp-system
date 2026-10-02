@@ -45,9 +45,13 @@ void main() {
     print('Testing 5: Profile...');
     final profile = await scraper.fetchStudentProfile(rollNo);
     expect(profile, isNotNull);
-    print('Profile: Name = "${profile!.name}", Branch = "${profile.branch}", CGPA = "${profile.cgpa}", Photo = "${profile.photoUrl}"');
+    print('Profile: Name = "${profile!.name}", Branch = "${profile.branch}", CGPA = "${profile.cgpa}", Photo = "${profile.photoUrl}", SPF Bands = ${profile.spfBands.length}');
     expect(profile.name.isNotEmpty, isTrue);
     expect(profile.photoUrl, isNotNull);
+    expect(profile.spfBands.isNotEmpty, isTrue);
+    for (final band in profile.spfBands) {
+      print('SPF Band: ${band.semester} | Cycle ${band.cycle} | Band ${band.band}');
+    }
 
     // 6. Time Table
     print('Testing 6: Time Table...');
