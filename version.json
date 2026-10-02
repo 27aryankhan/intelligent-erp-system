@@ -1,14 +1,14 @@
 {
-  "latest_version": "1.0.3",
-  "version_code": 4,
+  "latest_version": "1.0.4",
+  "version_code": 5,
   "min_supported_version_code": 1,
   "download_url": "https://github.com/bhargavi-builds/intelligent-erp-system/releases/latest/download/Intelligent.ERP.apk",
-  "file_size": "21.4 MB",
+  "file_size": "22.5 MB",
   "release_notes": [
-    "Seamless In-App Update downloader with live progress, ETA & speed",
-    "Mobile layout optimizations for attendance heatmap, margins & transcripts",
-    "Monday to Saturday college schedule with Sundays excluded",
-    "Enhanced attendance buffer & live lecture inspection"
+    "SPF Band Performance added to Student Profile & Academic Services",
+    "Official WebPros cycle assessment academic table",
+    "Optimized responsive layouts for both mobile and desktop",
+    "Seamless in-app automatic update delivery"
   ],
   "is_critical": false
 }
