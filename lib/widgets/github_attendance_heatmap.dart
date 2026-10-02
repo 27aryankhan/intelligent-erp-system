@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import '../services/hitam_scraper_service.dart';
 
 /// GitHub-style Attendance Activity Heatmap
-/// Matches GitHub's signature contribution graph aesthetic with a 53-week 1-year calendar grid,
-/// 5-level green intensity mapping, clean non-wrapping month headers, Mon/Wed/Fri labels,
-/// streak calculation, and interactive day lecture inspection.
+/// Matches GitHub's contribution graph aesthetic adapted for college academic schedules:
+/// - 6 days per week (Monday to Saturday, Sunday excluded as colleges are closed)
+/// - 52-week 1-year calendar grid
+/// - 5-level green intensity mapping
+/// - Clean non-wrapping month headers
+/// - Mon, Wed, Fri row alignment
+/// - Clean, icon-free day lecture inspection banner
 class GithubAttendanceHeatmap extends StatefulWidget {
   final StudentAcademicRegisterReport? academicRegister;
   final double overallAttendance;
@@ -31,7 +35,6 @@ class _DayAttendanceRecord {
   final int attended;
   final int held;
   final int level; // 0 to 4
-  final bool isWeekend;
   final bool hasClasses;
   final List<Map<String, String>> subjects;
 
@@ -40,7 +43,6 @@ class _DayAttendanceRecord {
     required this.attended,
     required this.held,
     required this.level,
-    required this.isWeekend,
     required this.hasClasses,
     required this.subjects,
   });
@@ -106,7 +108,6 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
               y = parsedY < 100 ? 2000 + parsedY : parsedY;
             }
           } else {
-            // If date key is only "DD/MM", align within current academic 52-week window
             final now = DateTime.now();
             if (m > now.month + 2) {
               y = now.year - 1;
@@ -121,7 +122,7 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
     return null;
   }
 
-  /// Builds a normalized map of date records spanning the 53-week window
+  /// Builds a normalized map of date records
   Map<String, _DayAttendanceRecord> _buildAttendanceMap(
     DateTime start,
     DateTime end,
@@ -166,7 +167,6 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
       DateTime cur = start;
       while (!cur.isAfter(end)) {
         final k = _formatKey(cur);
-        final isWeekend = cur.weekday == DateTime.sunday;
         final attended = dayAttended[k] ?? 0;
         final held = dayHeld[k] ?? 0;
         final subjList = daySubjects[k] ?? [];
@@ -190,7 +190,6 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
           attended: attended,
           held: held,
           level: level,
-          isWeekend: isWeekend,
           hasClasses: held > 0,
           subjects: subjList,
         );
@@ -210,7 +209,7 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
 
     while (!cur.isAfter(end)) {
       final k = _formatKey(cur);
-      final isWeekend = cur.weekday == DateTime.sunday;
+      final isSunday = cur.weekday == DateTime.sunday;
       final isFuture = cur.isAfter(now);
       final isDuringSession = !cur.isBefore(semesterStart) && !isFuture;
 
@@ -219,10 +218,9 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
       int level = 0;
       List<Map<String, String>> subjList = [];
 
-      if (!isWeekend && isDuringSession) {
+      if (!isSunday && isDuringSession) {
         dayIndex++;
         held = (cur.weekday == DateTime.saturday) ? 3 : 5;
-        // Deterministic pseudo-random pattern matching exact overall percentage
         final bool isGoodDay =
             ((dayIndex * 19 + cur.day * 7) % 100) < (attendanceRatio * 100);
         if (isGoodDay) {
@@ -246,7 +244,6 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
         attended: attended,
         held: held,
         level: level,
-        isWeekend: isWeekend,
         hasClasses: held > 0,
         subjects: subjList,
       );
@@ -289,58 +286,47 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
+    final DateTime today = DateTime(now.year, now.month, now.day);
 
-    // 53-week 1-year calendar window matching GitHub's profile graph
-    final DateTime end = DateTime(now.year, now.month, now.day);
-    // Align end to upcoming Saturday (so each column has 7 days Sun-Sat)
-    final DateTime alignedEnd =
-        end.add(Duration(days: (DateTime.saturday - end.weekday) % 7));
-    const int totalWeeks = 53;
-    final DateTime alignedStart =
-        alignedEnd.subtract(const Duration(days: totalWeeks * 7 - 1));
+    // Colleges are closed on Sunday, so each college week runs Monday to Saturday (6 days).
+    DateTime alignedEnd;
+    if (today.weekday == DateTime.sunday) {
+      alignedEnd = today.subtract(const Duration(days: 1)); // previous Saturday
+    } else {
+      alignedEnd = today.add(Duration(days: DateTime.saturday - today.weekday));
+    }
+
+    const int totalWeeks = 52;
+    // Monday of starting week: alignedEnd - 5 days gives current week's Monday.
+    // Go back (totalWeeks - 1) * 7 days to get start Monday.
+    final DateTime alignedStart = alignedEnd
+        .subtract(const Duration(days: 5))
+        .subtract(const Duration(days: (totalWeeks - 1) * 7));
 
     final attendanceMap = _buildAttendanceMap(alignedStart, alignedEnd);
 
-    // Group into week columns (each column has 7 days from Sunday=0 to Saturday=6)
+    // Group into 52 college-week columns (each column has 6 days: Mon=0 to Sat=5, Sunday excluded)
     final List<List<_DayAttendanceRecord>> weeks = [];
-    DateTime cur = alignedStart;
-    while (!cur.isAfter(alignedEnd)) {
+    for (int w = 0; w < totalWeeks; w++) {
+      final DateTime weekMonday =
+          alignedStart.add(Duration(days: w * 7));
       List<_DayAttendanceRecord> week = [];
-      for (int i = 0; i < 7; i++) {
-        final k = _formatKey(cur);
+      for (int dayOffset = 0; dayOffset < 6; dayOffset++) {
+        final DateTime d = weekMonday.add(Duration(days: dayOffset));
+        final k = _formatKey(d);
         week.add(
           attendanceMap[k] ??
               _DayAttendanceRecord(
-                date: cur,
+                date: d,
                 attended: 0,
                 held: 0,
                 level: 0,
-                isWeekend: cur.weekday == DateTime.sunday,
                 hasClasses: false,
                 subjects: const [],
               ),
         );
-        cur = cur.add(const Duration(days: 1));
       }
       weeks.add(week);
-    }
-
-    // Calculate active attendance streak (scanning backwards from today)
-    int activeStreak = 0;
-    DateTime scan = end;
-    bool streakBroken = false;
-    while (scan.isAfter(alignedStart) && !streakBroken) {
-      if (scan.weekday != DateTime.sunday) {
-        final rec = attendanceMap[_formatKey(scan)];
-        if (rec != null && rec.hasClasses) {
-          if (rec.attended > 0) {
-            activeStreak++;
-          } else {
-            streakBroken = true;
-          }
-        }
-      }
-      scan = scan.subtract(const Duration(days: 1));
     }
 
     // Default selected record: prefer latest day with attendance
@@ -352,7 +338,7 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
       ),
     );
 
-    // Generate month label positions across the 53 weeks
+    // Generate month label positions across the weeks
     const monthNames = [
       'Jan',
       'Feb',
@@ -375,7 +361,6 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
       final bool isMonthStart =
           col == 0 || firstDay.month != weeks[col - 1][0].date.month;
       if (isMonthStart) {
-        // Ensure month labels have at least 3 weeks spacing so they never collide
         if (col - lastCol >= 3) {
           monthLabels.add((colIdx: col, name: monthNames[firstDay.month - 1]));
           lastCol = col;
@@ -402,75 +387,25 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. HEADER ROW: GitHub-style Title + Streak Badge
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+          // 1. HEADER: Clean Title & Subtitle (icons & streaks removed)
+          const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.all(7),
-                decoration: BoxDecoration(
-                  color: _greenL4.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.calendar_view_week_rounded,
-                  color: _greenL4,
-                  size: 20,
+              Text(
+                'Attendance Activity',
+                style: TextStyle(
+                  color: _textBright,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.3,
                 ),
               ),
-              const SizedBox(width: 10),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Attendance Activity',
-                      style: TextStyle(
-                        color: _textBright,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.3,
-                      ),
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      'Term-wide lecture consistency heatmap',
-                      style: TextStyle(
-                        color: _textMuted,
-                        fontSize: 11.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Gamified Streak Badge
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF238636).withOpacity(0.18),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: _greenL3.withOpacity(0.5),
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text('🔥', style: TextStyle(fontSize: 13)),
-                    const SizedBox(width: 5),
-                    Text(
-                      activeStreak > 0
-                          ? '$activeStreak-Day Streak'
-                          : 'Term Active',
-                      style: const TextStyle(
-                        color: _greenL4,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
+              SizedBox(height: 2),
+              Text(
+                'Term-wide lecture consistency heatmap',
+                style: TextStyle(
+                  color: _textMuted,
+                  fontSize: 11.5,
                 ),
               ),
             ],
@@ -478,25 +413,25 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
 
           const SizedBox(height: 18),
 
-          // 2. THE 53-WEEK GITHUB CONTRIBUTION HEATMAP GRID
+          // 2. THE 6-DAY (MON-SAT) GITHUB CONTRIBUTION HEATMAP GRID
           LayoutBuilder(
             builder: (context, constraints) {
               final Widget gridContent = Row(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Mon, Wed, Fri row labels
+                  // Mon, Wed, Fri row labels (aligned with 6 college days)
                   SizedBox(
                     width: _dayLabelColWidth,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const SizedBox(height: 24), // Offset for month header
-                        ...List.generate(7, (rowIdx) {
+                        ...List.generate(6, (rowIdx) {
                           String label = '';
-                          if (rowIdx == 1) label = 'Mon';
-                          if (rowIdx == 3) label = 'Wed';
-                          if (rowIdx == 5) label = 'Fri';
+                          if (rowIdx == 0) label = 'Mon';
+                          if (rowIdx == 2) label = 'Wed';
+                          if (rowIdx == 4) label = 'Fri';
                           return Container(
                             height: _rowHeight,
                             alignment: Alignment.centerLeft,
@@ -517,7 +452,7 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
                     ),
                   ),
 
-                  // Month headers row + 7-row calendar grid
+                  // Month headers row + 6-row calendar grid
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -547,7 +482,7 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
                       ),
                       const SizedBox(height: 6),
 
-                      // 7-row columns of contribution squares
+                      // 6-row columns of contribution squares (Monday to Saturday)
                       Row(
                         children: weeks.map((week) {
                           return Column(
@@ -566,7 +501,6 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
                 ],
               );
 
-              // Center on wide screens, scroll horizontally on narrow screens
               final double totalContentWidth =
                   _dayLabelColWidth + gridWidth + 8;
               final bool canFitWithoutScroll =
@@ -593,7 +527,7 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
 
           const SizedBox(height: 16),
 
-          // 3. INTERACTIVE SELECTED DAY INSPECTION BANNER
+          // 3. INTERACTIVE SELECTED DAY INSPECTION BANNER (icon-free)
           if (_selectedRecord != null) _buildSelectedDayDetail(_selectedRecord!),
 
           const SizedBox(height: 14),
@@ -602,20 +536,13 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Row(
-                children: [
-                  Icon(Icons.info_outline_rounded,
-                      size: 13, color: _textMuted),
-                  SizedBox(width: 5),
-                  Text(
-                    'Attendance verified across all academic courses',
-                    style: TextStyle(
-                      color: _textMuted,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+              const Text(
+                'Attendance verified across all academic courses',
+                style: TextStyle(
+                  color: _textMuted,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
 
               // Less -> More 5-Level Legend
@@ -668,7 +595,7 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
     Color fillColor = _tileEmpty;
     Color borderColor = _tileBorder;
 
-    if (!isFuture && !record.isWeekend) {
+    if (!isFuture) {
       if (record.hasClasses) {
         if (record.attended == 0) {
           fillColor = _missedTileBg;
@@ -703,7 +630,7 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
 
     return Tooltip(
       message: '${_formatDisplayDate(record.date)}\n'
-          '${record.hasClasses ? "${record.attended} / ${record.held} classes attended" : (record.isWeekend ? "Sunday • Recess" : "No scheduled lectures")}',
+          '${record.hasClasses ? "${record.attended} / ${record.held} classes attended" : "No scheduled lectures"}',
       decoration: BoxDecoration(
         color: const Color(0xFF1F2937),
         borderRadius: BorderRadius.circular(8),
@@ -747,33 +674,23 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
 
     String statusText;
     Color statusColor;
-    IconData statusIcon;
 
     if (isFuture) {
       statusText = 'Future Session Date';
       statusColor = _textMuted;
-      statusIcon = Icons.update_rounded;
-    } else if (r.isWeekend) {
-      statusText = 'Sunday • College Recess';
-      statusColor = _textMuted;
-      statusIcon = Icons.beach_access_rounded;
     } else if (!r.hasClasses) {
-      statusText = 'No recorded lectures on this date';
+      statusText = 'No recorded lectures';
       statusColor = _textMuted;
-      statusIcon = Icons.event_busy_rounded;
     } else if (r.attended == r.held) {
       statusText = '${r.attended}/${r.held} Lectures Attended • 100% Present';
       statusColor = _greenL4;
-      statusIcon = Icons.check_circle_rounded;
     } else if (r.attended > 0) {
       statusText =
           '${r.attended}/${r.held} Attended • ${r.held - r.attended} Missed';
       statusColor = const Color(0xFFF59E0B);
-      statusIcon = Icons.warning_amber_rounded;
     } else {
-      statusText = '0/${r.held} Attended • Absent All Classes';
+      statusText = '0/${r.held} Attended • Absent';
       statusColor = const Color(0xFFEF4444);
-      statusIcon = Icons.cancel_rounded;
     }
 
     // Deduplicate and aggregate multiple session hours per course
@@ -799,48 +716,39 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
       Color bg;
       Color border;
       Color text;
-      IconData icon;
 
       if (allPresent) {
         bg = const Color(0xFF0E4429).withOpacity(0.6);
         border = _greenL3;
         text = _greenL4;
-        icon = Icons.check_circle_outline_rounded;
+        badgeText = '$badgeText • Present';
       } else if (allAbsent) {
         bg = const Color(0xFF3B1212).withOpacity(0.6);
         border = const Color(0xFF7F1D1D);
         text = const Color(0xFFFCA5A5);
-        icon = Icons.cancel_outlined;
+        badgeText = '$badgeText • Absent';
       } else {
-        badgeText = '$badgeText • $attendedHrs/$totalHrs';
+        badgeText = '$badgeText • $attendedHrs/$totalHrs Attended';
         bg = const Color(0xFF332200).withOpacity(0.6);
         border = const Color(0xFFD97706);
         text = const Color(0xFFFCD34D);
-        icon = Icons.info_outline_rounded;
       }
 
       subjectBadges.add(
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4.5),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(
             color: bg,
             borderRadius: BorderRadius.circular(6),
             border: Border.all(color: border, width: 0.9),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 12.5, color: text),
-              const SizedBox(width: 5),
-              Text(
-                badgeText,
-                style: TextStyle(
-                  color: text,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
+          child: Text(
+            badgeText,
+            style: TextStyle(
+              color: text,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       );
@@ -858,8 +766,6 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
         children: [
           Row(
             children: [
-              Icon(statusIcon, color: statusColor, size: 16),
-              const SizedBox(width: 8),
               Text(
                 _formatDisplayDate(r.date),
                 style: const TextStyle(
@@ -869,12 +775,22 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
                 ),
               ),
               const Spacer(),
-              Text(
-                statusText,
-                style: TextStyle(
-                  color: statusColor,
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w600,
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(5),
+                  border: Border.all(
+                      color: statusColor.withOpacity(0.35), width: 0.8),
+                ),
+                child: Text(
+                  statusText,
+                  style: TextStyle(
+                    color: statusColor,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
