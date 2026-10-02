@@ -58,5 +58,16 @@ void main() {
       expect(info.hasUpdate, isTrue);
       expect(info.isMandatory, isTrue);
     });
+
+    test('UpdateService resolves direct APK download URL properly', () {
+      final directApk = 'https://example.com/app.apk';
+      expect(UpdateService.resolveDirectDownloadUrl(directApk), equals(directApk));
+
+      final githubLatest = 'https://github.com/bhargavi-builds/intelligent-erp-system/releases/latest';
+      expect(
+        UpdateService.resolveDirectDownloadUrl(githubLatest),
+        contains('Intelligent.ERP.apk'),
+      );
+    });
   });
 }
