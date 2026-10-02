@@ -2306,10 +2306,40 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
             final studentInfo = Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                CircleAvatar(
-                  radius: isNarrow ? 26 : 30,
-                  backgroundColor: Colors.blue.shade100,
-                  child: Icon(Icons.school, size: isNarrow ? 28 : 32, color: Colors.blue),
+                Builder(
+                  builder: (context) {
+                    final photoUrl = HitamScraperService().latestProfile?.photoUrl;
+                    final double r = isNarrow ? 26 : 30;
+                    return Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.blue.shade200, width: 2),
+                      ),
+                      child: CircleAvatar(
+                        radius: r,
+                        backgroundColor: Colors.blue.shade50,
+                        child: ClipOval(
+                          child: (photoUrl != null && photoUrl.isNotEmpty)
+                              ? Image.network(
+                                  photoUrl,
+                                  width: r * 2,
+                                  height: r * 2,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) => Icon(
+                                    Icons.school,
+                                    size: isNarrow ? 28 : 32,
+                                    color: Colors.blue,
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.school,
+                                  size: isNarrow ? 28 : 32,
+                                  color: Colors.blue,
+                                ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -19669,10 +19699,40 @@ class _ParentFeeDetailsScreenState
             final studentInfo = Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                CircleAvatar(
-                  radius: isNarrow ? 26 : 30,
-                  backgroundColor: Colors.blue.shade100,
-                  child: Icon(Icons.school, size: isNarrow ? 28 : 32, color: Colors.blue),
+                Builder(
+                  builder: (context) {
+                    final photoUrl = HitamScraperService().latestProfile?.photoUrl;
+                    final double r = isNarrow ? 26 : 30;
+                    return Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.blue.shade200, width: 2),
+                      ),
+                      child: CircleAvatar(
+                        radius: r,
+                        backgroundColor: Colors.blue.shade50,
+                        child: ClipOval(
+                          child: (photoUrl != null && photoUrl.isNotEmpty)
+                              ? Image.network(
+                                  photoUrl,
+                                  width: r * 2,
+                                  height: r * 2,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) => Icon(
+                                    Icons.school,
+                                    size: isNarrow ? 28 : 32,
+                                    color: Colors.blue,
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.school,
+                                  size: isNarrow ? 28 : 32,
+                                  color: Colors.blue,
+                                ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(width: 14),
                 Expanded(

@@ -45,8 +45,9 @@ void main() {
     print('Testing 5: Profile...');
     final profile = await scraper.fetchStudentProfile(rollNo);
     expect(profile, isNotNull);
-    print('Profile: Name = "${profile!.name}", Branch = "${profile.branch}", CGPA = "${profile.cgpa}"');
+    print('Profile: Name = "${profile!.name}", Branch = "${profile.branch}", CGPA = "${profile.cgpa}", Photo = "${profile.photoUrl}"');
     expect(profile.name.isNotEmpty, isTrue);
+    expect(profile.photoUrl, isNotNull);
 
     // 6. Time Table
     print('Testing 6: Time Table...');

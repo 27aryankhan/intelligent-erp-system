@@ -1,13 +1,13 @@
 {
-  "latest_version": "1.0.0",
-  "version_code": 1,
+  "latest_version": "1.0.1",
+  "version_code": 2,
   "min_supported_version_code": 1,
   "download_url": "https://github.com/bhargavi-builds/intelligent-erp-system/releases/latest",
   "release_notes": [
-    "Direct integration with official HITAM WebPros Portal",
+    "Live student profile photo fetching and display from WebPros portal",
+    "Interactive high-resolution photo preview dialog",
     "Real-time Attendance, Backlogs, Fee Details & Marks",
-    "Offline caching with Safe Bunks & Recovery calculator",
-    "Official HD institutional backdrop and optimized video stream"
+    "Safe Bunks & Recovery Attendance Calculator"
   ],
   "is_critical": false
 }

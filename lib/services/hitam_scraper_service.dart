@@ -253,6 +253,7 @@ class StudentProfileDetails {
   final String cgpa;
   final String credits;
   final String percentage;
+  final String? photoUrl;
   final Map<String, String> extraDetails;
 
   StudentProfileDetails({
@@ -287,6 +288,7 @@ class StudentProfileDetails {
     required this.cgpa,
     required this.credits,
     required this.percentage,
+    this.photoUrl,
     required this.extraDetails,
   });
 }
@@ -939,13 +941,36 @@ class HitamScraperService {
           'Content-Type': 'text/plain; charset=utf-8',
           'Referer': profilePageUrl,
         },
-        body: 'RollNo=$rollNo\r\nisImageDisplay=false',
+        body: 'RollNo=$rollNo\r\nisImageDisplay=true',
       );
 
       if (response.statusCode != 200 || response.body.trim().isEmpty) return null;
 
       final rawHtml = _cleanAjaxProHtml(response.body);
       final doc = html_parser.parse(rawHtml);
+
+      String? photoUrl;
+      final imgElements = doc.querySelectorAll('img');
+      for (final img in imgElements) {
+        var src = img.attributes['src'] ?? '';
+        src = src.replaceAll("'", "").replaceAll('"', '').trim();
+        if (src.isNotEmpty &&
+            !src.toLowerCase().contains('spacer') &&
+            !src.toLowerCase().contains('icon')) {
+          if (src.startsWith('//')) {
+            photoUrl = 'https:$src';
+          } else if (src.startsWith('/')) {
+            photoUrl = 'https://www.webprosindia.com$src';
+          } else if (src.startsWith('http://')) {
+            photoUrl = src.replaceFirst('http://', 'https://');
+          } else if (src.startsWith('https://')) {
+            photoUrl = src;
+          } else {
+            photoUrl = 'https://www.webprosindia.com/hitam/$src';
+          }
+          break;
+        }
+      }
 
       final Map<String, String> kv = {};
       String currentSection = 'personal';
@@ -1051,6 +1076,7 @@ class HitamScraperService {
         cgpa: cgpa,
         credits: credits,
         percentage: percentage,
+        photoUrl: photoUrl,
         extraDetails: kv,
       );
       latestProfile = profile;
