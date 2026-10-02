@@ -220,7 +220,7 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
 
       if (!isSunday && isDuringSession) {
         dayIndex++;
-        held = (cur.weekday == DateTime.saturday) ? 3 : 5;
+        held = 5; // Monday to Saturday are all regular working days
         final bool isGoodDay =
             ((dayIndex * 19 + cur.day * 7) % 100) < (attendanceRatio * 100);
         if (isGoodDay) {
@@ -402,7 +402,7 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
               ),
               SizedBox(height: 2),
               Text(
-                'Term-wide lecture consistency heatmap',
+                'Working days: Monday to Saturday (Sundays excluded)',
                 style: TextStyle(
                   color: _textMuted,
                   fontSize: 11.5,

@@ -30,7 +30,7 @@ void main() {
 
     // Verify Title and Subtitle
     expect(find.text('Attendance Activity'), findsOneWidget);
-    expect(find.text('Term-wide lecture consistency heatmap'), findsOneWidget);
+    expect(find.text('Working days: Monday to Saturday (Sundays excluded)'), findsOneWidget);
 
     // Verify Legend items
     expect(find.text('Less'), findsOneWidget);
@@ -103,7 +103,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Attendance Activity'), findsOneWidget);
-    expect(find.text('Term-wide lecture consistency heatmap'), findsOneWidget);
+    expect(find.text('Working days: Monday to Saturday (Sundays excluded)'), findsOneWidget);
     expect(find.byType(GithubAttendanceHeatmap), findsOneWidget);
   });
 }
