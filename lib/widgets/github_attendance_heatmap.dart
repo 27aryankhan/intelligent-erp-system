@@ -63,8 +63,8 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
   static const Color _greenL2 = Color(0xFF006D32); // 26-50%
   static const Color _greenL3 = Color(0xFF26A641); // 51-75%
   static const Color _greenL4 = Color(0xFF39D353); // 76-100% (Vibrant Radiant Green)
-  static const Color _missedTileBg = Color(0xFF1F1618); // Subdued absent tile
-  static const Color _missedTileBorder = Color(0xFF7F1D1D); // Subtle crimson outline
+  static const Color _missedTileBg = Color(0xFFEF4444); // Solid vibrant red inside for absent day
+  static const Color _missedTileBorder = Color(0xFFEF4444);
 
   static const Color _textMuted = Color(0xFF7D8590);
   static const Color _textBright = Color(0xFFE6EDF3);
