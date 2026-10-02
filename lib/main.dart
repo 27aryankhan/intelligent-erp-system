@@ -1985,22 +1985,28 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue.shade50,
-                                  borderRadius: BorderRadius.circular(10),
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.shade50,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Icon(Icons.calculate, color: Colors.blue),
                                 ),
-                                child: const Icon(Icons.calculate, color: Colors.blue),
-                              ),
-                              const SizedBox(width: 12),
-                              const Text(
-                                'Attendance Margin Calculator',
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
-                              ),
-                            ],
+                                const SizedBox(width: 10),
+                                const Expanded(
+                                  child: Text(
+                                    'Attendance Margin Calculator',
+                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                           IconButton(
                             icon: const Icon(Icons.close),
@@ -2015,7 +2021,7 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
                       ),
                       const SizedBox(height: 16),
                       Container(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
                           color: projPercent >= 75 ? Colors.green.shade50 : Colors.red.shade50,
                           borderRadius: BorderRadius.circular(12),
@@ -2025,24 +2031,29 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('Projected Attendance:', style: TextStyle(fontWeight: FontWeight.bold)),
-                                Text(
-                                  projPercent >= 75 ? 'Safe Zone (Exam Eligible)' : 'Warning: Below 75% Cutoff',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: projPercent >= 75 ? Colors.green.shade900 : Colors.red.shade900,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Projected Attendance:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    projPercent >= 75 ? 'Safe Zone (Exam Eligible)' : 'Warning: Below 75% Cutoff',
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      color: projPercent >= 75 ? Colors.green.shade900 : Colors.red.shade900,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
+                            const SizedBox(width: 8),
                             Text(
                               '${projPercent.toStringAsFixed(1)}%',
                               style: TextStyle(
-                                fontSize: 26,
+                                fontSize: 24,
                                 fontWeight: FontWeight.bold,
                                 color: projPercent >= 75 ? Colors.green.shade900 : Colors.red.shade900,
                               ),
@@ -2114,97 +2125,118 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
       builder: (ctx) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 550),
+          constraints: BoxConstraints(
+            maxWidth: 550,
+            maxHeight: MediaQuery.sizeOf(ctx).height * 0.85,
+          ),
           child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.shade50,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(Icons.school, size: 28, color: Colors.blue),
-                        ),
-                        const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+            padding: const EdgeInsets.all(20.0),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Row(
                           children: [
-                            const Text(
-                              'HITAM HYDERABAD',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.shade50,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(Icons.school, size: 26, color: Colors.blue),
                             ),
-                            Text(
-                              'Official Attendance Transcript',
-                              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                            const SizedBox(width: 10),
+                            const Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'HITAM HYDERABAD',
+                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    'Official Attendance Transcript',
+                                    style: TextStyle(fontSize: 11.5, color: Colors.grey),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         ),
-                      ],
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(ctx),
-                    ),
-                  ],
-                ),
-                const Divider(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Doc Ref: HITAM/ATT/2026/0411', style: TextStyle(fontSize: 13, color: Colors.grey.shade800, fontWeight: FontWeight.bold)),
-                    const Text('Issued: 15 Sep 2026', style: TextStyle(fontSize: 13, color: Colors.grey)),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Candidate: $studentName', style: const TextStyle(fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 4),
-                      Text('Roll No: $studentId | Department: $department'),
-                      const SizedBox(height: 4),
-                      Text('Semester: $semester | Academic Year: 2025-2026'),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 16),
-                const Text('Subject-wise Verified Records:', style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                for (var s in subjects) ...[
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 3.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  const Divider(height: 20),
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      Text('Doc Ref: HITAM/ATT/2026/0411', style: TextStyle(fontSize: 12, color: Colors.grey.shade800, fontWeight: FontWeight.bold)),
+                      const Text('Issued: 15 Sep 2026', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('${s['subject']} (${s['code'] ?? 'CS'})'),
-                        Text(
-                          '${s['attended']} / ${s['total']} (${s['percentage'] is num ? (s['percentage'] as num).toStringAsFixed(2) : s['percentage']}%)',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: ((s['percentage'] as num?)?.toDouble() ?? 0.0) >= 75
-                                ? Colors.green.shade800
-                                : Colors.orange.shade800,
-                          ),
-                        ),
+                        Text('Candidate: $studentName', style: const TextStyle(fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 4),
+                        Text('Roll No: $studentId | Department: $department'),
+                        const SizedBox(height: 4),
+                        Text('Semester: $semester | Academic Year: 2025-2026'),
                       ],
                     ),
                   ),
-                ],
+                  const SizedBox(height: 16),
+                  const Text('Subject-wise Verified Records:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  for (var s in subjects) ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 3.5),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${s['subject']} (${s['code'] ?? 'CS'})',
+                              style: const TextStyle(fontSize: 13),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '${s['attended']} / ${s['total']} (${s['percentage'] is num ? (s['percentage'] as num).toStringAsFixed(2) : s['percentage']}%)',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12.5,
+                              color: ((s['percentage'] as num?)?.toDouble() ?? 0.0) >= 75
+                                  ? Colors.green.shade800
+                                  : Colors.orange.shade800,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 const Divider(height: 24),
                 Wrap(
                   alignment: WrapAlignment.spaceBetween,

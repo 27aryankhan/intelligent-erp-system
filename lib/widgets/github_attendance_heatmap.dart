@@ -49,7 +49,8 @@ class _DayAttendanceRecord {
 }
 
 class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
-  final ScrollController _scrollController = ScrollController();
+  final ScrollController _scrollController =
+      ScrollController(initialScrollOffset: 1500.0);
   _DayAttendanceRecord? _selectedRecord;
 
   // GitHub contribution color tokens
@@ -78,10 +79,27 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
   @override
   void initState() {
     super.initState();
-    // Auto-scroll to latest week (right edge) after initial frame
+    _scrollToRecent();
+  }
+
+  void _scrollToRecent() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
+      if (!mounted) return;
+      if (_scrollController.hasClients &&
+          _scrollController.position.maxScrollExtent > 0) {
         _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+      } else {
+        Future.delayed(const Duration(milliseconds: 200), () {
+          if (mounted &&
+              _scrollController.hasClients &&
+              _scrollController.position.maxScrollExtent > 0) {
+            _scrollController.animateTo(
+              _scrollController.position.maxScrollExtent,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
+          }
+        });
       }
     });
   }
@@ -510,17 +528,12 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
                 return Center(child: gridContent);
               }
 
-              return Scrollbar(
+              return SingleChildScrollView(
                 controller: _scrollController,
-                thumbVisibility: true,
-                trackVisibility: false,
-                child: SingleChildScrollView(
-                  controller: _scrollController,
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: gridContent,
-                ),
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.only(bottom: 6),
+                child: gridContent,
               );
             },
           ),
@@ -533,11 +546,16 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
           const SizedBox(height: 14),
 
           // 4. FOOTER: Legend matching GitHub reference
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
+          SizedBox(
+            width: double.infinity,
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 10,
+              runSpacing: 8,
+              children: [
               const Text(
-                'Attendance verified across all academic courses',
+                'Verified across all academic courses',
                 style: TextStyle(
                   color: _textMuted,
                   fontSize: 11,
@@ -547,18 +565,19 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
 
               // Less -> More 5-Level Legend
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   const Text(
                     'Less',
                     style: TextStyle(color: _textMuted, fontSize: 11),
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 5),
                   _buildLegendSquare(_tileEmpty, border: _tileBorder),
                   _buildLegendSquare(_greenL1),
                   _buildLegendSquare(_greenL2),
                   _buildLegendSquare(_greenL3),
                   _buildLegendSquare(_greenL4),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: 5),
                   const Text(
                     'More',
                     style: TextStyle(color: _textMuted, fontSize: 11),
@@ -567,6 +586,7 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
               ),
             ],
           ),
+        ),
         ],
       ),
     );
@@ -764,36 +784,42 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Text(
-                _formatDisplayDate(r.date),
-                style: const TextStyle(
-                  color: _textBright,
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const Spacer(),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(5),
-                  border: Border.all(
-                      color: statusColor.withOpacity(0.35), width: 0.8),
-                ),
-                child: Text(
-                  statusText,
-                  style: TextStyle(
-                    color: statusColor,
-                    fontSize: 11.5,
+          SizedBox(
+            width: double.infinity,
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                Text(
+                  _formatDisplayDate(r.date),
+                  style: const TextStyle(
+                    color: _textBright,
+                    fontSize: 12.5,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-              ),
-            ],
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(5),
+                    border: Border.all(
+                        color: statusColor.withOpacity(0.35), width: 0.8),
+                  ),
+                  child: Text(
+                    statusText,
+                    style: TextStyle(
+                      color: statusColor,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
           if (subjectBadges.isNotEmpty) ...[
             const SizedBox(height: 10),
