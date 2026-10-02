@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/hitam_auth_service.dart';
 import '../services/hitam_scraper_service.dart';
@@ -1918,6 +1919,14 @@ class _StudentAcademicRegisterScreenState
     try {
       final rollNo = HitamAuthService().activeUserId ?? '';
       final scraper = HitamScraperService();
+
+      // Prefetch student photo in background if not already loaded
+      if (scraper.latestProfile?.photoUrl == null && rollNo.isNotEmpty) {
+        unawaited(scraper.fetchStudentProfile(rollNo).then((_) {
+          if (mounted) setState(() {});
+        }));
+      }
+
       final report = await scraper.fetchStudentAcademicRegister(rollNo);
       if (mounted) {
         setState(() {
@@ -2082,11 +2091,13 @@ class _StudentAcademicRegisterScreenState
         ? r.semester
         : (HitamScraperService().latestProfile?.semester ??
             HitamScraperService().latestAttendanceReport?.semester ??
-            'IV/IV B.Tech I Semester');
+            '');
 
     final branch = HitamScraperService().latestProfile?.branch ??
         HitamScraperService().latestAttendanceReport?.branch ??
-        'Computer Science & Engineering';
+        'Engineering';
+
+    final photoUrl = HitamScraperService().latestProfile?.photoUrl;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -2178,22 +2189,114 @@ class _StudentAcademicRegisterScreenState
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                Container(
-                                  width: 46,
-                                  height: 46,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.1),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: const Color(0xFF38BDF8),
-                                      width: 1.5,
+                                GestureDetector(
+                                  onTap: (photoUrl != null && photoUrl.isNotEmpty)
+                                      ? () {
+                                          showDialog(
+                                            context: context,
+                                            builder: (ctx) => Dialog(
+                                              backgroundColor: Colors.transparent,
+                                              insetPadding: const EdgeInsets.all(24),
+                                              child: Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Container(
+                                                    decoration: BoxDecoration(
+                                                      borderRadius: BorderRadius.circular(16),
+                                                      border: Border.all(
+                                                        color: Colors.white.withOpacity(0.3),
+                                                        width: 2,
+                                                      ),
+                                                      boxShadow: [
+                                                        BoxShadow(
+                                                          color: Colors.black.withOpacity(0.5),
+                                                          blurRadius: 20,
+                                                          spreadRadius: 2,
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    child: ClipRRect(
+                                                      borderRadius: BorderRadius.circular(14),
+                                                      child: Image.network(
+                                                        photoUrl,
+                                                        fit: BoxFit.contain,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 14),
+                                                  Text(
+                                                    studentName,
+                                                    style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 16,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Text(
+                                                    rollNo,
+                                                    style: TextStyle(
+                                                      color: Colors.white.withOpacity(0.85),
+                                                      fontSize: 14,
+                                                      fontWeight: FontWeight.w600,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                      : null,
+                                  child: Container(
+                                    width: 48,
+                                    height: 48,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.1),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: const Color(0xFF38BDF8),
+                                        width: 2,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.2),
+                                          blurRadius: 6,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
                                     ),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: const Icon(
-                                    Icons.school_rounded,
-                                    color: Color(0xFF38BDF8),
-                                    size: 24,
+                                    child: ClipOval(
+                                      child: (photoUrl != null && photoUrl.isNotEmpty)
+                                          ? Image.network(
+                                              photoUrl,
+                                              width: 48,
+                                              height: 48,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (context, error, stackTrace) => const Icon(
+                                                Icons.school_rounded,
+                                                color: Color(0xFF38BDF8),
+                                                size: 24,
+                                              ),
+                                              loadingBuilder: (context, child, loadingProgress) {
+                                                if (loadingProgress == null) return child;
+                                                return const Center(
+                                                  child: SizedBox(
+                                                    width: 16,
+                                                    height: 16,
+                                                    child: CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                      color: Color(0xFF38BDF8),
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                            )
+                                          : const Icon(
+                                              Icons.school_rounded,
+                                              color: Color(0xFF38BDF8),
+                                              size: 24,
+                                            ),
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(width: 14),

@@ -250,7 +250,7 @@ class _LoginPageState extends State<LoginPage> {
       final String inputId = email.trim();
       final String rollNo = inputId.contains('@') ? inputId : inputId.toUpperCase();
 
-      // Step 1: Direct WebPros Authentication for students (Roll No like 23E51A05E8)
+      // Step 1: Direct WebPros Authentication for students (Roll No like 23E51Axxxx, 24E51Axxxx, etc.)
       bool webprosStudentSuccess = await authService.login(
         userId: rollNo,
         password: password,
@@ -1563,12 +1563,16 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
       HitamAuthService().activeUserId ??
       'Student';
   String studentId = HitamAuthService().activeUserId ?? 'Student';
-  String department = 'CSE - 4th Year';
-  String semester = 'Semester 7';
-  double overallAttendance = 84.77;
-  int totalClasses = 120;
-  int attendedClasses = 103;
-  int marginClasses = 16;
+  String department = HitamScraperService().latestProfile?.branch ??
+      HitamScraperService().latestAttendanceReport?.branch ??
+      'Engineering';
+  String semester = HitamScraperService().latestProfile?.semester ??
+      HitamScraperService().latestAttendanceReport?.semester ??
+      '';
+  double overallAttendance = 0.0;
+  int totalClasses = 0;
+  int attendedClasses = 0;
+  int marginClasses = 0;
 
   List<Map<String, dynamic>> subjects = [];
 
@@ -1761,48 +1765,29 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
             HitamAuthService().activeUserId ??
             'Student';
         studentId = HitamAuthService().activeUserId ?? 'Student';
-        department = 'CSE - 4th Year';
-        semester = 'Semester 7';
-        overallAttendance = 84.77;
-        totalClasses = 120;
-        attendedClasses = 103;
-        marginClasses = 16;
-        subjects = [
-          {
-            "subject": "Computer Networks",
-            "code": "CS701PC",
-            "faculty": "Dr. Ramesh",
-            "attended": 28,
-            "total": 32,
-            "percentage": 88
-          },
-          {
-            "subject": "Neural Networks",
-            "code": "CS702PE",
-            "faculty": "Prof. Priya",
-            "attended": 25,
-            "total": 30,
-            "percentage": 83
-          },
-          {
-            "subject": "Big Data",
-            "code": "CS703PE",
-            "faculty": "Dr. Sharma",
-            "attended": 27,
-            "total": 30,
-            "percentage": 90
-          },
-          {
-            "subject": "Compiler Design",
-            "code": "CS704PC",
-            "faculty": "Prof. K. Rao",
-            "attended": 23,
-            "total": 28,
-            "percentage": 82
-          }
-        ];
+        department = HitamScraperService().latestProfile?.branch ??
+            HitamScraperService().latestAttendanceReport?.branch ??
+            'Engineering';
+        semester = HitamScraperService().latestProfile?.semester ??
+            HitamScraperService().latestAttendanceReport?.semester ??
+            '';
+        overallAttendance = rep?.overallPercentage ?? 0.0;
+        totalClasses = rep?.totalHeld ?? 0;
+        attendedClasses = rep?.totalAttended ?? 0;
+        marginClasses = rep?.safeBunks ?? 0;
+        subjects = rep?.subjects.map((s) => {
+          "subject": s.subjectName,
+          "code": s.subjectCode,
+          "faculty": "HITAM Faculty",
+          "attended": s.classesAttended,
+          "total": s.classesHeld,
+          "percentage": s.percentage,
+          "safe_bunks": s.safeBunks,
+          "classes_needed": s.classesNeeded,
+          "status": s.status,
+        }).toList() ?? [];
         isLoading = false;
-        errorMessage = '';
+        errorMessage = subjects.isEmpty ? 'Attendance data not available offline.' : '';
       });
     }
   }
@@ -2242,7 +2227,7 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
                         DownloadsService.instance.addDownload(
                           DownloadItem(
                             id: 'ATT-${DateTime.now().millisecondsSinceEpoch}',
-                            title: 'Semester 7 Attendance Transcript',
+                            title: '${semester.isNotEmpty ? semester : "Academic"} Attendance Transcript',
                             category: 'Attendance',
                             fileName: 'Attendance_Transcript_${studentId}.pdf',
                             fileSize: '210 KB',
@@ -19089,7 +19074,7 @@ class _ParentFeeDetailsScreenState
 
   String studentName = 'Student';
   String studentId = 'HITAM Student';
-  String department = 'CSE - 4th Year';
+  String department = HitamScraperService().latestProfile?.branch ?? 'Engineering';
   String academicYear = '2025 - 2026';
   int totalFee = 117500;
   int paidFee = 92500;
@@ -19179,7 +19164,7 @@ class _ParentFeeDetailsScreenState
         setState(() {
           studentName = data['studentName']?.toString() ?? 'Student';
           studentId = data['studentId']?.toString() ?? 'HITAM Student';
-          department = data['department']?.toString() ?? 'CSE - 4th Year';
+          department = data['department']?.toString() ?? HitamScraperService().latestProfile?.branch ?? 'Engineering';
           academicYear = data['academicYear']?.toString() ?? '2025 - 2026';
 
           totalFee = (data['totalFee'] is num)
