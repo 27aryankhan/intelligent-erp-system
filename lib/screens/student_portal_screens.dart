@@ -3521,16 +3521,15 @@ class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
                                             ),
                                           ),
                                           const SizedBox(height: 2),
-                                          Text(
-                                            activeRoll.isNotEmpty
-                                                ? 'HT No: $activeRoll • WebPros Academic Portal'
-                                                : 'WebPros Academic Portal',
-                                            style: const TextStyle(
-                                              fontSize: 12.5,
-                                              color: Color(0xFF64748B),
-                                              fontWeight: FontWeight.w500,
+                                          if (activeRoll.isNotEmpty)
+                                            Text(
+                                              'HT No: $activeRoll',
+                                              style: const TextStyle(
+                                                fontSize: 12.5,
+                                                color: Color(0xFF64748B),
+                                                fontWeight: FontWeight.w500,
+                                              ),
                                             ),
-                                          ),
                                         ],
                                       ),
                                     ),

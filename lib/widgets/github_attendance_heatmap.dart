@@ -418,14 +418,6 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
                   letterSpacing: -0.3,
                 ),
               ),
-              SizedBox(height: 2),
-              Text(
-                'Working days: Monday to Saturday (Sundays excluded)',
-                style: TextStyle(
-                  color: _textMuted,
-                  fontSize: 11.5,
-                ),
-              ),
             ],
           ),
 

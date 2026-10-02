@@ -28,9 +28,8 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    // Verify Title and Subtitle
+    // Verify Title
     expect(find.text('Attendance Activity'), findsOneWidget);
-    expect(find.text('Working days: Monday to Saturday (Sundays excluded)'), findsOneWidget);
 
     // Verify Legend items
     expect(find.text('Less'), findsOneWidget);
@@ -103,7 +102,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Attendance Activity'), findsOneWidget);
-    expect(find.text('Working days: Monday to Saturday (Sundays excluded)'), findsOneWidget);
     expect(find.byType(GithubAttendanceHeatmap), findsOneWidget);
   });
 }
