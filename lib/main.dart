@@ -1685,24 +1685,35 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
           studentId = data['studentId']?.toString() ??
               HitamAuthService().activeUserId ??
               'Student';
-          department = data['department']?.toString() ?? 'CSE - 4th Year';
-          semester = data['semester']?.toString() ?? 'Semester 7';
+          department = data['department']?.toString() ??
+              HitamScraperService().latestProfile?.branch ??
+              HitamScraperService().latestAttendanceReport?.branch ??
+              'Engineering';
+          semester = data['semester']?.toString() ??
+              HitamScraperService().latestProfile?.semester ??
+              HitamScraperService().latestAttendanceReport?.semester ??
+              '';
 
+          final rep = HitamScraperService().latestAttendanceReport;
           overallAttendance = (data['overallAttendance'] is num)
               ? (data['overallAttendance'] as num).toDouble()
-              : double.tryParse(data['overallAttendance']?.toString() ?? '') ?? 84.77;
+              : double.tryParse(data['overallAttendance']?.toString() ?? '') ??
+                  (rep?.overallPercentage ?? 0.0);
 
           totalClasses = (data['totalClasses'] is num)
               ? (data['totalClasses'] as num).toInt()
-              : int.tryParse(data['totalClasses']?.toString() ?? '') ?? 120;
+              : int.tryParse(data['totalClasses']?.toString() ?? '') ??
+                  (rep?.totalHeld ?? 0);
 
           attendedClasses = (data['attendedClasses'] is num)
               ? (data['attendedClasses'] as num).toInt()
-              : int.tryParse(data['attendedClasses']?.toString() ?? '') ?? 103;
+              : int.tryParse(data['attendedClasses']?.toString() ?? '') ??
+                  (rep?.totalAttended ?? 0);
 
           marginClasses = (data['marginClasses'] is num)
               ? (data['marginClasses'] as num).toInt()
-              : int.tryParse(data['marginClasses']?.toString() ?? '') ?? 16;
+              : int.tryParse(data['marginClasses']?.toString() ?? '') ??
+                  (rep?.safeBunks ?? 0);
 
           if (data['subjects'] is List && (data['subjects'] as List).isNotEmpty) {
             subjects = List<Map<String, dynamic>>.from(
@@ -1711,40 +1722,18 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
               ),
             );
           } else {
-            subjects = [
-              {
-                "subject": "Computer Networks",
-                "code": "CS701PC",
-                "faculty": "Dr. Ramesh",
-                "attended": 28,
-                "total": 32,
-                "percentage": 88
-              },
-              {
-                "subject": "Neural Networks",
-                "code": "CS702PE",
-                "faculty": "Prof. Priya",
-                "attended": 25,
-                "total": 30,
-                "percentage": 83
-              },
-              {
-                "subject": "Big Data",
-                "code": "CS703PE",
-                "faculty": "Dr. Sharma",
-                "attended": 27,
-                "total": 30,
-                "percentage": 90
-              },
-              {
-                "subject": "Compiler Design",
-                "code": "CS704PC",
-                "faculty": "Prof. K. Rao",
-                "attended": 23,
-                "total": 28,
-                "percentage": 82
-              }
-            ];
+            final rep = HitamScraperService().latestAttendanceReport;
+            subjects = rep?.subjects.map((s) => {
+              "subject": s.subjectName,
+              "code": s.subjectCode,
+              "faculty": "HITAM Faculty",
+              "attended": s.classesAttended,
+              "total": s.classesHeld,
+              "percentage": s.percentage,
+              "safe_bunks": s.safeBunks,
+              "classes_needed": s.classesNeeded,
+              "status": s.status,
+            }).toList() ?? [];
           }
 
           isLoading = false;
@@ -7066,7 +7055,7 @@ class _AssignmentsScreenState extends State<AssignmentsScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                'Roll No: ${HitamAuthService().activeUserId ?? "Student"} • ${HitamScraperService().latestAttendanceReport?.branch ?? "B.Tech CSE"} (${HitamScraperService().latestAttendanceReport?.semester ?? "Academic Year 2026"})',
+                'Roll No: ${HitamAuthService().activeUserId ?? "Student"} • ${HitamScraperService().latestProfile?.branch ?? HitamScraperService().latestAttendanceReport?.branch ?? "Engineering"} (${HitamScraperService().latestProfile?.semester ?? HitamScraperService().latestAttendanceReport?.semester ?? "Academic Year 2026"})',
                 style: TextStyle(
                   color: Colors.white.withOpacity(0.75),
                   fontSize: isMobile ? 12 : 13,
@@ -9503,7 +9492,15 @@ class _StudentResultsScreenState extends State<StudentResultsScreen> {
           'cgpa': avgCgpa,
           'academicYear': '2024-2026',
           'creditsInfo': sem.creditsInfo,
-          'subjects': subjectList.isNotEmpty ? subjectList : _getFallbackSemesters()[0]['subjects'],
+          'subjects': subjectList.isNotEmpty
+              ? subjectList
+              : (scraper.latestAttendanceReport?.subjects.map((s) => {
+                    'code': s.subjectCode,
+                    'name': s.subjectName,
+                    'grade': '${s.percentage.toStringAsFixed(0)}%',
+                    'credits': 3,
+                    'status': 'Enrolled',
+                  }).toList() ?? <Map<String, dynamic>>[]),
         });
       }
 
@@ -9853,9 +9850,12 @@ class _StudentResultsScreenState extends State<StudentResultsScreen> {
         ? _semestersList[_selectedSemesterIndex]
         : <String, dynamic>{};
 
-    final double sgpa = (currentSemester['gpa'] as num?)?.toDouble() ?? 8.65;
-    final double cgpa = (currentSemester['cgpa'] as num?)?.toDouble() ?? 8.42;
-    final String semesterName = (currentSemester['semester'] ?? 'Semester 6').toString();
+    final double sgpa = (currentSemester['gpa'] as num?)?.toDouble() ?? 0.0;
+    final double cgpa = (currentSemester['cgpa'] as num?)?.toDouble() ??
+        (double.tryParse(HitamScraperService().latestProfile?.cgpa ?? '') ?? 0.0);
+    final String semesterName = (currentSemester['semester'] ??
+        HitamScraperService().latestProfile?.semester ??
+        'Semester').toString();
 
     // Extract subjects safely
     List<Map<String, dynamic>> rawSubjects = [];
@@ -13475,120 +13475,14 @@ class _FacultyAssignmentsScreenState extends State<FacultyAssignmentsScreen> {
       'dueDate': '20 August 2026',
       'points': 25,
       'totalStudents': 42,
-      'submittedCount': 5,
-      'pendingCount': 3,
+      'submittedCount': 0,
+      'pendingCount': 0,
       'status': 'Active',
       'description':
           'Implement iterative and recursive binary search algorithms in C++/Java with comprehensive time and space complexity proofs.',
       'instructions':
           'Upload solutions strictly in PDF format. Include boundary condition test cases.',
-      'submissions': [
-        {
-          'studentId': 'STU001',
-          'studentName': 'Bhavani K',
-          'rollNo': '22K91A0501',
-          'department': 'B.Tech CSE - Sec A',
-          'status': 'Submitted',
-          'submittedAt': '19 Aug 2026, 04:30 PM',
-          'fileName': 'binary_search_22K91A0501.pdf',
-          'fileSize': '1.4 MB',
-          'score': '24/25',
-          'grade': 'A+',
-          'feedback':
-              'Clean recursive formulation with comprehensive edge cases analysis.'
-        },
-        {
-          'studentId': 'STU002',
-          'studentName': 'Anjali Sharma',
-          'rollNo': '22K91A0502',
-          'department': 'B.Tech CSE - Sec A',
-          'status': 'Submitted',
-          'submittedAt': '19 Aug 2026, 11:15 AM',
-          'fileName': 'binary_search_22K91A0502.pdf',
-          'fileSize': '2.1 MB',
-          'score': '23/25',
-          'grade': 'A',
-          'feedback': 'Well-structured unit tests.'
-        },
-        {
-          'studentId': 'STU004',
-          'studentName': 'Sneha Reddy',
-          'rollNo': '22K91A0504',
-          'department': 'B.Tech CSE - Sec A',
-          'status': 'Submitted',
-          'submittedAt': '20 Aug 2026, 09:20 AM',
-          'fileName': 'binary_search_22K91A0504.pdf',
-          'fileSize': '1.8 MB',
-          'score': '25/25',
-          'grade': 'O',
-          'feedback': 'Outstanding asymptotic proof and clean diagrams.'
-        },
-        {
-          'studentId': 'STU005',
-          'studentName': 'Vikram Patel',
-          'rollNo': '22K91A0505',
-          'department': 'B.Tech CSE - Sec A',
-          'status': 'Submitted',
-          'submittedAt': '20 Aug 2026, 10:15 AM',
-          'fileName': 'binary_search_22K91A0505.pdf',
-          'fileSize': '1.2 MB',
-          'score': null,
-          'grade': null,
-          'feedback': null
-        },
-        {
-          'studentId': 'STU007',
-          'studentName': 'Priya Nair',
-          'rollNo': '22K91A0507',
-          'department': 'B.Tech CSE - Sec A',
-          'status': 'Submitted',
-          'submittedAt': '20 Aug 2026, 11:05 AM',
-          'fileName': 'binary_search_22K91A0507.pdf',
-          'fileSize': '1.6 MB',
-          'score': null,
-          'grade': null,
-          'feedback': null
-        },
-        {
-          'studentId': 'STU003',
-          'studentName': 'Rahul Varma',
-          'rollNo': '22K91A0503',
-          'department': 'B.Tech CSE - Sec A',
-          'status': 'Pending',
-          'submittedAt': null,
-          'fileName': null,
-          'fileSize': null,
-          'score': null,
-          'grade': null,
-          'feedback': null
-        },
-        {
-          'studentId': 'STU006',
-          'studentName': 'Aditya Roy',
-          'rollNo': '22K91A0506',
-          'department': 'B.Tech CSE - Sec A',
-          'status': 'Pending',
-          'submittedAt': null,
-          'fileName': null,
-          'fileSize': null,
-          'score': null,
-          'grade': null,
-          'feedback': null
-        },
-        {
-          'studentId': 'STU008',
-          'studentName': 'Karthik Raja',
-          'rollNo': '22K91A0508',
-          'department': 'B.Tech CSE - Sec A',
-          'status': 'Pending',
-          'submittedAt': null,
-          'fileName': null,
-          'fileSize': null,
-          'score': null,
-          'grade': null,
-          'feedback': null
-        }
-      ]
+      'submissions': <Map<String, dynamic>>[],
     },
     {
       'id': 'ASG002',
@@ -13599,68 +13493,14 @@ class _FacultyAssignmentsScreenState extends State<FacultyAssignmentsScreen> {
       'dueDate': '22 August 2026',
       'points': 30,
       'totalStudents': 42,
-      'submittedCount': 2,
-      'pendingCount': 2,
+      'submittedCount': 0,
+      'pendingCount': 0,
       'status': 'Active',
       'description':
           'Train and benchmark Decision Tree and Random Forest classifiers on the customer churn dataset.',
       'instructions':
           'Submit comparative ROC-AUC graphs, confusion matrices and hyperparameter tuning analysis in PDF format.',
-      'submissions': [
-        {
-          'studentId': 'STU001',
-          'studentName': 'Bhavani K',
-          'rollNo': '22K91A0501',
-          'department': 'B.Tech CSE - Sec A',
-          'status': 'Submitted',
-          'submittedAt': '21 Aug 2026, 05:40 PM',
-          'fileName': 'ml_classification_report_22K91A0501.pdf',
-          'fileSize': '3.2 MB',
-          'score': '29/30',
-          'grade': 'O',
-          'feedback':
-              'Impressive cross-validation methodology and ROC curve interpretation.'
-        },
-        {
-          'studentId': 'STU002',
-          'studentName': 'Anjali Sharma',
-          'rollNo': '22K91A0502',
-          'department': 'B.Tech CSE - Sec A',
-          'status': 'Submitted',
-          'submittedAt': '21 Aug 2026, 07:15 PM',
-          'fileName': 'ml_classification_report_22K91A0502.pdf',
-          'fileSize': '2.7 MB',
-          'score': '27/30',
-          'grade': 'A+',
-          'feedback': 'Good feature selection discussion.'
-        },
-        {
-          'studentId': 'STU003',
-          'studentName': 'Rahul Varma',
-          'rollNo': '22K91A0503',
-          'department': 'B.Tech CSE - Sec A',
-          'status': 'Pending',
-          'submittedAt': null,
-          'fileName': null,
-          'fileSize': null,
-          'score': null,
-          'grade': null,
-          'feedback': null
-        },
-        {
-          'studentId': 'STU004',
-          'studentName': 'Sneha Reddy',
-          'rollNo': '22K91A0504',
-          'department': 'B.Tech CSE - Sec A',
-          'status': 'Pending',
-          'submittedAt': null,
-          'fileName': null,
-          'fileSize': null,
-          'score': null,
-          'grade': null,
-          'feedback': null
-        }
-      ]
+      'submissions': <Map<String, dynamic>>[],
     },
     {
       'id': 'ASG003',
@@ -13671,54 +13511,14 @@ class _FacultyAssignmentsScreenState extends State<FacultyAssignmentsScreen> {
       'dueDate': '25 August 2026',
       'points': 25,
       'totalStudents': 42,
-      'submittedCount': 1,
-      'pendingCount': 2,
+      'submittedCount': 0,
+      'pendingCount': 0,
       'status': 'Active',
       'description':
           'Analyze Wireshark packet capture traces for three-way handshakes, TCP sequence numbers, and retransmissions.',
       'instructions':
           'Include annotated Wireshark packet captures and sequence diagrams in PDF format.',
-      'submissions': [
-        {
-          'studentId': 'STU002',
-          'studentName': 'Anjali Sharma',
-          'rollNo': '22K91A0502',
-          'department': 'B.Tech CSE - Sec A',
-          'status': 'Submitted',
-          'submittedAt': '23 Aug 2026, 03:20 PM',
-          'fileName': 'tcp_analysis_22K91A0502.pdf',
-          'fileSize': '1.9 MB',
-          'score': '23/25',
-          'grade': 'A',
-          'feedback': 'Good packet dissection.'
-        },
-        {
-          'studentId': 'STU001',
-          'studentName': 'Bhavani K',
-          'rollNo': '22K91A0501',
-          'department': 'B.Tech CSE - Sec A',
-          'status': 'Pending',
-          'submittedAt': null,
-          'fileName': null,
-          'fileSize': null,
-          'score': null,
-          'grade': null,
-          'feedback': null
-        },
-        {
-          'studentId': 'STU003',
-          'studentName': 'Rahul Varma',
-          'rollNo': '22K91A0503',
-          'department': 'B.Tech CSE - Sec A',
-          'status': 'Pending',
-          'submittedAt': null,
-          'fileName': null,
-          'fileSize': null,
-          'score': null,
-          'grade': null,
-          'feedback': null
-        }
-      ]
+      'submissions': <Map<String, dynamic>>[],
     },
     {
       'id': 'ASG004',
@@ -13729,42 +13529,14 @@ class _FacultyAssignmentsScreenState extends State<FacultyAssignmentsScreen> {
       'dueDate': '18 August 2026',
       'points': 25,
       'totalStudents': 42,
-      'submittedCount': 2,
+      'submittedCount': 0,
       'pendingCount': 0,
       'status': 'Completed',
       'description':
           'Write unit and integration test suites using JUnit/PyTest for an e-commerce checkout module.',
       'instructions':
           'Provide PDF report with JaCoCo / PyTest test coverage metrics and defect log.',
-      'submissions': [
-        {
-          'studentId': 'STU001',
-          'studentName': 'Bhavani K',
-          'rollNo': '22K91A0501',
-          'department': 'B.Tech CSE - Sec A',
-          'status': 'Submitted',
-          'submittedAt': '17 Aug 2026, 09:30 PM',
-          'fileName': 'software_testing_case_study_22K91A0501.pdf',
-          'fileSize': '2.4 MB',
-          'score': '24/25',
-          'grade': 'A+',
-          'feedback':
-              'Exceptional test coverage (98%) and clear boundary value analysis.'
-        },
-        {
-          'studentId': 'STU002',
-          'studentName': 'Anjali Sharma',
-          'rollNo': '22K91A0502',
-          'department': 'B.Tech CSE - Sec A',
-          'status': 'Submitted',
-          'submittedAt': '18 Aug 2026, 11:00 AM',
-          'fileName': 'testing_study_22K91A0502.pdf',
-          'fileSize': '1.7 MB',
-          'score': '22/25',
-          'grade': 'A',
-          'feedback': 'Good mocking strategies.'
-        }
-      ]
+      'submissions': <Map<String, dynamic>>[],
     }
   ];
 
@@ -14261,66 +14033,13 @@ class _FacultyAssignmentsScreenState extends State<FacultyAssignmentsScreen> {
       'faculty': 'Dr. Ramesh Kumar',
       'dueDate': dueDate,
       'points': points,
-      'totalStudents': 42,
+      'totalStudents': 0,
       'submittedCount': 0,
-      'pendingCount': 42,
+      'pendingCount': 0,
       'status': 'Active',
       'description': description,
       'instructions': instructions,
-      'submissions': [
-        {
-          'studentId': 'STU001',
-          'studentName': 'Bhavani K',
-          'rollNo': '22K91A0501',
-          'department': 'B.Tech CSE - Sec A',
-          'status': 'Pending',
-          'submittedAt': null,
-          'fileName': null,
-          'fileSize': null,
-          'score': null,
-          'grade': null,
-          'feedback': null
-        },
-        {
-          'studentId': 'STU002',
-          'studentName': 'Anjali Sharma',
-          'rollNo': '22K91A0502',
-          'department': 'B.Tech CSE - Sec A',
-          'status': 'Pending',
-          'submittedAt': null,
-          'fileName': null,
-          'fileSize': null,
-          'score': null,
-          'grade': null,
-          'feedback': null
-        },
-        {
-          'studentId': 'STU003',
-          'studentName': 'Rahul Varma',
-          'rollNo': '22K91A0503',
-          'department': 'B.Tech CSE - Sec A',
-          'status': 'Pending',
-          'submittedAt': null,
-          'fileName': null,
-          'fileSize': null,
-          'score': null,
-          'grade': null,
-          'feedback': null
-        },
-        {
-          'studentId': 'STU004',
-          'studentName': 'Sneha Reddy',
-          'rollNo': '22K91A0504',
-          'department': 'B.Tech CSE - Sec A',
-          'status': 'Pending',
-          'submittedAt': null,
-          'fileName': null,
-          'fileSize': null,
-          'score': null,
-          'grade': null,
-          'feedback': null
-        },
-      ]
+      'submissions': <Map<String, dynamic>>[],
     };
 
     // Optimistically add to UI
@@ -15358,7 +15077,7 @@ class _SubmissionsRosterModalState extends State<_SubmissionsRosterModal>
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Student Name: ${student['studentName']}\nRoll Number: ${student['rollNo']}\nDepartment: ${student['department'] ?? 'B.Tech CSE'}\nSubmission Date: ${student['submittedAt'] ?? 'On Time'}',
+                            'Student Name: ${student['studentName']}\nRoll Number: ${student['rollNo']}\nDepartment: ${student['department'] ?? 'Engineering'}\nSubmission Date: ${student['submittedAt'] ?? 'On Time'}',
                             style: const TextStyle(fontSize: 12, height: 1.5, color: Color(0xFF475569)),
                           ),
                           const SizedBox(height: 16),
@@ -15700,7 +15419,7 @@ class _SubmissionsRosterModalState extends State<_SubmissionsRosterModal>
                                               borderRadius: BorderRadius.circular(4),
                                             ),
                                             child: Text(
-                                              st['rollNo'] ?? '22K91A0501',
+                                              st['rollNo'] ?? '—',
                                               style: const TextStyle(
                                                 fontSize: 11,
                                                 fontWeight: FontWeight.w600,
@@ -15854,7 +15573,7 @@ class _SubmissionsRosterModalState extends State<_SubmissionsRosterModal>
                                               borderRadius: BorderRadius.circular(4),
                                             ),
                                             child: Text(
-                                              st['rollNo'] ?? '22K91A0501',
+                                              st['rollNo'] ?? '—',
                                               style: const TextStyle(
                                                 fontSize: 11,
                                                 fontWeight: FontWeight.w600,
@@ -15871,7 +15590,7 @@ class _SubmissionsRosterModalState extends State<_SubmissionsRosterModal>
                                               size: 13, color: Color(0xFFD97706)),
                                           const SizedBox(width: 4),
                                           Text(
-                                            'Status: Submission Not Done • ${st['department'] ?? 'B.Tech CSE'}',
+                                            'Status: Submission Not Done • ${st['department'] ?? 'Engineering'}',
                                             style: const TextStyle(
                                                 fontSize: 11,
                                                 color: Color(0xFFD97706),
@@ -16008,12 +15727,12 @@ class _FacultyAttendanceScreenState extends State<FacultyAttendanceScreen> {
                 80.0).toDouble();
 
             return {
-              'id': raw['id'] ?? raw['studentId'] ?? 'STU001',
-              'studentId': raw['studentId'] ?? raw['id'] ?? 'STU001',
-              'name': raw['name'] ?? raw['studentName'] ?? 'Student Name',
+              'id': (raw['id'] ?? raw['studentId'] ?? '').toString(),
+              'studentId': (raw['studentId'] ?? raw['id'] ?? '').toString(),
+              'name': (raw['name'] ?? raw['studentName'] ?? 'Student').toString(),
               'studentName':
-                  raw['studentName'] ?? raw['name'] ?? 'Student Name',
-              'rollNo': raw['rollNo'] ?? '22K91A0501',
+                  (raw['studentName'] ?? raw['name'] ?? 'Student').toString(),
+              'rollNo': (raw['rollNo'] ?? '').toString(),
               'branch': raw['branch'] ?? '${session.shortBranch}-${session.shortSection}',
               'status': (raw['status'] ?? 'Present').toString(),
               'attendance': attendancePct,
@@ -16033,71 +15752,8 @@ class _FacultyAttendanceScreenState extends State<FacultyAttendanceScreen> {
   }
 
   void _loadFallbackStudents() {
-    final session = FacultyClassSession.instance;
-    String yearPrefix = '22';
-    if (session.selectedYear.contains('1')) {
-      yearPrefix = '25';
-    } else if (session.selectedYear.contains('2')) {
-      yearPrefix = '24';
-    } else if (session.selectedYear.contains('3')) {
-      yearPrefix = '23';
-    }
-
-    String branchCode = '05';
-    if (session.selectedBranch.contains('MACHINE LEARNING')) {
-      branchCode = '66';
-    } else if (session.selectedBranch.contains('DATA SCIENCE')) {
-      branchCode = '67';
-    } else if (session.selectedBranch.contains('MECHANICAL')) {
-      branchCode = '03';
-    } else if (session.selectedBranch.contains('ELECTRONICS')) {
-      branchCode = '04';
-    }
-
-    int baseRoll = 501;
-    if (session.selectedSection.contains('B')) {
-      baseRoll = 531;
-    } else if (session.selectedSection.contains('C')) {
-      baseRoll = 561;
-    } else if (session.selectedSection.contains('D')) {
-      baseRoll = 591;
-    } else if (session.selectedSection.contains('E')) {
-      baseRoll = 621;
-    }
-
-    final namesPool = [
-      'Bhavani K',
-      'Anjali Sharma',
-      'Rahul Varma',
-      'Sneha Reddy',
-      'Vikram Malhotra',
-      'Aditya Roy',
-      'Priya Nair',
-      'Karthik Raja',
-      'Divya Teja',
-      'Siddharth Rao',
-    ];
-
-    final generated = List.generate(namesPool.length, (i) {
-      final rNum = (baseRoll + i).toString().padLeft(2, '0');
-      final roll = '$yearPrefix' 'K91A' '$branchCode$rNum';
-      final status = (i % 4 == 2) ? 'Absent' : 'Present';
-      final pct = 70.0 + (i * 3.5) % 28.0;
-      return {
-        'id': 'STU${(i + 1).toString().padLeft(3, '0')}',
-        'studentId': 'STU${(i + 1).toString().padLeft(3, '0')}',
-        'name': namesPool[i],
-        'studentName': namesPool[i],
-        'rollNo': roll,
-        'branch': '${session.shortBranch}-${session.shortSection}',
-        'status': status,
-        'attendance': pct,
-        'percentage': pct,
-      };
-    });
-
     setState(() {
-      students = generated;
+      students = [];
       isLoading = false;
       errorMessage = '';
     });
