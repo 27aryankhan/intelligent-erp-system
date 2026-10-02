@@ -1,14 +1,14 @@
 {
-  "latest_version": "1.0.4",
-  "version_code": 5,
+  "latest_version": "1.0.5",
+  "version_code": 6,
   "min_supported_version_code": 1,
   "download_url": "https://github.com/27aryankhan/intelligent-erp-system/releases/latest/download/Intelligent.ERP.apk",
   "file_size": "22.5 MB",
   "release_notes": [
-    "SPF Band Performance added to Student Profile & Academic Services",
-    "Official WebPros cycle assessment academic table",
-    "Optimized responsive layouts for both mobile and desktop",
-    "Seamless in-app automatic update delivery"
+    "Hardened backend API route security and role-based access control (RBAC)",
+    "Eliminated authentication bypass and secured credential handling",
+    "Updated update delivery pipeline to official repository (27aryankhan)",
+    "Resolved backend library vulnerabilities and improved system stability"
   ],
   "is_critical": false
 }
