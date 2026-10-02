@@ -3253,7 +3253,7 @@ class _StudentAcademicRegisterScreenState
 }
 
 // ============================================================================
-// 8. STUDENT SPF BAND SCREEN
+// 8. STUDENT SPF BAND SCREEN (REFINED EXECUTIVE DESIGN)
 // ============================================================================
 class StudentSpfBandScreen extends StatefulWidget {
   const StudentSpfBandScreen({super.key});
@@ -3266,6 +3266,7 @@ class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   List<SpfBandEntry> _spfBands = [];
+  int _selectedView = 0; // 0 = Academic Ledger (Table), 1 = Semester Breakdown (Cards)
 
   @override
   void initState() {
@@ -3291,7 +3292,7 @@ class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'Failed to load SPF Band performance.';
+          _errorMessage = 'Failed to load SPF Band performance records.';
           _isLoading = false;
         });
       }
@@ -3301,13 +3302,13 @@ class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
   Color _getBandColor(String band) {
     final b = band.trim().toUpperCase();
     if (b == 'A' || b == 'O') {
-      return const Color(0xFF10B981);
+      return const Color(0xFF059669); // Emerald
     } else if (b == 'B') {
-      return const Color(0xFF3B82F6);
+      return const Color(0xFF2563EB); // Royal Blue
     } else if (b == 'C') {
-      return const Color(0xFFF59E0B);
+      return const Color(0xFFD97706); // Amber
     } else {
-      return const Color(0xFFEF4444);
+      return const Color(0xFFDC2626); // Rose
     }
   }
 
@@ -3324,17 +3325,20 @@ class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
     }
   }
 
-  String _getBandDescription(String band) {
+  String _getBandLabel(String band) {
     final b = band.trim().toUpperCase();
-    if (b == 'A' || b == 'O') {
-      return 'Excellent Academic Agility & Consistency';
-    } else if (b == 'B') {
-      return 'Good Performance & Regular Engagement';
-    } else if (b == 'C') {
-      return 'Satisfactory - Buffer Needed for High Marks';
-    } else {
-      return 'Needs Remedial Focus & Attendance Recovery';
-    }
+    if (b == 'A' || b == 'O') return 'Excellent (85%+)';
+    if (b == 'B') return 'Very Good (70% - 84%)';
+    if (b == 'C') return 'Good (55% - 69%)';
+    return 'Remedial (<55%)';
+  }
+
+  int _bandRank(String band) {
+    final b = band.trim().toUpperCase();
+    if (b == 'O' || b == 'A') return 4;
+    if (b == 'B') return 3;
+    if (b == 'C') return 2;
+    return 1;
   }
 
   @override
@@ -3345,15 +3349,19 @@ class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
       grouped.putIfAbsent(entry.semester, () => []).add(entry);
     }
 
-    // Latest evaluated band
     final latestBand = _spfBands.isNotEmpty ? _spfBands.last : null;
+    final topBand = _getTopBand(_spfBands);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: const Text(
           'SPF Band Performance',
-          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 17,
+            letterSpacing: -0.2,
+          ),
         ),
         centerTitle: true,
         elevation: 0,
@@ -3361,7 +3369,7 @@ class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
         foregroundColor: const Color(0xFF0F172A),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded),
+            icon: const Icon(Icons.refresh_rounded, size: 21),
             onPressed: _loadSpfBands,
             tooltip: 'Refresh',
           ),
@@ -3369,9 +3377,11 @@ class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: _loadSpfBands,
-        color: const Color(0xFF6366F1),
+        color: const Color(0xFF0F172A),
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? const Center(
+                child: CircularProgressIndicator(strokeWidth: 2.5),
+              )
             : _errorMessage != null
                 ? Center(
                     child: Padding(
@@ -3380,23 +3390,27 @@ class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(Icons.error_outline_rounded,
-                              size: 48, color: Colors.red.shade400),
+                              size: 44, color: Colors.red.shade400),
                           const SizedBox(height: 12),
                           Text(
                             _errorMessage!,
+                            textAlign: TextAlign.center,
                             style: const TextStyle(
-                              fontSize: 15,
+                              fontSize: 14,
                               color: Color(0xFF64748B),
                             ),
                           ),
                           const SizedBox(height: 16),
                           ElevatedButton.icon(
                             onPressed: _loadSpfBands,
-                            icon: const Icon(Icons.refresh),
-                            label: const Text('Retry'),
+                            icon: const Icon(Icons.refresh, size: 16),
+                            label: const Text('Try Again'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF6366F1),
+                              backgroundColor: const Color(0xFF0F172A),
                               foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
                             ),
                           ),
                         ],
@@ -3410,20 +3424,20 @@ class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.stars_rounded,
-                                  size: 54, color: Colors.grey.shade400),
+                              Icon(Icons.military_tech_outlined,
+                                  size: 48, color: Colors.grey.shade400),
                               const SizedBox(height: 14),
                               const Text(
-                                'No SPF Band Records',
+                                'No SPF Records Available',
                                 style: TextStyle(
-                                  fontSize: 17,
+                                  fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                   color: Color(0xFF1E293B),
                                 ),
                               ),
                               const SizedBox(height: 6),
                               const Text(
-                                'SPF Band performance evaluation has not been published yet.',
+                                'Your semester cycle evaluations will appear here once published by the college.',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontSize: 13,
@@ -3434,378 +3448,853 @@ class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
                           ),
                         ),
                       )
-                    : ListView(
-                        padding: const EdgeInsets.all(16),
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        children: [
-                          // Top Hero Banner
-                          Container(
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF312E81), Color(0xFF4338CA), Color(0xFF4F46E5)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(20),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFF4338CA).withOpacity(0.3),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
+                    : Align(
+                        alignment: Alignment.topCenter,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 880),
+                          child: ListView(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 18,
                             ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(10),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.15),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: const Icon(
-                                        Icons.military_tech_rounded,
-                                        color: Colors.white,
-                                        size: 26,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 14),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          const Text(
-                                            'SPF Performance',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            'Student Performance Framework',
-                                            style: TextStyle(
-                                              color: Colors.white.withOpacity(0.8),
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    if (latestBand != null)
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 14, vertical: 8),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius: BorderRadius.circular(12),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withOpacity(0.1),
-                                              blurRadius: 6,
-                                            ),
-                                          ],
-                                        ),
-                                        child: Column(
-                                          children: [
-                                            const Text(
-                                              'LATEST',
-                                              style: TextStyle(
-                                                fontSize: 9,
-                                                fontWeight: FontWeight.w800,
-                                                letterSpacing: 0.5,
-                                                color: Color(0xFF64748B),
-                                              ),
-                                            ),
-                                            const SizedBox(height: 1),
-                                            Text(
-                                              'Band ${latestBand.band}',
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w900,
-                                                color: _getBandColor(latestBand.band),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                                const SizedBox(height: 18),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 14, vertical: 10),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.12),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceAround,
-                                    children: [
-                                      _buildHeroStat('Evaluations', '${_spfBands.length} Cycles'),
-                                      Container(
-                                        width: 1,
-                                        height: 24,
-                                        color: Colors.white.withOpacity(0.2),
-                                      ),
-                                      _buildHeroStat('Semesters', '${grouped.length} Recorded'),
-                                      Container(
-                                        width: 1,
-                                        height: 24,
-                                        color: Colors.white.withOpacity(0.2),
-                                      ),
-                                      _buildHeroStat(
-                                        'Top Rating',
-                                        _getTopBand(_spfBands),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-
-                          // Header
-                          Row(
+                            physics: const AlwaysScrollableScrollPhysics(),
                             children: [
-                              Container(
-                                width: 4,
-                                height: 18,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF6366F1),
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
+                              // 1. EXECUTIVE OVERVIEW CARD
+                              _buildExecutiveOverviewCard(
+                                latestBand: latestBand,
+                                totalEvaluations: _spfBands.length,
+                                totalSemesters: grouped.length,
+                                topBand: topBand,
                               ),
-                              const SizedBox(width: 8),
-                              const Text(
-                                'SEMESTER-WISE CYCLE BANDS',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 0.8,
-                                  color: Color(0xFF475569),
-                                ),
-                              ),
+                              const SizedBox(height: 18),
+
+                              // 2. VIEW SWITCHER BAR
+                              _buildViewSwitcher(),
+                              const SizedBox(height: 16),
+
+                              // 3. MAIN DATA DISPLAY (Table or Cards)
+                              if (_selectedView == 0)
+                                _buildAcademicLedgerTable(grouped)
+                              else
+                                _buildSemesterBreakdownCards(grouped),
+
+                              const SizedBox(height: 20),
+
+                              // 4. INSTITUTIONAL BENCHMARK GUIDE
+                              _buildInstitutionalGradeReference(),
+                              const SizedBox(height: 24),
                             ],
                           ),
-                          const SizedBox(height: 12),
-
-                          // Semester Group Cards
-                          ...grouped.entries.map((group) {
-                            final semName = group.key;
-                            final cycles = group.value;
-
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 14),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: const Color(0xFFE2E8F0)),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.02),
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Semester Header
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 12),
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFF0F172A),
-                                      borderRadius: BorderRadius.vertical(
-                                          top: Radius.circular(15)),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        const Icon(
-                                          Icons.calendar_month_rounded,
-                                          color: Color(0xFF818CF8),
-                                          size: 16,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            semName,
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 13.5,
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-
-                                  // Cycles list
-                                  Padding(
-                                    padding: const EdgeInsets.all(14),
-                                    child: Row(
-                                      children: cycles.map((cycleItem) {
-                                        final color = _getBandColor(cycleItem.band);
-                                        final bgColor = _getBandBgColor(cycleItem.band);
-
-                                        return Expanded(
-                                          child: Container(
-                                            margin: const EdgeInsets.symmetric(
-                                                horizontal: 4),
-                                            padding: const EdgeInsets.all(12),
-                                            decoration: BoxDecoration(
-                                              color: bgColor,
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                              border: Border.all(
-                                                  color: color.withOpacity(0.3)),
-                                            ),
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.center,
-                                              children: [
-                                                Text(
-                                                  'CYCLE ${cycleItem.cycle}',
-                                                  style: TextStyle(
-                                                    fontSize: 11,
-                                                    fontWeight: FontWeight.w800,
-                                                    letterSpacing: 0.5,
-                                                    color: color,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 6),
-                                                Container(
-                                                  width: 44,
-                                                  height: 44,
-                                                  decoration: BoxDecoration(
-                                                    color: color,
-                                                    shape: BoxShape.circle,
-                                                    boxShadow: [
-                                                      BoxShadow(
-                                                        color:
-                                                            color.withOpacity(0.3),
-                                                        blurRadius: 6,
-                                                        offset:
-                                                            const Offset(0, 2),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  alignment: Alignment.center,
-                                                  child: Text(
-                                                    cycleItem.band,
-                                                    style: const TextStyle(
-                                                      color: Colors.white,
-                                                      fontSize: 20,
-                                                      fontWeight:
-                                                          FontWeight.w900,
-                                                    ),
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 8),
-                                                Text(
-                                                  _getBandDescription(
-                                                      cycleItem.band),
-                                                  textAlign: TextAlign.center,
-                                                  maxLines: 2,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                  style: TextStyle(
-                                                    fontSize: 10,
-                                                    fontWeight: FontWeight.w500,
-                                                    color: Colors.grey.shade700,
-                                                    height: 1.25,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        );
-                                      }).toList(),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }),
-
-                          const SizedBox(height: 10),
-
-                          // Explanatory Information Card
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF1F5F9),
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: const Color(0xFFCBD5E1)),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Row(
-                                  children: [
-                                    Icon(Icons.info_outline_rounded,
-                                        size: 18, color: Color(0xFF475569)),
-                                    SizedBox(width: 8),
-                                    Text(
-                                      'About SPF Band Performance',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w700,
-                                        color: Color(0xFF1E293B),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'The Student Performance Framework (SPF) evaluates regular academic agility, lecture presence, and continuous internal assessment across two cycles per semester. Band A/O represents top-tier mastery, followed by Band B, C, and D.',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    height: 1.4,
-                                    color: Colors.grey.shade700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                        ],
+                        ),
                       ),
       ),
     );
   }
 
-  Widget _buildHeroStat(String title, String val) {
+  // 1. EXECUTIVE OVERVIEW CARD
+  Widget _buildExecutiveOverviewCard({
+    required SpfBandEntry? latestBand,
+    required int totalEvaluations,
+    required int totalSemesters,
+    required String topBand,
+  }) {
+    final activeRoll = HitamAuthService().activeUserId ?? '';
+    final studentName = HitamScraperService().latestProfile?.name.trim() ??
+        HitamScraperService().latestAttendanceReport?.studentName.trim() ??
+        '';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F172A),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withOpacity(0.08),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top Header Row
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF10B981),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'STUDENT PERFORMANCE FRAMEWORK',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.65),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      studentName.isNotEmpty ? studentName : 'Academic Record',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    if (activeRoll.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        'HT No: $activeRoll • Verified College Ledger',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.6),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              if (latestBand != null)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.12),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        'CURRENT',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.6),
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Band ${latestBand.band}',
+                            style: TextStyle(
+                              color: _getBandColor(latestBand.band),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          const Divider(height: 1, color: Color(0xFF1E293B)),
+          const SizedBox(height: 16),
+
+          // 3 Balanced Metric Tiles
+          Row(
+            children: [
+              Expanded(
+                child: _buildMetricTile(
+                  label: 'Completed Reviews',
+                  value: '$totalEvaluations Cycles',
+                  icon: Icons.check_circle_outline_rounded,
+                ),
+              ),
+              Container(width: 1, height: 32, color: const Color(0xFF1E293B)),
+              Expanded(
+                child: _buildMetricTile(
+                  label: 'Recorded Semesters',
+                  value: '$totalSemesters Terms',
+                  icon: Icons.date_range_outlined,
+                ),
+              ),
+              Container(width: 1, height: 32, color: const Color(0xFF1E293B)),
+              Expanded(
+                child: _buildMetricTile(
+                  label: 'Peak Assessment',
+                  value: topBand,
+                  icon: Icons.military_tech_outlined,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetricTile({
+    required String label,
+    required String value,
+    required IconData icon,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 13, color: const Color(0xFF94A3B8)),
+              const SizedBox(width: 5),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFF94A3B8),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 2. VIEW SWITCHER
+  Widget _buildViewSwitcher() {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE2E8F0),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildSwitchTab(
+              index: 0,
+              label: 'Academic Ledger (Table)',
+              icon: Icons.table_chart_outlined,
+            ),
+          ),
+          Expanded(
+            child: _buildSwitchTab(
+              index: 1,
+              label: 'Semester Breakdown (Cards)',
+              icon: Icons.view_agenda_outlined,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSwitchTab({
+    required int index,
+    required String label,
+    required IconData icon,
+  }) {
+    final isSelected = _selectedView == index;
+    return GestureDetector(
+      onTap: () {
+        if (!isSelected) {
+          setState(() {
+            _selectedView = index;
+          });
+        }
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 15,
+              color:
+                  isSelected ? const Color(0xFF0F172A) : const Color(0xFF64748B),
+            ),
+            const SizedBox(width: 7),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                color: isSelected
+                    ? const Color(0xFF0F172A)
+                    : const Color(0xFF64748B),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 3A. ACADEMIC LEDGER TABLE (Structured Official University View)
+  Widget _buildAcademicLedgerTable(Map<String, List<SpfBandEntry>> grouped) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          // Table Header
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            color: const Color(0xFFF1F5F9),
+            child: const Row(
+              children: [
+                Expanded(
+                  flex: 5,
+                  child: Text(
+                    'SEMESTER',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.6,
+                      color: Color(0xFF475569),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Center(
+                    child: Text(
+                      'CYCLE 1',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.6,
+                        color: Color(0xFF475569),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Center(
+                    child: Text(
+                      'CYCLE 2',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.6,
+                        color: Color(0xFF475569),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 3,
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      'PROGRESSION',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.6,
+                        color: Color(0xFF475569),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1, color: Color(0xFFE2E8F0)),
+
+          // Table Rows
+          ...grouped.entries.toList().asMap().entries.map((entry) {
+            final idx = entry.key;
+            final semName = entry.value.key;
+            final cycles = entry.value.value;
+
+            final c1 = cycles.isNotEmpty ? cycles[0].band : '-';
+            final c2 = cycles.length > 1 ? cycles[1].band : '-';
+
+            final r1 = _bandRank(c1);
+            final r2 = _bandRank(c2);
+
+            String trendLabel = 'Consistent';
+            Color trendColor = const Color(0xFF64748B);
+            IconData trendIcon = Icons.remove_rounded;
+
+            if (c1 != '-' && c2 != '-') {
+              if (r2 > r1) {
+                trendLabel = 'Improved';
+                trendColor = const Color(0xFF10B981);
+                trendIcon = Icons.arrow_upward_rounded;
+              } else if (r2 < r1) {
+                trendLabel = 'Shifted';
+                trendColor = const Color(0xFFF59E0B);
+                trendIcon = Icons.arrow_downward_rounded;
+              } else {
+                trendLabel = 'Sustained';
+                trendColor = const Color(0xFF2563EB);
+                trendIcon = Icons.check_rounded;
+              }
+            }
+
+            final isEven = idx % 2 == 0;
+
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: isEven ? Colors.white : const Color(0xFFF8FAFC),
+                border: Border(
+                  bottom: BorderSide(
+                    color: idx == grouped.length - 1
+                        ? Colors.transparent
+                        : const Color(0xFFF1F5F9),
+                  ),
+                ),
+              ),
+              child: Row(
+                children: [
+                  // Semester Title
+                  Expanded(
+                    flex: 5,
+                    child: Text(
+                      semName,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                  ),
+
+                  // Cycle 1
+                  Expanded(
+                    flex: 2,
+                    child: Center(
+                      child: _buildCompactBandBadge(c1),
+                    ),
+                  ),
+
+                  // Cycle 2
+                  Expanded(
+                    flex: 2,
+                    child: Center(
+                      child: _buildCompactBandBadge(c2),
+                    ),
+                  ),
+
+                  // Progression
+                  Expanded(
+                    flex: 3,
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: trendColor.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(trendIcon, size: 12, color: trendColor),
+                            const SizedBox(width: 4),
+                            Text(
+                              trendLabel,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: trendColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  // 3B. SEMESTER BREAKDOWN CARDS
+  Widget _buildSemesterBreakdownCards(Map<String, List<SpfBandEntry>> grouped) {
     return Column(
-      children: [
-        Text(
-          val,
-          style: const TextStyle(
+      children: grouped.entries.map((group) {
+        final semName = group.key;
+        final cycles = group.value;
+
+        final c1 = cycles.isNotEmpty ? cycles[0].band : '-';
+        final c2 = cycles.length > 1 ? cycles[1].band : '-';
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
             color: Colors.white,
-            fontSize: 14,
-            fontWeight: FontWeight.w800,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.02),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          title,
-          style: TextStyle(
-            color: Colors.white.withOpacity(0.75),
-            fontSize: 11,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF8FAFC),
+                  borderRadius:
+                      BorderRadius.vertical(top: Radius.circular(13)),
+                  border: Border(
+                    bottom: BorderSide(color: Color(0xFFF1F5F9)),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.school_outlined,
+                      size: 16,
+                      color: Color(0xFF475569),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        semName,
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: const Text(
+                        'Completed',
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Side-by-Side Review Panels
+              Padding(
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _buildCycleCard(
+                        cycleNum: '1',
+                        band: c1,
+                        label: 'Mid-Term Evaluation',
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildCycleCard(
+                        cycleNum: '2',
+                        band: c2,
+                        label: 'Final-Term Evaluation',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildCycleCard({
+    required String cycleNum,
+    required String band,
+    required String label,
+  }) {
+    final color = _getBandColor(band);
+    final bgColor = _getBandBgColor(band);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'CYCLE $cycleNum',
+                style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.6,
+                  color: color,
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  'BAND $band',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            _getBandLabel(band),
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF1E293B),
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey.shade600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompactBandBadge(String band) {
+    if (band == '-') {
+      return const Text(
+        '-',
+        style: TextStyle(color: Color(0xFF94A3B8), fontWeight: FontWeight.bold),
+      );
+    }
+    final color = _getBandColor(band);
+    final bgColor = _getBandBgColor(band);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withOpacity(0.25)),
+      ),
+      child: Text(
+        'Band $band',
+        style: TextStyle(
+          color: color,
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
         ),
-      ],
+      ),
+    );
+  }
+
+  // 4. INSTITUTIONAL BENCHMARK GUIDE
+  Widget _buildInstitutionalGradeReference() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.info_outline_rounded,
+                  size: 15, color: Color(0xFF64748B)),
+              SizedBox(width: 6),
+              Text(
+                'Institutional SPF Grading Scale',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF0F172A),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _buildGradeLegend(
+                band: 'A',
+                range: '85%+',
+                title: 'Excellent / Top Tier',
+                color: const Color(0xFF059669),
+                bgColor: const Color(0xFFECFDF5),
+              ),
+              _buildGradeLegend(
+                band: 'B',
+                range: '70% - 84%',
+                title: 'Very Good',
+                color: const Color(0xFF2563EB),
+                bgColor: const Color(0xFFEFF6FF),
+              ),
+              _buildGradeLegend(
+                band: 'C',
+                range: '55% - 69%',
+                title: 'Good / Satisfactory',
+                color: const Color(0xFFD97706),
+                bgColor: const Color(0xFFFFFBEB),
+              ),
+              _buildGradeLegend(
+                band: 'D',
+                range: '< 55%',
+                title: 'Remedial Focus',
+                color: const Color(0xFFDC2626),
+                bgColor: const Color(0xFFFEF2F2),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGradeLegend({
+    required String band,
+    required String range,
+    required String title,
+    required Color color,
+    required Color bgColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              band,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            '$range • $title',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
