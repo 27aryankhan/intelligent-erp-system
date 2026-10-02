@@ -1,15 +1,14 @@
 {
-  "latest_version": "1.0.2",
-  "version_code": 3,
+  "latest_version": "1.0.3",
+  "version_code": 4,
   "min_supported_version_code": 1,
   "download_url": "https://github.com/bhargavi-builds/intelligent-erp-system/releases/latest/download/Intelligent.ERP.apk",
-  "file_size": "21.9 MB",
+  "file_size": "21.4 MB",
   "release_notes": [
-    "GitHub-style 53-week Attendance Activity Heatmap & streak tracking",
-    "Interactive daily lecture inspection with per-subject attendance breakdown",
-    "Live student profile photo fetching and display from WebPros portal",
-    "Real-time Attendance, Backlogs, Fee Details & Marks",
-    "Safe Bunks & Recovery Attendance Calculator"
+    "Seamless In-App Update downloader with live progress, ETA & speed",
+    "Mobile layout optimizations for attendance heatmap, margins & transcripts",
+    "Monday to Saturday college schedule with Sundays excluded",
+    "Enhanced attendance buffer & live lecture inspection"
   ],
   "is_critical": false
 }

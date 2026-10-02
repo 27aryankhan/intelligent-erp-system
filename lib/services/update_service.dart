@@ -62,9 +62,9 @@ class UpdateService {
   factory UpdateService() => _instance;
   UpdateService._internal();
 
-  /// Current running version of the app (matches pubspec.yaml version 1.0.2+3)
-  static const String currentVersion = '1.0.2';
-  static const int currentVersionCode = 3;
+  /// Current running version of the app (matches pubspec.yaml version 1.0.3+4)
+  static const String currentVersion = '1.0.3';
+  static const int currentVersionCode = 4;
 
   /// Primary 100% Free CDN URL on GitHub
   static const String primaryUpdateUrl =
