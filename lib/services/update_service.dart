@@ -78,8 +78,10 @@ class UpdateService {
     try {
       // 1. Try Primary GitHub Raw endpoint
       try {
+        final cacheBusterUrl =
+            '$primaryUpdateUrl?t=${DateTime.now().millisecondsSinceEpoch}';
         final res = await client
-            .get(Uri.parse(primaryUpdateUrl))
+            .get(Uri.parse(cacheBusterUrl))
             .timeout(const Duration(seconds: 4));
         if (res.statusCode == 200 && res.body.trim().isNotEmpty) {
           final data = jsonDecode(res.body);
