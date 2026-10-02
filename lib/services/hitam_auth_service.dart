@@ -23,6 +23,11 @@ class HitamAuthService {
     required String password,
     required UserRole role,
   }) async {
+    // Always wipe previous credentials & session cookies before each attempt
+    sessionCookies.clear();
+    activeUserId = null;
+    activeRole = null;
+
     final client = http.Client();
 
     try {
@@ -86,23 +91,26 @@ class HitamAuthService {
       final streamedResponse = await client.send(request);
       final postResponse = await http.Response.fromStream(streamedResponse);
 
-      // Harvest cookies (ASP.NET_SessionId, frmAuth)
-      final rawCookie = postResponse.headers['set-cookie'];
-      if (rawCookie != null) {
-        _saveCookies(rawCookie);
-      }
-
       final location = postResponse.headers['location']?.toLowerCase() ?? '';
-      final hasAuthCookie = sessionCookies.containsKey('frmAuth');
-      final isRedirectSuccess = postResponse.statusCode == 302 &&
+
+      // Strict WebPros Authentication Check:
+      // - Must return HTTP 302
+      // - Must redirect to an authenticated master page (e.g. StudentMaster.aspx, StaffMaster.aspx, ParentMaster.aspx)
+      // - Must NOT redirect to an error page or default.aspx
+      final bool isRedirectToMaster = postResponse.statusCode == 302 &&
           (location.contains('studentmaster') ||
               location.contains('staffmaster') ||
               location.contains('parentmaster') ||
-              location.contains('master'));
+              location.contains('master')) &&
+          !location.contains('errorpage') &&
+          !location.contains('default.aspx');
 
-      final isSuccess = isRedirectSuccess || hasAuthCookie;
-
-      if (isSuccess) {
+      if (isRedirectToMaster) {
+        // Harvest cookies only on confirmed successful redirect
+        final rawCookie = postResponse.headers['set-cookie'];
+        if (rawCookie != null) {
+          _saveCookies(rawCookie);
+        }
         activeUserId = userId;
         activeRole = role;
         // Store credentials for background sync
@@ -117,8 +125,15 @@ class HitamAuthService {
         return true;
       }
 
+      // Authentication rejected or invalid credentials
+      sessionCookies.clear();
+      activeUserId = null;
+      activeRole = null;
       return false;
     } catch (e) {
+      sessionCookies.clear();
+      activeUserId = null;
+      activeRole = null;
       return false;
     } finally {
       client.close();

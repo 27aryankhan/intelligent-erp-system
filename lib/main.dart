@@ -168,64 +168,6 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  void _showLoginWarningDialog({required String title, required String message}) {
-    if (!mounted) return;
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        backgroundColor: const Color(0xFF1E293B),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.amber.shade900.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.amber.shade500.withOpacity(0.5)),
-              ),
-              child: const Icon(Icons.warning_amber_rounded, color: Color(0xFFFBBF24), size: 24),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-          ],
-        ),
-        content: Text(
-          message,
-          style: TextStyle(
-            color: Colors.white.withOpacity(0.85),
-            fontSize: 14,
-            height: 1.5,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            style: TextButton.styleFrom(
-              backgroundColor: const Color(0xFF38BDF8),
-              foregroundColor: const Color(0xFF0F172A),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-            ),
-            child: const Text(
-              'Try Again',
-              style: TextStyle(fontWeight: FontWeight.w700),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Future<void> _handleLogin() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
@@ -234,10 +176,6 @@ class _LoginPageState extends State<LoginPage> {
       setState(() {
         _errorMessage = 'Please enter your Roll Number / User ID and Password';
       });
-      _showLoginWarningDialog(
-        title: 'Missing Credentials',
-        message: 'Please enter both your Roll Number / User ID and Password to sign in to HITAM ERP.',
-      );
       return;
     }
 
@@ -347,29 +285,17 @@ class _LoginPageState extends State<LoginPage> {
         }
       }
 
-      // If invalid credentials on WebPros - Display prominent warning!
+      // If invalid credentials on WebPros - Display prominent inline banner
       setState(() {
         _errorMessage = 'Invalid credentials. Please verify your Roll Number and Password.';
         _isLoading = false;
       });
-      _showLoginWarningDialog(
-        title: 'Login Warning',
-        message: 'The Roll Number or Password you entered was rejected by the HITAM WebPros Portal.\n\n'
-            '• Please ensure your Roll Number is typed correctly as registered with HITAM\n'
-            '• Please ensure your password is typed correctly\n'
-            '• Verify that your account is active on https://www.webprosindia.com/hitam/',
-      );
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _errorMessage = 'Network connection error. Please check your internet connection.';
         _isLoading = false;
       });
-      _showLoginWarningDialog(
-        title: 'Connection Error',
-        message: 'Unable to communicate with the HITAM WebPros Portal.\n\n'
-            'Please verify your internet connection and try again.',
-      );
     } finally {
       if (mounted) {
         setState(() {
