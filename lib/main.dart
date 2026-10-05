@@ -362,7 +362,7 @@ class _LoginPageState extends State<LoginPage> {
       return Container(
         margin: const EdgeInsets.only(bottom: 20),
         child: AnimatedRays(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(16),
           padding: const EdgeInsets.all(14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -370,20 +370,22 @@ class _LoginPageState extends State<LoginPage> {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    width: 38,
+                    height: 38,
                     decoration: BoxDecoration(
+                      color: const Color(0xFF1E293B),
                       borderRadius: BorderRadius.circular(10),
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF60A5FA), Color(0xFFE879F9)],
+                      border: Border.all(
+                        color: const Color(0xFF60A5FA).withValues(alpha: 0.25),
                       ),
                     ),
                     child: const Icon(
-                      Icons.auto_awesome_rounded,
-                      color: Colors.white,
-                      size: 18,
+                      Icons.system_update_rounded,
+                      color: Color(0xFF60A5FA),
+                      size: 20,
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -393,37 +395,26 @@ class _LoginPageState extends State<LoginPage> {
                             const Text(
                               'UPDATE AVAILABLE',
                               style: TextStyle(
-                                color: Color(0xFF60A5FA),
+                                color: Color(0xFF94A3B8),
                                 fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.8,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.6,
                               ),
                             ),
                             const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 1.5),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF5EEAD4).withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(
-                                  color: const Color(0xFF5EEAD4).withValues(alpha: 0.4),
-                                ),
-                              ),
-                              child: Text(
-                                'v${info.latestVersion}',
-                                style: const TextStyle(
-                                  color: Color(0xFF5EEAD4),
-                                  fontSize: 10.5,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                            Text(
+                              'v${info.latestVersion} • ${info.fileSize}',
+                              style: const TextStyle(
+                                color: Color(0xFF60A5FA),
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 3),
                         Text(
-                          'A new version is ready with updated features (${info.fileSize}).',
+                          'A new update is available for Intelligent ERP.',
                           style: TextStyle(
                             color: Colors.white.withValues(alpha: 0.9),
                             fontSize: 12,
@@ -439,29 +430,21 @@ class _LoginPageState extends State<LoginPage> {
               SizedBox(
                 width: double.infinity,
                 height: 38,
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(10),
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF0284C7), Color(0xFF6366F1)],
-                    ),
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    UpdateService().showUpdateDialog(context, info);
+                  },
+                  icon: const Icon(Icons.arrow_downward_rounded, size: 16),
+                  label: Text(
+                    'Update to v${info.latestVersion}',
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                   ),
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      UpdateService().showUpdateDialog(context, info);
-                    },
-                    icon: const Icon(Icons.download_rounded, size: 16),
-                    label: const Text(
-                      'Update Now (In-App)',
-                      style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2563EB),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
                     ),
                   ),
                 ),

@@ -68,20 +68,8 @@ class UpdateService {
   /// Current running version of the app (matches pubspec.yaml version 1.0.9+10)
   static const String currentVersion = '1.0.9';
   static const int currentVersionCode = 10;
-  static int _cachedEffectiveVersionCode = currentVersionCode;
 
-  static int get effectiveVersionCode => _cachedEffectiveVersionCode;
-
-  static Future<void> syncStoredVersionCode() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final stored =
-          prefs.getInt('installed_update_code') ?? currentVersionCode;
-      if (stored > _cachedEffectiveVersionCode) {
-        _cachedEffectiveVersionCode = stored;
-      }
-    } catch (_) {}
-  }
+  static int get effectiveVersionCode => currentVersionCode;
 
   /// Primary 100% Free CDN URL on GitHub
   static const String primaryUpdateUrl =
@@ -91,7 +79,6 @@ class UpdateService {
 
   /// Check whether an update is available on the remote server
   Future<AppUpdateInfo?> checkForUpdate() async {
-    await syncStoredVersionCode();
     final client = http.Client();
     try {
       // 1. Try Primary GitHub Raw endpoint
@@ -150,11 +137,12 @@ class UpdateService {
         SnackBar(
           content: Row(
             children: [
-              const Icon(Icons.verified_rounded, color: Colors.greenAccent),
+              const Icon(Icons.check_circle_outline_rounded,
+                  color: Color(0xFF10B981), size: 18),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Your app is updated till date and the app you are using is updated. (v$currentVersion)',
+                  'Intelligent ERP is up to date (v$currentVersion).',
                   style: const TextStyle(fontSize: 12.5),
                 ),
               ),
@@ -188,8 +176,11 @@ class UpdateService {
   }
 }
 
-/// Animated Rays Aurora background inspired by VengeanceUI / shadcn AnimatedRays
-/// Colors: Sky Blue (#60a5fa), Fuchsia/Magenta (#e879f9), Teal (#5eead4), Indigo (#818cf8)
+/// Authentic VengeanceUI Animated Rays background
+/// Source: https://raw.githubusercontent.com/Ashutoshx7/VengeanceUI/main/public/r/animated-rays.json
+/// Implements 100° angled repeating linear ray beams with aurora color stops
+/// (#60a5fa Sky Blue, #e879f9 Fuchsia, #5eead4 Mint Teal)
+/// and a radial mask anchored at the top-right (100% 0%) with smooth drifting animation.
 class AnimatedRays extends StatefulWidget {
   final Widget child;
   final BorderRadius? borderRadius;
@@ -219,7 +210,7 @@ class _AnimatedRaysState extends State<AnimatedRays>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 8),
+      duration: const Duration(seconds: 30),
     )..repeat();
   }
 
@@ -231,7 +222,7 @@ class _AnimatedRaysState extends State<AnimatedRays>
 
   @override
   Widget build(BuildContext context) {
-    final radius = widget.borderRadius ?? BorderRadius.circular(24);
+    final radius = widget.borderRadius ?? BorderRadius.circular(20);
 
     return Container(
       decoration: BoxDecoration(
@@ -240,14 +231,14 @@ class _AnimatedRaysState extends State<AnimatedRays>
             ? [widget.glowShadow!]
             : [
                 BoxShadow(
-                  color: const Color(0xFF60A5FA).withValues(alpha: 0.16),
-                  blurRadius: 32,
+                  color: Colors.black.withValues(alpha: 0.55),
+                  blurRadius: 36,
                   spreadRadius: 2,
-                  offset: const Offset(0, 8),
+                  offset: const Offset(0, 12),
                 ),
                 BoxShadow(
-                  color: const Color(0xFFE879F9).withValues(alpha: 0.12),
-                  blurRadius: 38,
+                  color: const Color(0xFF60A5FA).withValues(alpha: 0.12),
+                  blurRadius: 40,
                   spreadRadius: 0,
                   offset: const Offset(0, 4),
                 ),
@@ -257,7 +248,7 @@ class _AnimatedRaysState extends State<AnimatedRays>
         borderRadius: radius,
         child: Stack(
           children: [
-            // Animated Aurora Rays Canvas
+            // VengeanceUI Animated Rays Canvas
             Positioned.fill(
               child: AnimatedBuilder(
                 animation: _controller,
@@ -272,27 +263,16 @@ class _AnimatedRaysState extends State<AnimatedRays>
                 },
               ),
             ),
-            // Frosted glassmorphism overlay
+            // Sleek card edge border & subtle gradient overlay
             Positioned.fill(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: radius,
-                    border: widget.border ??
-                        Border.all(
-                          color: const Color(0xFF60A5FA).withValues(alpha: 0.35),
-                          width: 1.2,
-                        ),
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Colors.white.withValues(alpha: 0.07),
-                        Colors.white.withValues(alpha: 0.02),
-                      ],
-                    ),
-                  ),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: radius,
+                  border: widget.border ??
+                      Border.all(
+                        color: Colors.white.withValues(alpha: 0.08),
+                        width: 1.0,
+                      ),
                 ),
               ),
             ),
@@ -317,103 +297,93 @@ class _AnimatedRaysPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
 
-    // 1. Deep cosmic obsidian base (replaces dull flat dark blue)
-    final basePaint = Paint()..color = const Color(0xFF080D1A);
-    canvas.drawRect(rect, basePaint);
+    // 1. Deep cosmic obsidian base background (VengeanceUI dark mode)
+    final bgPaint = Paint()..color = const Color(0xFF090D16);
+    canvas.drawRect(rect, bgPaint);
 
-    // 2. Animated Aurora Light Waves (VengeanceUI palette)
-    final double t = animationValue * 2 * math.pi;
+    // 2. Save layer for masked aurora rays
+    canvas.saveLayer(rect, Paint());
 
-    // Orb 1: Sky Blue (#60A5FA)
-    final orb1Paint = Paint()
-      ..shader = RadialGradient(
-        center: Alignment(0.65 + math.sin(t) * 0.25, -0.65 + math.cos(t) * 0.2),
-        radius: 1.15,
-        colors: [
-          const Color(0xFF60A5FA).withValues(alpha: 0.38),
-          const Color(0xFF60A5FA).withValues(alpha: 0.12),
-          Colors.transparent,
-        ],
-        stops: const [0.0, 0.45, 1.0],
-      ).createShader(rect);
-    canvas.drawRect(rect, orb1Paint);
+    // 3. Draw angled ray beams (100 degrees = ~1.745 rad)
+    final double rayAngle = (100 - 90) * math.pi / 180; // 10 degrees tilt from vertical
+    final double stripePeriod = 64.0;
+    final double driftOffset = animationValue * stripePeriod;
 
-    // Orb 2: Fuchsia/Magenta (#E879F9)
-    final orb2Paint = Paint()
-      ..shader = RadialGradient(
-        center: Alignment(-0.6 + math.cos(t * 0.8) * 0.25, 0.45 + math.sin(t * 0.8) * 0.2),
-        radius: 0.95,
-        colors: [
-          const Color(0xFFE879F9).withValues(alpha: 0.30),
-          const Color(0xFFE879F9).withValues(alpha: 0.08),
-          Colors.transparent,
-        ],
-        stops: const [0.0, 0.5, 1.0],
-      ).createShader(rect);
-    canvas.drawRect(rect, orb2Paint);
-
-    // Orb 3: Turquoise/Teal (#5EEAD4)
-    final orb3Paint = Paint()
-      ..shader = RadialGradient(
-        center: Alignment(0.2 + math.sin(t * 1.2) * 0.35, 0.15 + math.cos(t * 1.2) * 0.25),
-        radius: 0.85,
-        colors: [
-          const Color(0xFF5EEAD4).withValues(alpha: 0.26),
-          const Color(0xFF5EEAD4).withValues(alpha: 0.05),
-          Colors.transparent,
-        ],
-        stops: const [0.0, 0.4, 1.0],
-      ).createShader(rect);
-    canvas.drawRect(rect, orb3Paint);
-
-    // 3. Angled Ray Stripes (100° repeating linear beams from VengeanceUI)
     canvas.save();
-    canvas.clipRect(rect);
     canvas.translate(size.width / 2, size.height / 2);
-    canvas.rotate(10 * math.pi / 180);
+    canvas.rotate(rayAngle);
     canvas.translate(-size.width / 2, -size.height / 2);
 
-    final stripePaint = Paint()..style = PaintingStyle.fill;
-    final double stripeSpacing = 28.0;
-    final double stripeWidth = 6.5;
-    final double waveOffset = (animationValue * stripeSpacing * 2) % stripeSpacing;
+    final double expandedW = size.width * 2.4;
+    final double expandedH = size.height * 2.4;
 
-    final double totalW = size.width * 1.6;
-    final double totalH = size.height * 1.6;
+    // Draw repeating aurora rainbow stripes: #60a5fa -> #e879f9 -> #60a5fa -> #5eead4 -> #60a5fa
+    for (double x = -expandedW * 0.4 + driftOffset; x < expandedW * 1.3; x += stripePeriod) {
+      final double normalized = ((x + expandedW) / (expandedW * 1.6)) % 1.0;
 
-    for (double x = -totalW * 0.3 + waveOffset; x < totalW; x += stripeSpacing) {
-      final normX = (x / totalW).clamp(0.0, 1.0);
-      Color stripeColor;
-      if (normX < 0.33) {
-        stripeColor = Color.lerp(
-            const Color(0xFF60A5FA), const Color(0xFFE879F9), normX / 0.33)!;
-      } else if (normX < 0.66) {
-        stripeColor = Color.lerp(
-            const Color(0xFFE879F9), const Color(0xFF5EEAD4), (normX - 0.33) / 0.33)!;
+      Color rayColor;
+      if (normalized < 0.25) {
+        rayColor = Color.lerp(
+            const Color(0xFF60A5FA), const Color(0xFFE879F9), normalized / 0.25)!;
+      } else if (normalized < 0.50) {
+        rayColor = Color.lerp(
+            const Color(0xFFE879F9), const Color(0xFF60A5FA), (normalized - 0.25) / 0.25)!;
+      } else if (normalized < 0.75) {
+        rayColor = Color.lerp(
+            const Color(0xFF60A5FA), const Color(0xFF5EEAD4), (normalized - 0.50) / 0.25)!;
       } else {
-        stripeColor = Color.lerp(
-            const Color(0xFF5EEAD4), const Color(0xFF60A5FA), (normX - 0.66) / 0.34)!;
+        rayColor = Color.lerp(
+            const Color(0xFF5EEAD4), const Color(0xFF60A5FA), (normalized - 0.75) / 0.25)!;
       }
 
-      stripePaint.color = stripeColor.withValues(
-          alpha: 0.06 + 0.04 * math.sin(t + normX * 6));
+      final rayPaint = Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            rayColor.withValues(alpha: 0.35),
+            rayColor.withValues(alpha: 0.18),
+            rayColor.withValues(alpha: 0.04),
+          ],
+          stops: const [0.0, 0.45, 1.0],
+        ).createShader(Rect.fromLTWH(x, -expandedH * 0.4, stripePeriod * 0.65, expandedH))
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
+
       canvas.drawRect(
-          Rect.fromLTWH(x, -totalH * 0.3, stripeWidth, totalH), stripePaint);
+        Rect.fromLTWH(x, -expandedH * 0.4, stripePeriod * 0.65, expandedH),
+        rayPaint,
+      );
     }
     canvas.restore();
 
-    // 4. Subtle Radial Vignette
-    final vignettePaint = Paint()
+    // 4. Top-Right Radial Mask: radial-gradient(ellipse at 100% 0%, black 40%, transparent 70%)
+    final maskPaint = Paint()
+      ..blendMode = BlendMode.dstIn
       ..shader = RadialGradient(
-        center: const Alignment(0.0, 0.0),
-        radius: 1.25,
+        center: const Alignment(1.0, -1.0), // Top Right corner
+        radius: 1.35,
         colors: [
+          Colors.black.withValues(alpha: 0.90),
+          Colors.black.withValues(alpha: 0.55),
           Colors.transparent,
-          const Color(0xFF030712).withValues(alpha: 0.6),
         ],
-        stops: const [0.35, 1.0],
+        stops: const [0.0, 0.40, 0.75],
       ).createShader(rect);
-    canvas.drawRect(rect, vignettePaint);
+    canvas.drawRect(rect, maskPaint);
+
+    canvas.restore(); // End masked aurora layer
+
+    // 5. Deep glassmorphic surface gradient for content readability & contrast
+    final surfacePaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          const Color(0xFF0F172A).withValues(alpha: 0.75),
+          const Color(0xFF090D16).withValues(alpha: 0.90),
+        ],
+      ).createShader(rect);
+    canvas.drawRect(rect, surfacePaint);
   }
 
   @override
@@ -434,9 +404,10 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
   bool _isDownloading = false;
   bool _isComplete = false;
   String? _downloadError;
+  String? _installError;
   double _progress = 0.0;
   String _downloadedSize = '0.0 MB';
-  String _totalSize = '21.0 MB';
+  String _totalSize = '22.0 MB';
   String _speedText = '';
   String _etaText = '';
   String? _downloadedFilePath;
@@ -446,6 +417,31 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
   void initState() {
     super.initState();
     _totalSize = widget.info.fileSize;
+    _checkExistingApk();
+  }
+
+  /// If the APK was already downloaded in cache, offer instant installation
+  Future<void> _checkExistingApk() async {
+    try {
+      Directory? saveDir;
+      if (Platform.isAndroid) {
+        final extDirs = await getExternalCacheDirectories();
+        if (extDirs != null && extDirs.isNotEmpty) {
+          saveDir = extDirs.first;
+        }
+      }
+      saveDir ??= await getTemporaryDirectory();
+      final saveFile = File(p.join(saveDir.path, 'Intelligent_ERP_Update.apk'));
+      if (await saveFile.exists() && await saveFile.length() > 5 * 1024 * 1024) {
+        if (mounted) {
+          setState(() {
+            _downloadedFilePath = saveFile.path;
+            _isComplete = true;
+            _progress = 1.0;
+          });
+        }
+      }
+    } catch (_) {}
   }
 
   @override
@@ -457,11 +453,13 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
   Future<void> _startInAppDownload() async {
     setState(() {
       _isDownloading = true;
+      _isComplete = false;
       _downloadError = null;
+      _installError = null;
       _progress = 0.0;
       _downloadedSize = '0.0 MB';
       _speedText = 'Connecting...';
-      _etaText = 'Calculating time...';
+      _etaText = '';
     });
 
     final client = http.Client();
@@ -473,7 +471,7 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
       http.StreamedResponse? streamedResponse;
       int redirectHops = 0;
 
-      // Robustly follow redirects across CDNs (GitHub ➔ Release ➔ S3/Azure asset blob)
+      // Robustly follow redirects across CDNs
       while (redirectHops < 8) {
         final request = http.Request('GET', Uri.parse(targetUrl));
         request.followRedirects = true;
@@ -500,7 +498,7 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
       final int? reportedLength = streamedResponse.contentLength;
       final int totalBytes = (reportedLength != null && reportedLength > 0)
           ? reportedLength
-          : (21 * 1024 * 1024);
+          : (22 * 1024 * 1024);
 
       Directory? saveDir;
       if (Platform.isAndroid) {
@@ -527,7 +525,7 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
       int lastSampleTimeMs = 0;
       double currentSpeedBytesPerSec = 0;
 
-      // 15 second chunk timeout to eliminate any socket hang or 10-minute freeze
+      // 15 second chunk timeout
       final chunkStream = streamedResponse.stream.timeout(
         const Duration(seconds: 15),
         onTimeout: (sink) {
@@ -551,7 +549,6 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
           lastSampleTimeMs = elapsedMs;
         }
 
-        // Cap at 0.95 during active chunk stream to prevent freezing at 100%
         double prog = 0.0;
         if (totalBytes > 0) {
           final raw = receivedBytes / totalBytes;
@@ -582,8 +579,6 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
           } else {
             eta = '~${remainingSec}s remaining';
           }
-        } else if (prog > 0.05) {
-          eta = 'Finalizing...';
         }
 
         if (mounted) {
@@ -611,13 +606,6 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
 
       if (!mounted) return;
 
-      // Update cached and stored version code so user won't get prompted again
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setInt('installed_update_code', widget.info.latestVersionCode);
-        UpdateService._cachedEffectiveVersionCode = widget.info.latestVersionCode;
-      } catch (_) {}
-
       setState(() {
         _isDownloading = false;
         _isComplete = true;
@@ -627,7 +615,7 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
         _downloadedFilePath = saveFile.path;
       });
 
-      // Automatically launch the native package installer on Android inside the phone
+      // Automatically launch the native package installer
       await _launchInstaller(saveFile.path);
     } catch (e) {
       if (!mounted) return;
@@ -652,6 +640,17 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
 
   Future<void> _launchInstaller(String filePath) async {
     try {
+      final file = File(filePath);
+      if (!await file.exists() || await file.length() < 1024 * 1024) {
+        if (mounted) {
+          setState(() {
+            _installError = 'Downloaded update file was not found. Please tap to re-download.';
+            _isComplete = false;
+          });
+        }
+        return;
+      }
+
       if (Platform.isAndroid) {
         final result = await OpenFilex.open(
           filePath,
@@ -660,8 +659,17 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
         debugPrint('Package installer result: ${result.type} - ${result.message}');
         if (result.type == ResultType.permissionDenied && mounted) {
           setState(() {
-            _downloadError =
-                'Permission needed: Please enable "Install unknown apps" for Intelligent ERP in Android Settings, then tap Install.';
+            _installError =
+                'Permission Needed: Please allow "Install unknown apps" for Intelligent ERP in Android Settings, then tap Install Now.';
+          });
+        } else if (result.type == ResultType.error && mounted) {
+          setState(() {
+            _installError =
+                'Could not launch installer: ${result.message}. Tap Install Now to retry.';
+          });
+        } else if (result.type == ResultType.done && mounted) {
+          setState(() {
+            _installError = null;
           });
         }
       } else {
@@ -671,7 +679,7 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
       debugPrint('Error triggering package installer: $e');
       if (mounted) {
         setState(() {
-          _downloadError = 'Failed to open installer: $e';
+          _installError = 'Could not start installation: $e';
         });
       }
     }
@@ -684,20 +692,20 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
       child: Dialog(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
         child: AnimatedRays(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(22),
           padding: const EdgeInsets.all(22),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 390),
+            constraints: const BoxConstraints(maxWidth: 380),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _buildHeader(),
-                const SizedBox(height: 16),
-                _buildContent(),
                 const SizedBox(height: 18),
+                _buildContent(),
+                const SizedBox(height: 20),
                 _buildActions(),
               ],
             ),
@@ -708,60 +716,55 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
   }
 
   Widget _buildHeader() {
-    Color badgeColor;
     IconData headerIcon;
+    Color iconColor;
+    Color iconBgColor;
     String titleText;
-    String badgeText;
+    String subtitleText;
 
     if (_isComplete) {
-      badgeColor = const Color(0xFF10B981);
-      headerIcon = Icons.verified_rounded;
+      headerIcon = Icons.check_circle_outline_rounded;
+      iconColor = const Color(0xFF10B981);
+      iconBgColor = const Color(0xFF064E3B).withValues(alpha: 0.35);
       titleText = 'Ready to Install';
-      badgeText = 'Verified ($_totalSize)';
+      subtitleText = 'Version ${widget.info.latestVersion}  •  Verified';
     } else if (_isDownloading) {
-      badgeColor = const Color(0xFF60A5FA);
       headerIcon = Icons.downloading_rounded;
+      iconColor = const Color(0xFF60A5FA);
+      iconBgColor = const Color(0xFF1E3A8A).withValues(alpha: 0.35);
       titleText = 'Downloading Update';
-      badgeText = 'Intelligent ERP v${widget.info.latestVersion}';
+      subtitleText = 'Intelligent ERP v${widget.info.latestVersion}';
     } else {
-      badgeColor = const Color(0xFF60A5FA);
-      headerIcon = Icons.auto_awesome_rounded;
+      headerIcon = Icons.system_update_rounded;
+      iconColor = const Color(0xFF60A5FA);
+      iconBgColor = const Color(0xFF1E293B);
       titleText = 'Update Available';
-      badgeText = 'v${UpdateService.currentVersion} ➔ v${widget.info.latestVersion}';
+      subtitleText = 'Version ${widget.info.latestVersion}  •  ${widget.info.fileSize}';
     }
 
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // Glowing Aurora Icon Container
+        // Refined minimal icon container
         Container(
-          padding: const EdgeInsets.all(10),
+          width: 44,
+          height: 44,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF60A5FA),
-                Color(0xFFE879F9),
-              ],
+            color: iconBgColor,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: iconColor.withValues(alpha: 0.25),
+              width: 1,
             ),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF60A5FA).withValues(alpha: 0.35),
-                blurRadius: 14,
-                offset: const Offset(0, 4),
-              ),
-            ],
           ),
           child: Icon(
             headerIcon,
-            color: Colors.white,
+            color: iconColor,
             size: 22,
           ),
         ),
-        const SizedBox(width: 12),
-        // Title & Version Badges
+        const SizedBox(width: 14),
+        // Title & clean version subtitle
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -770,58 +773,19 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
                 titleText,
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 18.5,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: -0.3,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.2,
                 ),
               ),
-              const SizedBox(height: 4),
-              Wrap(
-                spacing: 6,
-                runSpacing: 4,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 2.5),
-                    decoration: BoxDecoration(
-                      color: badgeColor.withValues(alpha: 0.18),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: badgeColor.withValues(alpha: 0.45),
-                        width: 1,
-                      ),
-                    ),
-                    child: Text(
-                      badgeText,
-                      style: TextStyle(
-                        color: badgeColor,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  if (!_isComplete && !_isDownloading)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 7, vertical: 2.5),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF5EEAD4).withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: const Color(0xFF5EEAD4).withValues(alpha: 0.35),
-                          width: 1,
-                        ),
-                      ),
-                      child: Text(
-                        _totalSize,
-                        style: const TextStyle(
-                          color: Color(0xFF5EEAD4),
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                ],
+              const SizedBox(height: 3),
+              Text(
+                subtitleText,
+                style: const TextStyle(
+                  color: Color(0xFF94A3B8),
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ],
           ),
@@ -831,7 +795,7 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
           IconButton(
             onPressed: () => Navigator.of(context).pop(),
             icon: const Icon(Icons.close_rounded, size: 20),
-            color: Colors.white60,
+            color: const Color(0xFF94A3B8),
             splashRadius: 18,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
@@ -847,15 +811,15 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Downloading update package directly inside your app...',
-            style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12.5),
+            'Downloading update package directly in the app...',
+            style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
           ),
           const SizedBox(height: 16),
-          // Custom glowing aurora progress bar
+          // Clean progress bar with rounded ends
           ClipRRect(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(6),
             child: SizedBox(
-              height: 10,
+              height: 8,
               child: Stack(
                 children: [
                   Container(
@@ -868,7 +832,6 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
                         gradient: LinearGradient(
                           colors: [
                             Color(0xFF60A5FA),
-                            Color(0xFFE879F9),
                             Color(0xFF5EEAD4),
                           ],
                         ),
@@ -888,12 +851,12 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w600,
-                  fontSize: 12,
+                  fontSize: 12.5,
                 ),
               ),
               if (_speedText.isNotEmpty)
                 Text(
-                  _speedText,
+                  _etaText.isNotEmpty ? '$_speedText • $_etaText' : _speedText,
                   style: const TextStyle(
                     color: Color(0xFF5EEAD4),
                     fontSize: 11.5,
@@ -902,31 +865,12 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
                 ),
             ],
           ),
-          if (_etaText.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Icon(Icons.timer_outlined,
-                    size: 13, color: Colors.grey.shade400),
-                const SizedBox(width: 4),
-                Text(
-                  _etaText,
-                  style: TextStyle(
-                    color: Colors.grey.shade400,
-                    fontSize: 11,
-                  ),
-                ),
-              ],
-            ),
-          ],
-          const SizedBox(height: 12),
-          Text(
-            'Please keep the app open while the package downloads.',
+          const SizedBox(height: 10),
+          const Text(
+            'Keep Intelligent ERP open while the package downloads.',
             style: TextStyle(
-              color: Colors.grey.shade400,
-              fontSize: 11,
-              fontStyle: FontStyle.italic,
+              color: Color(0xFF64748B),
+              fontSize: 11.5,
             ),
           ),
         ],
@@ -941,32 +885,33 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: const Color(0xFF10B981).withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(14),
+              color: const Color(0xFF10B981).withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: const Color(0xFF10B981).withValues(alpha: 0.4),
+                color: const Color(0xFF10B981).withValues(alpha: 0.3),
               ),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.verified, color: Color(0xFF34D399), size: 24),
+                const Icon(Icons.check_circle_rounded,
+                    color: Color(0xFF34D399), size: 20),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Your app is updated till date!',
+                        'Update Downloaded Successfully',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 13.5,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Package downloaded successfully ($_totalSize). The Android system installer has opened to finalize the update.',
+                        'The package ($_totalSize) is ready to install. Tap Install Now to complete the update.',
                         style: const TextStyle(
                           color: Color(0xFF94A3B8),
                           fontSize: 12,
@@ -979,76 +924,98 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
               ],
             ),
           ),
-          const SizedBox(height: 12),
-          const Text(
-            'If the installation screen didn\'t pop up, tap "Install Update" below.',
-            style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
-          ),
+          if (_installError != null) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFD97706).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.35),
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.info_outline_rounded,
+                      color: Color(0xFFFBBF24), size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _installError!,
+                      style: const TextStyle(
+                        color: Color(0xFFFDE68A),
+                        fontSize: 11.5,
+                        height: 1.3,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       );
     }
 
+    // Idle / Update Available Content
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (widget.info.releaseNotes.isNotEmpty) ...[
           const Text(
-            'WHAT\'S NEW',
+            'WHAT\'S IN THIS UPDATE',
             style: TextStyle(
-              color: Color(0xFF60A5FA),
+              color: Color(0xFF94A3B8),
               fontSize: 11,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.8,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.6,
             ),
           ),
           const SizedBox(height: 8),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 180),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.35),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.08),
-                ),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0D1526).withValues(alpha: 0.8),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.06),
               ),
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: widget.info.releaseNotes.map((note) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 6.0),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Padding(
-                            padding: EdgeInsets.only(top: 2),
-                            child: Icon(
-                              Icons.auto_awesome,
-                              size: 11,
-                              color: Color(0xFF5EEAD4),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              note,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                height: 1.35,
-                              ),
-                            ),
-                          ),
-                        ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: widget.info.releaseNotes.map((note) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 7.0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        margin: const EdgeInsets.only(top: 6),
+                        width: 5,
+                        height: 5,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF60A5FA),
+                          shape: BoxShape.circle,
+                        ),
                       ),
-                    );
-                  }).toList(),
-                ),
-              ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          note,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12.5,
+                            height: 1.35,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
             ),
           ),
         ],
@@ -1057,15 +1024,15 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: Colors.red.shade900.withValues(alpha: 0.35),
+              color: Colors.red.shade900.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
-                color: Colors.red.shade400.withValues(alpha: 0.4),
+                color: Colors.red.shade400.withValues(alpha: 0.35),
               ),
             ),
             child: Row(
               children: [
-                const Icon(Icons.error_outline,
+                const Icon(Icons.error_outline_rounded,
                     color: Colors.redAccent, size: 18),
                 const SizedBox(width: 8),
                 Expanded(
@@ -1091,16 +1058,18 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
         child: OutlinedButton(
           onPressed: _cancelDownload,
           style: OutlinedButton.styleFrom(
-            foregroundColor: const Color(0xFFEF4444),
+            foregroundColor: const Color(0xFF94A3B8),
             side: BorderSide(
-              color: const Color(0xFFEF4444).withValues(alpha: 0.5),
+              color: Colors.white.withValues(alpha: 0.15),
             ),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
             ),
           ),
-          child: const Text('Cancel Download',
-              style: TextStyle(fontWeight: FontWeight.bold)),
+          child: const Text(
+            'Cancel Download',
+            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+          ),
         ),
       );
     }
@@ -1111,41 +1080,25 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
           SizedBox(
             width: double.infinity,
             height: 44,
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                gradient: const LinearGradient(
-                  colors: [
-                    Color(0xFF059669),
-                    Color(0xFF10B981),
-                  ],
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF10B981).withValues(alpha: 0.35),
-                    blurRadius: 14,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+            child: ElevatedButton.icon(
+              onPressed: () {
+                if (_downloadedFilePath != null) {
+                  _launchInstaller(_downloadedFilePath!);
+                } else {
+                  _startInAppDownload();
+                }
+              },
+              icon: const Icon(Icons.install_mobile_rounded, size: 18),
+              label: const Text(
+                'Install Now',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
               ),
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  if (_downloadedFilePath != null) {
-                    _launchInstaller(_downloadedFilePath!);
-                  }
-                },
-                icon: const Icon(Icons.install_mobile_rounded, size: 18),
-                label: const Text(
-                  'Install Update',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  shadowColor: Colors.transparent,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF10B981),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(11),
                 ),
               ),
             ),
@@ -1154,8 +1107,8 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text(
-              'Close',
-              style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+              'Install Later',
+              style: TextStyle(color: Color(0xFF64748B), fontSize: 12.5),
             ),
           ),
         ],
@@ -1163,45 +1116,41 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
     }
 
     // IDLE / NOT STARTED:
-    // Glowing gradient button, NO "Later" button!
-    return SizedBox(
-      width: double.infinity,
-      height: 44,
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          gradient: const LinearGradient(
-            colors: [
-              Color(0xFF0284C7),
-              Color(0xFF6366F1),
-              Color(0xFF9333EA),
-            ],
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF60A5FA).withValues(alpha: 0.35),
-              blurRadius: 16,
-              offset: const Offset(0, 4),
+    // Clean solid Royal Blue button & discrete Later link
+    return Column(
+      children: [
+        SizedBox(
+          width: double.infinity,
+          height: 44,
+          child: ElevatedButton.icon(
+            onPressed: _startInAppDownload,
+            icon: const Icon(Icons.arrow_downward_rounded, size: 18),
+            label: Text(
+              _downloadError != null ? 'Retry Download' : 'Update Now',
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
             ),
-          ],
-        ),
-        child: ElevatedButton.icon(
-          onPressed: _startInAppDownload,
-          icon: const Icon(Icons.download_rounded, size: 18),
-          label: Text(
-            _downloadError != null ? 'Retry Download' : 'Update Now',
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.transparent,
-            shadowColor: Colors.transparent,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2563EB),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(11),
+              ),
             ),
           ),
         ),
-      ),
+        if (!widget.info.isMandatory) ...[
+          const SizedBox(height: 6),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text(
+              'Later',
+              style: TextStyle(color: Color(0xFF64748B), fontSize: 12.5),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
+
