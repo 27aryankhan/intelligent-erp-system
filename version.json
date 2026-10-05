@@ -1,15 +1,15 @@
 {
-  "latest_version": "1.0.7",
-  "version_code": 8,
+  "latest_version": "1.0.8",
+  "version_code": 9,
   "min_supported_version_code": 1,
   "download_url": "https://github.com/27aryankhan/intelligent-erp-system/releases/latest/download/Intelligent.ERP.apk",
   "file_size": "21 MB",
   "release_notes": [
-    "Live Subject Attendance Notifications: instant heads-up alerts when marked Present or Absent",
-    "Total Attendance Percentage & academic standing status pushed to mobile status bar",
-    "Automated background attendance watcher and app-resume sync engine",
-    "Added on-demand 'Push Attendance' button and test alerts in Attendance Details and Dashboard",
-    "Fixed mobile notification permissions and channel priority for Android 13+"
+    "VengeanceUI Animated Rays: Brand new fluid aurora background theme",
+    "Seamless in-app update: Fixed 100% freezing bug and download timeouts",
+    "Streamlined update flow: Direct update with native package installation",
+    "Live Subject Attendance Notifications: Heads-up alerts when marked Present or Absent",
+    "Total Attendance Percentage & academic standing status pushed to status bar"
   ],
   "is_critical": false
 }
