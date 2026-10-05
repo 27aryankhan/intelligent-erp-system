@@ -8,7 +8,6 @@
     "Redesigned Attendance Activity heatmap with clean white aesthetic matching the app theme",
     "Repositioned Attendance Activity directly below student profile card",
     "Cleaned Student Dashboard header for a more streamlined experience",
-    "Optimized mobile APK package size down to 21 MB (65% reduction)",
     "Hardened login credential validation and session state management"
   ],
   "is_critical": false
