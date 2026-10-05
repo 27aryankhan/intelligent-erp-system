@@ -2,6 +2,7 @@ import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html_parser;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'crypto_service.dart';
+import 'background_service.dart';
 
 enum UserRole { faculty, student, parent }
 
@@ -184,6 +185,7 @@ class HitamAuthService {
     activeUserId = null;
     activeRole = null;
     try {
+      await BackgroundService().cancelAttendanceSyncTask();
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('hitam_user_id');
       await prefs.remove('hitam_user_pwd');

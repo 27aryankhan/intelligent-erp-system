@@ -16,6 +16,7 @@ import 'services/database_service.dart';
 import 'screens/student_portal_screens.dart';
 import 'services/update_service.dart';
 import 'widgets/github_attendance_heatmap.dart';
+import 'services/background_service.dart';
 
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -24,6 +25,10 @@ void main() async {
   await ApiConfig.init();
   final notificationService = NotificationService();
   await notificationService.initialize();
+
+  // Initialize background service for closed-app notifications
+  await BackgroundService().initialize();
+  await BackgroundService().checkAndScheduleIfLoggedIn();
 
   runApp(const IntelligentERP());
 }
@@ -266,6 +271,9 @@ class _LoginPageState extends State<LoginPage> {
           userId: activeRoll,
           email: activeRoll,
         );
+        // Register background sync task so notifications continue even when app is closed
+        await BackgroundService().registerAttendanceSyncTask();
+
         if (report != null) {
           await NotificationService().pushAttendanceSummaryNotification(report);
           await NotificationService().checkShortageWarning(report, force: true);
