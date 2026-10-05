@@ -53,21 +53,21 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
       ScrollController(initialScrollOffset: 1500.0);
   _DayAttendanceRecord? _selectedRecord;
 
-  // GitHub contribution color tokens
-  static const Color _bgCanvas = Color(0xFF0D1117);
-  static const Color _cardBorder = Color(0xFF30363D);
-  static const Color _tileEmpty = Color(0xFF161B22);
-  static const Color _tileBorder = Color(0xFF21262D);
+  // GitHub contribution color tokens (Light Theme)
+  static const Color _bgCanvas = Colors.white;
+  static const Color _cardBorder = Color(0xFFE2E8F0);
+  static const Color _tileEmpty = Color(0xFFEBEDF0);
+  static const Color _tileBorder = Color(0xFFE2E8F0);
 
-  static const Color _greenL1 = Color(0xFF0E4429); // 1-25%
-  static const Color _greenL2 = Color(0xFF006D32); // 26-50%
-  static const Color _greenL3 = Color(0xFF26A641); // 51-75%
-  static const Color _greenL4 = Color(0xFF39D353); // 76-100% (Vibrant Radiant Green)
+  static const Color _greenL1 = Color(0xFF9BE9A8); // 1-25%
+  static const Color _greenL2 = Color(0xFF40C463); // 26-50%
+  static const Color _greenL3 = Color(0xFF30A14E); // 51-75%
+  static const Color _greenL4 = Color(0xFF216E39); // 76-100% (GitHub Light Emerald Green)
   static const Color _missedTileBg = Color(0xFFEF4444); // Solid vibrant red inside for absent day
-  static const Color _missedTileBorder = Color(0xFFEF4444);
+  static const Color _missedTileBorder = Color(0xFFDC2626);
 
-  static const Color _textMuted = Color(0xFF7D8590);
-  static const Color _textBright = Color(0xFFE6EDF3);
+  static const Color _textMuted = Color(0xFF64748B);
+  static const Color _textBright = Color(0xFF0F172A);
 
   // Exact geometry tokens for 100% alignment
   static const double _tileSize = 11.5;
@@ -395,9 +395,9 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
         border: Border.all(color: _cardBorder, width: 1.2),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.35),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -637,16 +637,22 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
     }
 
     if (isSelected) {
-      borderColor = Colors.white;
+      borderColor = const Color(0xFF0F172A);
     }
 
     return Tooltip(
       message: '${_formatDisplayDate(record.date)}\n'
           '${record.hasClasses ? "${record.attended} / ${record.held} classes attended" : "No scheduled lectures"}',
       decoration: BoxDecoration(
-        color: const Color(0xFF1F2937),
+        color: const Color(0xFF1E293B),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFF374151)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.15),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       textStyle: const TextStyle(color: Colors.white, fontSize: 11),
       child: GestureDetector(
@@ -663,13 +669,13 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
             color: fillColor,
             borderRadius: BorderRadius.circular(2.8),
             border: Border.all(
-              color: isSelected ? Colors.white : borderColor,
+              color: isSelected ? const Color(0xFF0F172A) : borderColor,
               width: isSelected ? 1.6 : 0.8,
             ),
             boxShadow: isSelected
                 ? [
                     BoxShadow(
-                      color: Colors.white.withOpacity(0.35),
+                      color: const Color(0xFF0F172A).withOpacity(0.25),
                       blurRadius: 4,
                       spreadRadius: 0.8,
                     )
@@ -707,20 +713,20 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
       Color text;
 
       if (allPresent) {
-        bg = const Color(0xFF0E4429).withOpacity(0.6);
-        border = _greenL3;
-        text = _greenL4;
+        bg = const Color(0xFFDCFCE7);
+        border = const Color(0xFF86EFAC);
+        text = const Color(0xFF15803D);
         badgeText = '$badgeText • Present';
       } else if (allAbsent) {
-        bg = const Color(0xFF3B1212).withOpacity(0.6);
-        border = const Color(0xFF7F1D1D);
-        text = const Color(0xFFFCA5A5);
+        bg = const Color(0xFFFEE2E2);
+        border = const Color(0xFFFCA5A5);
+        text = const Color(0xFFB91C1C);
         badgeText = '$badgeText • Absent';
       } else {
         badgeText = '$badgeText • $attendedHrs/$totalHrs Attended';
-        bg = const Color(0xFF332200).withOpacity(0.6);
-        border = const Color(0xFFD97706);
-        text = const Color(0xFFFCD34D);
+        bg = const Color(0xFFFEF3C7);
+        border = const Color(0xFFFCD34D);
+        text = const Color(0xFFB45309);
       }
 
       subjectBadges.add(
@@ -746,7 +752,7 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
       decoration: BoxDecoration(
-        color: const Color(0xFF161B22),
+        color: const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: _cardBorder),
       ),
