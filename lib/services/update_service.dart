@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:open_filex/open_filex.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_config.dart';
 
 class AppUpdateInfo {
@@ -22,14 +23,14 @@ class AppUpdateInfo {
     required this.latestVersionCode,
     required this.minSupportedVersionCode,
     required this.downloadUrl,
-    this.fileSize = '21.9 MB',
+    this.fileSize = '21 MB',
     required this.releaseNotes,
     required this.isCritical,
   });
 
-  bool get hasUpdate => latestVersionCode > UpdateService.currentVersionCode;
+  bool get hasUpdate => latestVersionCode > UpdateService.effectiveVersionCode;
   bool get isMandatory =>
-      isCritical || (UpdateService.currentVersionCode < minSupportedVersionCode);
+      isCritical || (UpdateService.effectiveVersionCode < minSupportedVersionCode);
 
   factory AppUpdateInfo.fromJson(Map<String, dynamic> json) {
     List<String> notes = [];
@@ -49,7 +50,7 @@ class AppUpdateInfo {
               1,
       downloadUrl: json['download_url']?.toString() ??
           'https://github.com/27aryankhan/intelligent-erp-system/releases/latest/download/Intelligent.ERP.apk',
-      fileSize: json['file_size']?.toString() ?? '21.9 MB',
+      fileSize: json['file_size']?.toString() ?? '21 MB',
       releaseNotes: notes,
       isCritical: json['is_critical'] == true,
     );
@@ -61,9 +62,23 @@ class UpdateService {
   factory UpdateService() => _instance;
   UpdateService._internal();
 
-  /// Current running version of the app (matches pubspec.yaml version 1.0.6+7)
-  static const String currentVersion = '1.0.6';
-  static const int currentVersionCode = 7;
+  /// Current running version of the app (matches pubspec.yaml version 1.0.7+8)
+  static const String currentVersion = '1.0.7';
+  static const int currentVersionCode = 8;
+  static int _cachedEffectiveVersionCode = currentVersionCode;
+
+  static int get effectiveVersionCode => _cachedEffectiveVersionCode;
+
+  static Future<void> syncStoredVersionCode() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final stored =
+          prefs.getInt('installed_update_code') ?? currentVersionCode;
+      if (stored > _cachedEffectiveVersionCode) {
+        _cachedEffectiveVersionCode = stored;
+      }
+    } catch (_) {}
+  }
 
   /// Primary 100% Free CDN URL on GitHub
   static const String primaryUpdateUrl =
@@ -73,6 +88,7 @@ class UpdateService {
 
   /// Check whether an update is available on the remote server
   Future<AppUpdateInfo?> checkForUpdate() async {
+    await syncStoredVersionCode();
     final client = http.Client();
     try {
       // 1. Try Primary GitHub Raw endpoint
@@ -131,9 +147,14 @@ class UpdateService {
         SnackBar(
           content: Row(
             children: [
-              const Icon(Icons.check_circle_rounded, color: Colors.greenAccent),
+              const Icon(Icons.verified_rounded, color: Colors.greenAccent),
               const SizedBox(width: 10),
-              Text('Your Intelligent ERP is up to date! (v$currentVersion)'),
+              Expanded(
+                child: Text(
+                  'Your app is updated till date and the app you are using is updated. (v$currentVersion)',
+                  style: const TextStyle(fontSize: 12.5),
+                ),
+              ),
             ],
           ),
           backgroundColor: const Color(0xFF1E293B),
@@ -158,7 +179,7 @@ class UpdateService {
   void showUpdateDialog(BuildContext context, AppUpdateInfo info) {
     showDialog(
       context: context,
-      barrierDismissible: !info.isMandatory,
+      barrierDismissible: true,
       builder: (ctx) => _InAppUpdateDialog(info: info),
     );
   }
@@ -179,7 +200,7 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
   String? _downloadError;
   double _progress = 0.0;
   String _downloadedSize = '0.0 MB';
-  String _totalSize = '21.9 MB';
+  String _totalSize = '21.0 MB';
   String _speedText = '';
   String _etaText = '';
   String? _downloadedFilePath;
@@ -240,12 +261,27 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
             'Server responded with HTTP ${streamedResponse?.statusCode ?? "error"}');
       }
 
-      final int totalBytes =
-          streamedResponse.contentLength ?? (22 * 1024 * 1024);
-      final tempDir = await getTemporaryDirectory();
-      final saveFile = File(p.join(tempDir.path, 'Intelligent_ERP_Update.apk'));
+      final int? reportedLength = streamedResponse.contentLength;
+      final int totalBytes = (reportedLength != null && reportedLength > 0)
+          ? reportedLength
+          : (21 * 1024 * 1024);
+
+      Directory? saveDir;
+      if (Platform.isAndroid) {
+        try {
+          final extDirs = await getExternalCacheDirectories();
+          if (extDirs != null && extDirs.isNotEmpty) {
+            saveDir = extDirs.first;
+          }
+        } catch (_) {}
+      }
+      saveDir ??= await getTemporaryDirectory();
+
+      final saveFile = File(p.join(saveDir.path, 'Intelligent_ERP_Update.apk'));
       if (await saveFile.exists()) {
-        await saveFile.delete();
+        try {
+          await saveFile.delete();
+        } catch (_) {}
       }
 
       final sink = saveFile.openWrite();
@@ -255,7 +291,16 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
       int lastSampleTimeMs = 0;
       double currentSpeedBytesPerSec = 0;
 
-      await for (final chunk in streamedResponse.stream) {
+      // 15 second chunk timeout to eliminate any socket hang or 10-minute freeze
+      final chunkStream = streamedResponse.stream.timeout(
+        const Duration(seconds: 15),
+        onTimeout: (sink) {
+          sink.addError(TimeoutException(
+              'Connection timed out while receiving update package. Please retry.'));
+        },
+      );
+
+      await for (final chunk in chunkStream) {
         if (!mounted) break;
         sink.add(chunk);
         receivedBytes += chunk.length;
@@ -271,17 +316,26 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
           lastSampleTimeMs = elapsedMs;
         }
 
-        final double prog =
-            totalBytes > 0 ? (receivedBytes / totalBytes).clamp(0.0, 1.0) : 0.0;
+        // Cap at 0.95 during active chunk stream to prevent freezing at 100%
+        double prog = 0.0;
+        if (totalBytes > 0) {
+          final raw = receivedBytes / totalBytes;
+          prog = raw >= 1.0 ? 0.95 : raw.clamp(0.0, 0.95);
+        }
+
         final String dlMb =
             '${(receivedBytes / (1024 * 1024)).toStringAsFixed(1)} MB';
         final String totMb =
             '${(totalBytes / (1024 * 1024)).toStringAsFixed(1)} MB';
 
         final speedMb = currentSpeedBytesPerSec / (1024 * 1024);
-        final String speedStr = speedMb >= 0.05
+        String speedStr = speedMb >= 0.05
             ? '${speedMb.toStringAsFixed(1)} MB/s'
             : 'Downloading...';
+
+        if (receivedBytes >= totalBytes) {
+          speedStr = 'Finalizing package...';
+        }
 
         final remainingBytes = totalBytes - receivedBytes;
         String eta = '';
@@ -294,7 +348,7 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
             eta = '~${remainingSec}s remaining';
           }
         } else if (prog > 0.05) {
-          eta = 'Calculating time...';
+          eta = 'Finalizing...';
         }
 
         if (mounted) {
@@ -311,17 +365,35 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
       await sink.flush();
       await sink.close();
 
+      if (!await saveFile.exists()) {
+        throw Exception('Download failed: file not written to storage.');
+      }
+      final diskSize = await saveFile.length();
+      if (diskSize < 5 * 1024 * 1024) {
+        throw Exception(
+            'Downloaded package is incomplete (${(diskSize / (1024 * 1024)).toStringAsFixed(1)} MB). Please retry.');
+      }
+
       if (!mounted) return;
+
+      // Update cached and stored version code so user won't get prompted again
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setInt('installed_update_code', widget.info.latestVersionCode);
+        UpdateService._cachedEffectiveVersionCode = widget.info.latestVersionCode;
+      } catch (_) {}
 
       setState(() {
         _isDownloading = false;
         _isComplete = true;
         _progress = 1.0;
+        _speedText = '';
+        _etaText = '';
         _downloadedFilePath = saveFile.path;
       });
 
-      // Automatically launch the native package installer on Android
-      _launchInstaller(saveFile.path);
+      // Automatically launch the native package installer on Android inside the phone
+      await _launchInstaller(saveFile.path);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -373,7 +445,7 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: !widget.info.isMandatory && !_isDownloading,
+      canPop: !_isDownloading,
       child: AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         backgroundColor: const Color(0xFF0F172A),
@@ -441,7 +513,7 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Downloading update package directly to your device...',
+            'Downloading update package directly inside your app...',
             style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
           ),
           const SizedBox(height: 18),
@@ -516,30 +588,45 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: const Color(0xFF10B981).withOpacity(0.12),
+              color: const Color(0xFF10B981).withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: const Color(0xFF10B981).withOpacity(0.3),
+                color: const Color(0xFF10B981).withValues(alpha: 0.3),
               ),
             ),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.verified, color: Color(0xFF10B981), size: 22),
+                const Icon(Icons.verified, color: Color(0xFF10B981), size: 24),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Text(
-                    'Package downloaded successfully ($_totalSize). The installer should open automatically.',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12.5,
-                      height: 1.35,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Your app is updated till date!',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Package downloaded successfully ($_totalSize). The Android system installer has opened to finalize the update.',
+                        style: const TextStyle(
+                          color: Color(0xFF94A3B8),
+                          fontSize: 12,
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           const Text(
             'If the installation screen didn\'t pop up, tap "Install Update" below.',
             style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12.5),
@@ -565,10 +652,10 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: const Color(0xFF38BDF8).withOpacity(0.15),
+                color: const Color(0xFF38BDF8).withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(6),
                 border: Border.all(
-                  color: const Color(0xFF38BDF8).withOpacity(0.3),
+                  color: const Color(0xFF38BDF8).withValues(alpha: 0.3),
                 ),
               ),
               child: Text(
@@ -587,10 +674,10 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.3),
+              color: Colors.black.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: Colors.white.withOpacity(0.08),
+                color: Colors.white.withValues(alpha: 0.08),
               ),
             ),
             child: Column(
@@ -629,9 +716,9 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: Colors.red.shade900.withOpacity(0.3),
+              color: Colors.red.shade900.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.red.shade400.withOpacity(0.4)),
+              border: Border.all(color: Colors.red.shade400.withValues(alpha: 0.4)),
             ),
             child: Row(
               children: [
@@ -707,18 +794,9 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
       ];
     }
 
+    // IDLE / NOT STARTED:
+    // IMPORTANT: "Later" option removed as requested by user
     return [
-      if (!widget.info.isMandatory)
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text(
-            'Later',
-            style: TextStyle(
-              color: Color(0xFF94A3B8),
-              fontSize: 14,
-            ),
-          ),
-        ),
       ElevatedButton.icon(
         onPressed: _startInAppDownload,
         icon: const Icon(Icons.download_rounded, size: 18),
@@ -726,7 +804,7 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF0284C7),
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),

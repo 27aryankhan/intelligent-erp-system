@@ -27,12 +27,18 @@ void main() {
       expect(info.downloadUrl, contains('Intelligent_ERP.apk'));
     });
 
+    test('UpdateService has correct current version 1.0.7 and code 8', () {
+      expect(UpdateService.currentVersion, equals('1.0.7'));
+      expect(UpdateService.currentVersionCode, equals(8));
+      expect(UpdateService.effectiveVersionCode, greaterThanOrEqualTo(8));
+    });
+
     test('AppUpdateInfo detects same version as NOT needing update', () {
       final json = {
         'latest_version': UpdateService.currentVersion,
         'version_code': UpdateService.currentVersionCode,
         'min_supported_version_code': 1,
-        'download_url': 'https://github.com/bhargavi-builds/intelligent-erp-system/releases/latest',
+        'download_url': 'https://github.com/27aryankhan/intelligent-erp-system/releases/latest',
         'release_notes': [],
         'is_critical': false,
       };
