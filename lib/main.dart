@@ -462,78 +462,8 @@ class _LoginPageState extends State<LoginPage> {
       );
     }
 
-    // Permanent fixed Animated Rays banner for all versions
-    return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      child: AnimatedRays(
-        borderRadius: BorderRadius.circular(18),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(7),
-              decoration: BoxDecoration(
-                color: const Color(0xFF10B981).withValues(alpha: 0.25),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.verified_rounded,
-                color: Color(0xFF34D399),
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Text(
-                        'APP UP TO DATE',
-                        style: TextStyle(
-                          color: Color(0xFF34D399),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.8,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 1.5),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF10B981).withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          'v${UpdateService.currentVersion}',
-                          style: const TextStyle(
-                            color: Color(0xFF34D399),
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 3),
-                  const Text(
-                    'Your app is updated till date and the app you are using is updated.',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      height: 1.3,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+    // If already up-to-date, do not show any update banner on login screen
+    return const SizedBox.shrink();
   }
 
   @override

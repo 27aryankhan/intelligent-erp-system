@@ -1,12 +1,12 @@
 {
-  "latest_version": "1.0.8",
-  "version_code": 9,
+  "latest_version": "1.0.9",
+  "version_code": 10,
   "min_supported_version_code": 1,
   "download_url": "https://github.com/27aryankhan/intelligent-erp-system/releases/latest/download/Intelligent.ERP.apk",
   "file_size": "21 MB",
   "release_notes": [
-    "Seamless in-app update: Fixed 100% freezing bug and download timeouts",
-    "Streamlined update flow: Direct update with native package installation",
+    "Clean login interface: Removed redundant up-to-date banner",
+    "Seamless in-app update: Native package installation without freezing",
     "Live Subject Attendance Notifications: Heads-up alerts when marked Present or Absent",
     "Total Attendance Percentage & academic standing status pushed to status bar"
   ],

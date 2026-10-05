@@ -65,9 +65,9 @@ class UpdateService {
   factory UpdateService() => _instance;
   UpdateService._internal();
 
-  /// Current running version of the app (matches pubspec.yaml version 1.0.8+9)
-  static const String currentVersion = '1.0.8';
-  static const int currentVersionCode = 9;
+  /// Current running version of the app (matches pubspec.yaml version 1.0.9+10)
+  static const String currentVersion = '1.0.9';
+  static const int currentVersionCode = 10;
   static int _cachedEffectiveVersionCode = currentVersionCode;
 
   static int get effectiveVersionCode => _cachedEffectiveVersionCode;
