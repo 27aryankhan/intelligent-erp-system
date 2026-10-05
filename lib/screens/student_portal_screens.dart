@@ -1616,7 +1616,9 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
   Widget _buildBandBadge(String band) {
     Color bg;
     Color fg;
-    final b = band.trim().toUpperCase();
+    final clean =
+        band.replaceAll(RegExp(r'band\s*', caseSensitive: false), '').trim();
+    final b = clean.toUpperCase();
     if (b == 'A' || b == 'O') {
       bg = const Color(0xFFDCFCE7);
       fg = const Color(0xFF16A34A);
@@ -1638,7 +1640,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
         border: Border.all(color: fg.withOpacity(0.3)),
       ),
       child: Text(
-        band,
+        b.isNotEmpty ? b : band,
         style: TextStyle(
           color: fg,
           fontWeight: FontWeight.w800,
@@ -3299,7 +3301,9 @@ class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
   }
 
   Widget _buildBandBadge(String band) {
-    final b = band.trim().toUpperCase();
+    final clean =
+        band.replaceAll(RegExp(r'band\s*', caseSensitive: false), '').trim();
+    final b = clean.toUpperCase();
     if (b.isEmpty || b == '-') {
       return const Text(
         '—',
@@ -3333,16 +3337,16 @@ class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3.5),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3.5),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(6),
         border: Border.all(color: borderColor),
       ),
       child: Text(
-        'Band $b',
+        b,
         style: TextStyle(
-          fontSize: 12,
+          fontSize: 12.5,
           fontWeight: FontWeight.w700,
           color: textColor,
           letterSpacing: 0.2,
