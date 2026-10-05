@@ -1,14 +1,15 @@
 {
-  "latest_version": "1.0.5",
-  "version_code": 6,
+  "latest_version": "1.0.6",
+  "version_code": 7,
   "min_supported_version_code": 1,
   "download_url": "https://github.com/27aryankhan/intelligent-erp-system/releases/latest/download/Intelligent.ERP.apk",
-  "file_size": "22.5 MB",
+  "file_size": "21 MB",
   "release_notes": [
-    "Hardened backend API route security and role-based access control (RBAC)",
-    "Eliminated authentication bypass and secured credential handling",
-    "Updated update delivery pipeline to official repository (27aryankhan)",
-    "Resolved backend library vulnerabilities and improved system stability"
+    "Redesigned Attendance Activity heatmap with clean white aesthetic matching the app theme",
+    "Repositioned Attendance Activity directly below student profile card",
+    "Cleaned Student Dashboard header for a more streamlined experience",
+    "Optimized mobile APK package size down to 21 MB (65% reduction)",
+    "Hardened login credential validation and session state management"
   ],
   "is_critical": false
 }
