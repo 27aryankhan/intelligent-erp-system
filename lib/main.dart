@@ -122,6 +122,7 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
   String? _errorMessage;
+  AppUpdateInfo? _availableUpdate;
 
   VideoPlayerController? _videoController;
   bool _isVideoInitialized = false;
@@ -131,8 +132,23 @@ class _LoginPageState extends State<LoginPage> {
     super.initState();
     _initializeBackgroundVideo();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      UpdateService().promptUpdateIfAvailable(context, silent: true);
+      _checkForUpdatesOnLoginPage();
     });
+  }
+
+  Future<void> _checkForUpdatesOnLoginPage() async {
+    try {
+      final updateInfo = await UpdateService().checkForUpdate();
+      if (!mounted) return;
+      if (updateInfo != null && updateInfo.hasUpdate) {
+        setState(() {
+          _availableUpdate = updateInfo;
+        });
+        UpdateService().showUpdateDialog(context, updateInfo);
+      }
+    } catch (e) {
+      debugPrint('Update check on login page error: $e');
+    }
   }
 
   void _initializeBackgroundVideo() {
@@ -303,6 +319,128 @@ class _LoginPageState extends State<LoginPage> {
         });
       }
     }
+  }
+
+  Widget _buildLoginUpdateNotificationBanner() {
+    if (_availableUpdate == null || !_availableUpdate!.hasUpdate) {
+      return const SizedBox.shrink();
+    }
+
+    final info = _availableUpdate!;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F172A).withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFF38BDF8).withValues(alpha: 0.8),
+          width: 1.4,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0284C7).withValues(alpha: 0.35),
+            blurRadius: 18,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0284C7).withValues(alpha: 0.25),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.system_update_rounded,
+                  color: Color(0xFF38BDF8),
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Text(
+                          'UPDATE AVAILABLE',
+                          style: TextStyle(
+                            color: Color(0xFF38BDF8),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 1.5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF10B981).withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: const Color(0xFF10B981).withValues(alpha: 0.5),
+                            ),
+                          ),
+                          child: Text(
+                            'v${info.latestVersion}',
+                            style: const TextStyle(
+                              color: Color(0xFF34D399),
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      'A new version is ready with updated features (${info.fileSize}).',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 38,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                UpdateService().showUpdateDialog(context, info);
+              },
+              icon: const Icon(Icons.download_rounded, size: 16),
+              label: const Text(
+                'Update Now (In-App)',
+                style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0284C7),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                elevation: 3,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -537,6 +675,9 @@ class _LoginPageState extends State<LoginPage> {
                             ),
 
                             const SizedBox(height: 28),
+
+                            if (_availableUpdate != null && _availableUpdate!.hasUpdate)
+                              _buildLoginUpdateNotificationBanner(),
 
                             if (_errorMessage != null)
                               Container(

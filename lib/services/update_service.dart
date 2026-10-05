@@ -6,7 +6,6 @@ import 'package:http/http.dart' as http;
 import 'package:open_filex/open_filex.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../config/api_config.dart';
 
 class AppUpdateInfo {
@@ -155,20 +154,6 @@ class UpdateService {
     return url;
   }
 
-  /// Launches the download URL in the device browser / download manager as fallback
-  Future<bool> launchDownload(String url) async {
-    try {
-      final uri = Uri.parse(url);
-      return await launchUrl(
-        uri,
-        mode: LaunchMode.externalApplication,
-      );
-    } catch (e) {
-      debugPrint('Error launching update URL: $e');
-      return false;
-    }
-  }
-
   /// Displays the modern in-app update notification dialog
   void showUpdateDialog(BuildContext context, AppUpdateInfo info) {
     showDialog(
@@ -226,16 +211,33 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
     _activeClient = client;
 
     try {
-      final targetUrl =
+      String targetUrl =
           UpdateService.resolveDirectDownloadUrl(widget.info.downloadUrl);
-      final request = http.Request('GET', Uri.parse(targetUrl));
-      request.followRedirects = true;
-      request.maxRedirects = 5;
+      http.StreamedResponse? streamedResponse;
+      int redirectHops = 0;
 
-      final streamedResponse = await client.send(request);
-      if (streamedResponse.statusCode != 200) {
+      // Robustly follow redirects across CDNs (GitHub ➔ Release ➔ S3/Azure asset blob)
+      while (redirectHops < 8) {
+        final request = http.Request('GET', Uri.parse(targetUrl));
+        request.followRedirects = true;
+        request.maxRedirects = 8;
+
+        final res = await client.send(request);
+        if (res.statusCode >= 300 &&
+            res.statusCode < 400 &&
+            res.headers.containsKey('location')) {
+          targetUrl = res.headers['location']!;
+          redirectHops++;
+          continue;
+        }
+
+        streamedResponse = res;
+        break;
+      }
+
+      if (streamedResponse == null || streamedResponse.statusCode != 200) {
         throw Exception(
-            'Server responded with HTTP ${streamedResponse.statusCode}');
+            'Server responded with HTTP ${streamedResponse?.statusCode ?? "error"}');
       }
 
       final int totalBytes =
@@ -318,7 +320,7 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
         _downloadedFilePath = saveFile.path;
       });
 
-      // Automatically launch the installer on Android
+      // Automatically launch the native package installer on Android
       _launchInstaller(saveFile.path);
     } catch (e) {
       if (!mounted) return;
@@ -344,13 +346,27 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
   Future<void> _launchInstaller(String filePath) async {
     try {
       if (Platform.isAndroid) {
-        await OpenFilex.open(filePath,
-            type: 'application/vnd.android.package-archive');
+        final result = await OpenFilex.open(
+          filePath,
+          type: 'application/vnd.android.package-archive',
+        );
+        debugPrint('Package installer result: ${result.type} - ${result.message}');
+        if (result.type == ResultType.permissionDenied && mounted) {
+          setState(() {
+            _downloadError =
+                'Permission needed: Please enable "Install unknown apps" for Intelligent ERP in Android Settings, then tap Install.';
+          });
+        }
       } else {
         await OpenFilex.open(filePath);
       }
     } catch (e) {
       debugPrint('Error triggering package installer: $e');
+      if (mounted) {
+        setState(() {
+          _downloadError = 'Failed to open installer: $e';
+        });
+      }
     }
   }
 
