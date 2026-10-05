@@ -154,6 +154,31 @@ class HitamAuthService {
   String get cookieHeader =>
       sessionCookies.entries.map((e) => '${e.key}=${e.value}').join('; ');
 
+  /// Ensures valid session cookies are loaded or re-authenticates automatically
+  /// using stored credentials in SharedPreferences
+  Future<bool> ensureAuthenticated() async {
+    if (sessionCookies.isNotEmpty && activeUserId != null) {
+      return true;
+    }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedId = prefs.getString('hitam_user_id');
+      final savedPwd = prefs.getString('hitam_user_pwd');
+      final savedRoleStr = prefs.getString('hitam_user_role') ?? 'student';
+      if (savedId != null &&
+          savedPwd != null &&
+          savedId.isNotEmpty &&
+          savedPwd.isNotEmpty) {
+        final role = UserRole.values.firstWhere(
+          (r) => r.name.toLowerCase() == savedRoleStr.toLowerCase(),
+          orElse: () => UserRole.student,
+        );
+        return await login(userId: savedId, password: savedPwd, role: role);
+      }
+    } catch (_) {}
+    return false;
+  }
+
   Future<void> logout() async {
     sessionCookies.clear();
     activeUserId = null;

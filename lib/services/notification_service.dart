@@ -305,6 +305,9 @@ class NotificationService {
     _activeWatchingRoll = rollNo;
     _attendanceWatcherTimer?.cancel();
 
+    // Trigger an immediate background sync on startup
+    Future.microtask(() => syncAttendanceNow());
+
     // Check periodically every 10 minutes for live attendance updates
     _attendanceWatcherTimer =
         Timer.periodic(const Duration(minutes: 10), (_) async {
@@ -321,19 +324,82 @@ class NotificationService {
 
   /// Trigger an immediate silent sync and diff of attendance
   Future<void> syncAttendanceNow() async {
-    final roll = _activeWatchingRoll.isNotEmpty
+    String roll = _activeWatchingRoll.isNotEmpty
         ? _activeWatchingRoll
         : (HitamAuthService().activeUserId ?? '');
+
+    if (roll.isEmpty) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        roll = prefs.getString('hitam_user_id') ?? '';
+        if (roll.isNotEmpty) {
+          _activeWatchingRoll = roll;
+        }
+      } catch (_) {}
+    }
+
     if (roll.isEmpty) return;
 
     try {
+      // Ensure authenticated with stored credentials before scraping
+      await HitamAuthService().ensureAuthenticated();
+
       final scraper = HitamScraperService();
       final report = await scraper.fetchStudentAttendanceReport(roll);
       if (report != null && report.subjects.isNotEmpty) {
         await checkAndNotifyAttendance(report);
+        await checkShortageWarning(report);
       }
     } catch (e) {
       debugPrint('Background attendance sync error: $e');
+    }
+  }
+
+  /// Checks whether overall attendance is below the mandatory 75% cutoff
+  /// and automatically pushes an urgent notification to the student's status bar.
+  Future<void> checkShortageWarning(
+    StudentAttendanceReport report, {
+    bool force = false,
+  }) async {
+    if (report.overallPercentage >= 75.0) return;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final lastNotifKey = 'last_shortage_notif_time_${report.rollNo}';
+      final lastHeldKey = 'last_shortage_held_${report.rollNo}';
+
+      final lastNotifMs = prefs.getInt(lastNotifKey) ?? 0;
+      final lastHeld = prefs.getInt(lastHeldKey) ?? -1;
+      final nowMs = DateTime.now().millisecondsSinceEpoch;
+
+      // Notify if: forced, OR classes held changed, OR more than 2 hours since last shortage alert
+      final bool shouldNotify = force ||
+          (report.totalHeld != lastHeld) ||
+          (nowMs - lastNotifMs > 2 * 3600 * 1000);
+
+      if (shouldNotify) {
+        await prefs.setInt(lastNotifKey, nowMs);
+        await prefs.setInt(lastHeldKey, report.totalHeld);
+
+        final int notifId =
+            ('shortage_${report.rollNo}'.hashCode).abs().remainder(100000);
+
+        final classesNeeded = report.classesNeeded > 0
+            ? 'Need to attend ${report.classesNeeded} consecutive classes to reach 75%.'
+            : 'Attend upcoming classes to reach 75%.';
+
+        await showNotification(
+          id: notifId,
+          title: '🚨 Attendance Shortage: ${report.overallPercentage.toStringAsFixed(1)}% (Below 75%)',
+          body: 'Your attendance is ${report.overallPercentage.toStringAsFixed(1)}%, which is below the mandatory 75% cutoff (${report.totalAttended}/${report.totalHeld} classes).\n'
+              '$classesNeeded Tap to view subject-wise breakdown.',
+          payload: 'attendance',
+          type: 'attendance',
+        );
+        debugPrint('Shortage warning notification pushed for ${report.rollNo}: ${report.overallPercentage}%');
+      }
+    } catch (e) {
+      debugPrint('Error in checkShortageWarning: $e');
     }
   }
 
@@ -382,8 +448,12 @@ class NotificationService {
         // First time seeing attendance: save snapshot
         await prefs.setString(key, jsonEncode(newSnapshot));
 
-        if (forceNotifySummary) {
-          await pushAttendanceSummaryNotification(currentReport);
+        // Automatically push attendance summary notification
+        await pushAttendanceSummaryNotification(currentReport);
+
+        // If attendance is below 75%, immediately send shortage warning
+        if (currentReport.overallPercentage < 75.0) {
+          await checkShortageWarning(currentReport, force: true);
         }
         return;
       }
@@ -448,27 +518,13 @@ class NotificationService {
       debugPrint(
           'Attendance check complete for $rollNo: present=$presentDetected, absent=$absentDetected');
 
-      // Check if overall attendance dropped or changed
-      final bool overallHeldIncreased = currentReport.totalHeld > prevTotalHeld;
-      final bool pctDiffers =
-          (currentReport.overallPercentage - prevOverall).abs() >= 0.05;
-
-      if (overallHeldIncreased || pctDiffers) {
-        // If attendance dropped below 75% cutoff threshold
-        if (currentReport.overallPercentage < 75.0 && prevOverall >= 75.0) {
-          await showNotification(
-            id: ('shortage_${currentReport.rollNo}'.hashCode).abs().remainder(100000),
-            title: '⚠️ Attendance Shortage Warning: ${currentReport.overallPercentage.toStringAsFixed(1)}%',
-            body: 'Your total attendance has fallen below the 75% mandatory cutoff (${currentReport.totalAttended}/${currentReport.totalHeld} classes).\n'
-                'You must attend ${currentReport.classesNeeded} consecutive classes to regain exam eligibility.',
-            payload: 'attendance',
-            type: 'attendance',
-          );
-        }
+      // Check if attendance is below 75%
+      if (currentReport.overallPercentage < 75.0) {
+        await checkShortageWarning(currentReport);
       }
 
       // If user explicitly forced a summary notification, or if changes happened and no individual alerts were fired
-      if (forceNotifySummary) {
+      if (forceNotifySummary || (presentDetected == 0 && absentDetected == 0 && currentReport.totalHeld > prevTotalHeld)) {
         await pushAttendanceSummaryNotification(currentReport);
       }
 

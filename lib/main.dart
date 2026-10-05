@@ -267,7 +267,9 @@ class _LoginPageState extends State<LoginPage> {
           email: activeRoll,
         );
         if (report != null) {
-          NotificationService().checkAndNotifyAttendance(report);
+          await NotificationService().pushAttendanceSummaryNotification(report);
+          await NotificationService().checkShortageWarning(report, force: true);
+          await NotificationService().checkAndNotifyAttendance(report);
         }
 
         if (!mounted) return;
@@ -1094,6 +1096,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
       newAnnouncements = 3;
       isLoading = false;
       NotificationService().checkAndNotifyAttendance(rep);
+      NotificationService().checkShortageWarning(rep);
     }
     fetchStudentData();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -1101,6 +1104,11 @@ class _StudentDashboardState extends State<StudentDashboard> {
       final rollNo = widget.studentId ?? HitamAuthService().activeUserId;
       if (rollNo != null && rollNo.isNotEmpty) {
         NotificationService().startAttendanceWatcher(rollNo);
+        final rep = widget.initialReport ?? HitamScraperService().latestAttendanceReport;
+        if (rep != null) {
+          await NotificationService().pushAttendanceSummaryNotification(rep);
+          await NotificationService().checkShortageWarning(rep);
+        }
       }
       UpdateService().promptUpdateIfAvailable(context, silent: true);
     });
@@ -1185,6 +1193,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
         errorMessage = '';
       });
       NotificationService().checkAndNotifyAttendance(report!);
+      NotificationService().checkShortageWarning(report!);
     }
 
     try {
@@ -1424,7 +1433,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    'Get live alerts when marked Present or Absent',
+                                    'Automatic alerts for Present, Absent & <75% shortage',
                                     style: TextStyle(
                                       fontSize: 11.5,
                                       color: Colors.blue.shade900,
@@ -1434,20 +1443,42 @@ class _StudentDashboardState extends State<StudentDashboard> {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            ElevatedButton.icon(
-                              onPressed: _notifyAttendanceStatus,
-                              icon: const Icon(Icons.send_rounded, size: 14),
-                              label: const Text('Notify'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF2563EB),
-                                foregroundColor: Colors.white,
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
+                            InkWell(
+                              onTap: _notifyAttendanceStatus,
+                              borderRadius: BorderRadius.circular(20),
+                              child: Container(
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
+                                  horizontal: 10,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: const Color(0xFF10B981).withValues(alpha: 0.4),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 7,
+                                      height: 7,
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFF10B981),
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    const Text(
+                                      'Live Alerts',
+                                      style: TextStyle(
+                                        color: Color(0xFF047857),
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),

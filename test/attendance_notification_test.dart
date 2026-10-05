@@ -151,5 +151,38 @@ void main() {
       expect(updatedData['subjects']['22CS602']['attended'], 20);
       expect(updatedData['overallPercentage'], 74.5);
     });
+
+    test('Automatically triggers shortage alert and records when attendance is below 75%', () async {
+      final notifService = NotificationService();
+      final reportBelow75 = StudentAttendanceReport(
+        rollNo: '22KD1A0504',
+        studentName: 'Shortage Student',
+        course: 'B.Tech',
+        branch: 'CSE',
+        semester: 'Semester 6',
+        totalHeld: 100,
+        totalAttended: 70,
+        overallPercentage: 70.0,
+        subjects: [
+          SubjectAttendance(
+            subjectCode: '22CS603',
+            subjectName: 'Compiler Design',
+            classesHeld: 50,
+            classesAttended: 35,
+            percentage: 70.0,
+          ),
+        ],
+      );
+
+      await notifService.checkShortageWarning(reportBelow75, force: true);
+
+      final prefs = await SharedPreferences.getInstance();
+      final lastNotifMs = prefs.getInt('last_shortage_notif_time_22KD1A0504');
+      final lastHeld = prefs.getInt('last_shortage_held_22KD1A0504');
+
+      expect(lastNotifMs, isNotNull);
+      expect(lastNotifMs, greaterThan(0));
+      expect(lastHeld, equals(100));
+    });
   });
 }
