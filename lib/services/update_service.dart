@@ -703,18 +703,6 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
             ),
           ),
         ),
-      if (_downloadError != null)
-        TextButton.icon(
-          onPressed: () {
-            UpdateService().launchDownload(widget.info.downloadUrl);
-            Navigator.of(context).pop();
-          },
-          icon: const Icon(Icons.open_in_browser, size: 16),
-          label: const Text('Open in Browser'),
-          style: TextButton.styleFrom(
-            foregroundColor: const Color(0xFF38BDF8),
-          ),
-        ),
       ElevatedButton.icon(
         onPressed: _startInAppDownload,
         icon: const Icon(Icons.download_rounded, size: 18),
