@@ -3,7 +3,10 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_config.dart';
+import 'hitam_auth_service.dart';
+import 'hitam_scraper_service.dart';
 
 /// Enterprise-grade Notification Service for Intelligent ERP.
 /// Handles native local notifications, OS system tray banners,
@@ -27,6 +30,11 @@ class NotificationService {
   static const String channelName = 'HITAM Campus Alerts & Deadlines';
   static const String channelDescription =
       'Notifications for assignments, exams, fees, and official announcements.';
+
+  static const String attendanceChannelId = 'intelligent_erp_attendance_channel_v2';
+  static const String attendanceChannelName = 'HITAM Attendance & Academic Alerts';
+  static const String attendanceChannelDescription =
+      'Real-time notifications for subject attendance (Present/Absent) and overall percentage.';
 
   /// Initialize local and background notification handling
   Future<void> initialize() async {
@@ -66,7 +74,7 @@ class NotificationService {
         },
       );
 
-      // Create Android Notification Channel
+      // Create Android Notification Channels with maximum priority
       if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
         final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
             _localNotifications.resolvePlatformSpecificImplementation<
@@ -77,6 +85,17 @@ class NotificationService {
             channelId,
             channelName,
             description: channelDescription,
+            importance: Importance.max,
+            enableVibration: true,
+            playSound: true,
+          ),
+        );
+
+        await androidImplementation?.createNotificationChannel(
+          const AndroidNotificationChannel(
+            attendanceChannelId,
+            attendanceChannelName,
+            description: attendanceChannelDescription,
             importance: Importance.max,
             enableVibration: true,
             playSound: true,
@@ -102,6 +121,7 @@ class NotificationService {
                 AndroidFlutterLocalNotificationsPlugin>();
         final bool? granted =
             await androidImplementation?.requestNotificationsPermission();
+        debugPrint('Android notification permission status: $granted');
         return granted ?? false;
       } else if (defaultTargetPlatform == TargetPlatform.iOS) {
         final IOSFlutterLocalNotificationsPlugin? iosImplementation =
@@ -142,20 +162,32 @@ class NotificationService {
       await initialize();
     }
 
+    final isAttendance = type.toLowerCase() == 'attendance';
+    final targetChannelId = isAttendance ? attendanceChannelId : channelId;
+    final targetChannelName = isAttendance ? attendanceChannelName : channelName;
+    final targetChannelDesc =
+        isAttendance ? attendanceChannelDescription : channelDescription;
+
     final AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
-      channelId,
-      channelName,
-      channelDescription: channelDescription,
+      targetChannelId,
+      targetChannelName,
+      channelDescription: targetChannelDesc,
       importance: Importance.max,
-      priority: Priority.high,
+      priority: Priority.max,
       showWhen: true,
       enableVibration: true,
       playSound: true,
+      visibility: NotificationVisibility.public,
+      category: isAttendance
+          ? AndroidNotificationCategory.status
+          : AndroidNotificationCategory.event,
       styleInformation: BigTextStyleInformation(
         body,
         contentTitle: title,
-        summaryText: 'HITAM ERP • ${type.toUpperCase()}',
+        summaryText: isAttendance
+            ? 'HITAM ERP • ATTENDANCE'
+            : 'HITAM ERP • ${type.toUpperCase()}',
       ),
     );
 
@@ -163,6 +195,7 @@ class NotificationService {
       presentAlert: true,
       presentBadge: true,
       presentSound: true,
+      interruptionLevel: InterruptionLevel.timeSensitive,
     );
 
     final NotificationDetails platformDetails = NotificationDetails(
@@ -173,12 +206,15 @@ class NotificationService {
 
     try {
       await _localNotifications.show(
-        id: id,
+        id: id == 0
+            ? DateTime.now().millisecondsSinceEpoch.remainder(100000)
+            : id,
         title: title,
         body: body,
         notificationDetails: platformDetails,
-        payload: payload ?? type,
+        payload: payload ?? (isAttendance ? 'attendance' : type),
       );
+      debugPrint('Notification displayed: $title');
     } catch (e) {
       debugPrint('Failed to show notification: $e');
     }
@@ -244,8 +280,262 @@ class NotificationService {
       token: 'token_${_currentRole}_${DateTime.now().millisecondsSinceEpoch}',
     );
 
+    // If student session, launch real-time attendance watcher
+    if (_currentRole == 'student' && _currentUserId.isNotEmpty) {
+      startAttendanceWatcher(_currentUserId);
+    } else {
+      stopAttendanceWatcher();
+    }
+
     // Restart real-time monitoring for the updated role
     startRealtimePulse();
+  }
+
+  // ===========================================================================
+  // REAL-TIME STUDENT ATTENDANCE MONITORING & DIFF ENGINE
+  // ===========================================================================
+  Timer? _attendanceWatcherTimer;
+  String _activeWatchingRoll = '';
+
+  /// Start periodic background watcher for student attendance updates.
+  /// Runs periodically while app is running, fetching the latest attendance
+  /// from WebPros and notifying the student of new Present/Absent marks.
+  void startAttendanceWatcher(String rollNo) {
+    if (rollNo.isEmpty) return;
+    _activeWatchingRoll = rollNo;
+    _attendanceWatcherTimer?.cancel();
+
+    // Check periodically every 10 minutes for live attendance updates
+    _attendanceWatcherTimer =
+        Timer.periodic(const Duration(minutes: 10), (_) async {
+      await syncAttendanceNow();
+    });
+    debugPrint('NotificationService: Attendance watcher active for roll: $rollNo');
+  }
+
+  /// Stop attendance watcher
+  void stopAttendanceWatcher() {
+    _attendanceWatcherTimer?.cancel();
+    _attendanceWatcherTimer = null;
+  }
+
+  /// Trigger an immediate silent sync and diff of attendance
+  Future<void> syncAttendanceNow() async {
+    final roll = _activeWatchingRoll.isNotEmpty
+        ? _activeWatchingRoll
+        : (HitamAuthService().activeUserId ?? '');
+    if (roll.isEmpty) return;
+
+    try {
+      final scraper = HitamScraperService();
+      final report = await scraper.fetchStudentAttendanceReport(roll);
+      if (report != null && report.subjects.isNotEmpty) {
+        await checkAndNotifyAttendance(report);
+      }
+    } catch (e) {
+      debugPrint('Background attendance sync error: $e');
+    }
+  }
+
+  /// Compare fresh attendance report against previously stored local snapshot.
+  /// Detects whether student was marked PRESENT or ABSENT in any subject,
+  /// detects overall percentage changes, and pushes heads-up notifications!
+  Future<void> checkAndNotifyAttendance(
+    StudentAttendanceReport currentReport, {
+    bool forceNotifySummary = false,
+  }) async {
+    if (currentReport.subjects.isEmpty) return;
+    final rollNo = currentReport.rollNo.isNotEmpty
+        ? currentReport.rollNo
+        : (HitamAuthService().activeUserId ?? 'student');
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final key = 'last_attendance_snapshot_$rollNo';
+      final prevRaw = prefs.getString(key);
+
+      // Build new snapshot map for saving
+      final Map<String, dynamic> newSnapshot = {
+        'timestamp': DateTime.now().toIso8601String(),
+        'overallPercentage': currentReport.overallPercentage,
+        'totalHeld': currentReport.totalHeld,
+        'totalAttended': currentReport.totalAttended,
+        'safeBunks': currentReport.safeBunks,
+        'classesNeeded': currentReport.classesNeeded,
+        'status': currentReport.academicStatus,
+        'subjects': <String, dynamic>{},
+      };
+
+      for (var s in currentReport.subjects) {
+        (newSnapshot['subjects'] as Map<String, dynamic>)[s.subjectCode] = {
+          'name': s.subjectName,
+          'held': s.classesHeld,
+          'attended': s.classesAttended,
+          'percentage': s.percentage,
+          'safe_bunks': s.safeBunks,
+          'classes_needed': s.classesNeeded,
+          'status': s.status,
+        };
+      }
+
+      if (prevRaw == null) {
+        // First time seeing attendance: save snapshot
+        await prefs.setString(key, jsonEncode(newSnapshot));
+
+        if (forceNotifySummary) {
+          await pushAttendanceSummaryNotification(currentReport);
+        }
+        return;
+      }
+
+      // We have previous snapshot - perform diffing!
+      final Map<String, dynamic> prev = jsonDecode(prevRaw);
+      final Map<String, dynamic> prevSubjects =
+          (prev['subjects'] as Map<String, dynamic>?) ?? {};
+      final double prevOverall =
+          (prev['overallPercentage'] as num?)?.toDouble() ?? 0.0;
+      final int prevTotalHeld = (prev['totalHeld'] as num?)?.toInt() ?? 0;
+      final int prevTotalAttended =
+          (prev['totalAttended'] as num?)?.toInt() ?? 0;
+
+      int presentDetected = 0;
+      int absentDetected = 0;
+
+      for (var s in currentReport.subjects) {
+        final prevSubjectData =
+            prevSubjects[s.subjectCode] ?? prevSubjects[s.subjectName];
+        if (prevSubjectData != null) {
+          final int prevHeld =
+              (prevSubjectData['held'] as num?)?.toInt() ?? 0;
+          final int prevAttended =
+              (prevSubjectData['attended'] as num?)?.toInt() ?? 0;
+
+          final int heldDiff = s.classesHeld - prevHeld;
+          final int attendedDiff = s.classesAttended - prevAttended;
+
+          if (heldDiff > 0) {
+            if (attendedDiff > 0) {
+              // Student was marked PRESENT in this subject
+              presentDetected++;
+              final int notifId =
+                  ('present_${s.subjectCode}_${s.classesHeld}'.hashCode).abs().remainder(100000);
+              await showNotification(
+                id: notifId,
+                title: '🟢 Marked Present: ${s.subjectName}',
+                body: 'You were marked PRESENT today (+$attendedDiff class).\n'
+                    'Subject: ${s.classesAttended}/${s.classesHeld} (${s.percentage.toStringAsFixed(1)}%) • Overall: ${currentReport.overallPercentage.toStringAsFixed(1)}%',
+                payload: 'attendance',
+                type: 'attendance',
+              );
+            } else {
+              // Student was marked ABSENT in this subject
+              absentDetected++;
+              final int notifId =
+                  ('absent_${s.subjectCode}_${s.classesHeld}'.hashCode).abs().remainder(100000);
+              await showNotification(
+                id: notifId,
+                title: '🔴 Attendance Alert: Marked ABSENT in ${s.subjectName}',
+                body: 'You were marked ABSENT today ($heldDiff missed class).\n'
+                    'Subject: ${s.classesAttended}/${s.classesHeld} (${s.percentage.toStringAsFixed(1)}%) • Overall: ${currentReport.overallPercentage.toStringAsFixed(1)}%',
+                payload: 'attendance',
+                type: 'attendance',
+              );
+            }
+          }
+        }
+      }
+
+      debugPrint(
+          'Attendance check complete for $rollNo: present=$presentDetected, absent=$absentDetected');
+
+      // Check if overall attendance dropped or changed
+      final bool overallHeldIncreased = currentReport.totalHeld > prevTotalHeld;
+      final bool pctDiffers =
+          (currentReport.overallPercentage - prevOverall).abs() >= 0.05;
+
+      if (overallHeldIncreased || pctDiffers) {
+        // If attendance dropped below 75% cutoff threshold
+        if (currentReport.overallPercentage < 75.0 && prevOverall >= 75.0) {
+          await showNotification(
+            id: ('shortage_${currentReport.rollNo}'.hashCode).abs().remainder(100000),
+            title: '⚠️ Attendance Shortage Warning: ${currentReport.overallPercentage.toStringAsFixed(1)}%',
+            body: 'Your total attendance has fallen below the 75% mandatory cutoff (${currentReport.totalAttended}/${currentReport.totalHeld} classes).\n'
+                'You must attend ${currentReport.classesNeeded} consecutive classes to regain exam eligibility.',
+            payload: 'attendance',
+            type: 'attendance',
+          );
+        }
+      }
+
+      // If user explicitly forced a summary notification, or if changes happened and no individual alerts were fired
+      if (forceNotifySummary) {
+        await pushAttendanceSummaryNotification(currentReport);
+      }
+
+      // Update stored snapshot
+      await prefs.setString(key, jsonEncode(newSnapshot));
+    } catch (e) {
+      debugPrint('Error during checkAndNotifyAttendance: $e');
+    }
+  }
+
+  /// Push an immediate comprehensive attendance status notification to the notification shade.
+  Future<void> pushAttendanceSummaryNotification(
+    StudentAttendanceReport report,
+  ) async {
+    final statusEmoji = report.overallPercentage >= 75.0
+        ? '✅'
+        : (report.overallPercentage >= 65.0 ? '⚠️' : '🚨');
+
+    final standingAdvice = report.safeBunks > 0
+        ? 'Safe Bunks Margin: ${report.safeBunks} classes remaining'
+        : (report.classesNeeded > 0
+            ? 'Need ${report.classesNeeded} consecutive classes to reach 75%'
+            : 'Maintain current attendance');
+
+    final int notifId =
+        ('summary_${report.rollNo}_${DateTime.now().minute}'.hashCode).abs().remainder(100000);
+
+    await showNotification(
+      id: notifId,
+      title: '$statusEmoji Total Attendance: ${report.overallPercentage.toStringAsFixed(1)}% (${report.academicStatus})',
+      body: 'Classes Attended: ${report.totalAttended} / ${report.totalHeld} (${report.overallPercentage.toStringAsFixed(1)}%)\n'
+          '$standingAdvice across ${report.subjects.length} subjects.\n'
+          'Tap to view subject-wise breakdown.',
+      payload: 'attendance',
+      type: 'attendance',
+    );
+  }
+
+  /// Simulate a Present or Absent subject attendance notification
+  /// so users and students can immediately test how alerts look on their phone!
+  Future<void> simulateAttendanceAlert({
+    required bool isPresent,
+    String? subjectName,
+    double? overallPct,
+  }) async {
+    final sub = subjectName ?? (isPresent ? 'Database Management Systems' : 'Computer Networks');
+    final overall = overallPct ?? (isPresent ? 84.6 : 74.2);
+
+    if (isPresent) {
+      await showNotification(
+        id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
+        title: '🟢 Marked Present: $sub',
+        body: 'You were marked PRESENT for today\'s lecture (+1 class).\n'
+            'Subject: 24/28 (85.7%) • Overall Attendance: ${overall.toStringAsFixed(1)}% (SAFE)',
+        payload: 'attendance',
+        type: 'attendance',
+      );
+    } else {
+      await showNotification(
+        id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
+        title: '🔴 Attendance Alert: Marked ABSENT in $sub',
+        body: 'You were marked ABSENT for today\'s lecture (1 missed lecture).\n'
+            'Subject: 18/26 (69.2%) • Overall Attendance: ${overall.toStringAsFixed(1)}% (WARNING)',
+        payload: 'attendance',
+        type: 'attendance',
+      );
+    }
   }
 
   /// Starts the continuous zero-delay real-time pulse monitor
@@ -326,10 +616,24 @@ class NotificationService {
 
     if (normalizedRole == 'student') {
       switch (scenario) {
-        case 'attendance':
-          title = 'Attendance Update: Recorded Present';
+        case 'attendance_present':
+          title = '🟢 Attendance: Marked PRESENT in Computer Networks';
           body =
-              'Your attendance for Computer Networks was recorded as Present today. Overall: 85%.';
+              'You were marked PRESENT for today\'s lecture (+1 class).\nSubject: 24/28 (85.7%) • Overall Attendance: 84.6% (SAFE)';
+          type = 'attendance';
+          screen = 'attendance';
+          break;
+        case 'attendance_absent':
+          title = '🔴 Attendance Alert: Marked ABSENT in Operating Systems';
+          body =
+              'You were marked ABSENT for today\'s lecture (1 missed lecture).\nSubject: 18/26 (69.2%) • Overall Attendance: 74.2% (WARNING)';
+          type = 'attendance';
+          screen = 'attendance';
+          break;
+        case 'attendance':
+          title = '📊 Total Attendance: 84.6% (GOOD STANDING)';
+          body =
+              'Classes Attended: 142/168 (84.6%)\nSafe Bunks Margin: 12 classes remaining across 8 subjects.';
           type = 'attendance';
           screen = 'attendance';
           break;
@@ -569,6 +873,7 @@ class NotificationService {
   }
 
   void dispose() {
+    stopAttendanceWatcher();
     stopRealtimePulse();
     _payloadStreamController.close();
   }

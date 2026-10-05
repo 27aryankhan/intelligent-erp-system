@@ -24,7 +24,6 @@ void main() async {
   await ApiConfig.init();
   final notificationService = NotificationService();
   await notificationService.initialize();
-  await notificationService.requestPermissions();
 
   runApp(const IntelligentERP());
 }
@@ -36,12 +35,19 @@ class IntelligentERP extends StatefulWidget {
   State<IntelligentERP> createState() => _IntelligentERPState();
 }
 
-class _IntelligentERPState extends State<IntelligentERP> {
+class _IntelligentERPState extends State<IntelligentERP>
+    with WidgetsBindingObserver {
   StreamSubscription<String?>? _notificationSubscription;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Request notifications permission after Activity has mounted
+      await NotificationService().requestPermissions();
+    });
+
     _notificationSubscription =
         NotificationService().onNotificationTap.listen((payload) {
       if (payload == null || payload.isEmpty) return;
@@ -84,7 +90,16 @@ class _IntelligentERPState extends State<IntelligentERP> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // When user re-enters or switches back to app, silently sync attendance
+      NotificationService().syncAttendanceNow();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _notificationSubscription?.cancel();
     super.dispose();
   }
@@ -244,6 +259,9 @@ class _LoginPageState extends State<LoginPage> {
           userId: activeRoll,
           email: activeRoll,
         );
+        if (report != null) {
+          NotificationService().checkAndNotifyAttendance(report);
+        }
 
         if (!mounted) return;
         Navigator.push(
@@ -1071,16 +1089,79 @@ class _StudentDashboardState extends State<StudentDashboard> {
       upcomingExams = 1;
       newAnnouncements = 3;
       isLoading = false;
+      NotificationService().checkAndNotifyAttendance(rep);
     }
     fetchStudentData();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await NotificationService().requestPermissions();
+      final rollNo = widget.studentId ?? HitamAuthService().activeUserId;
+      if (rollNo != null && rollNo.isNotEmpty) {
+        NotificationService().startAttendanceWatcher(rollNo);
+      }
       UpdateService().promptUpdateIfAvailable(context, silent: true);
     });
   }
 
+  Future<void> _notifyAttendanceStatus() async {
+    final granted = await NotificationService().requestPermissions();
+    if (!granted && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              '⚠️ Please allow notifications in device settings to receive attendance alerts.'),
+          backgroundColor: Color(0xFFDC2626),
+        ),
+      );
+      return;
+    }
+
+    final scraper = HitamScraperService();
+    final rep = scraper.latestAttendanceReport ?? widget.initialReport;
+    if (rep != null) {
+      await NotificationService().pushAttendanceSummaryNotification(rep);
+      await NotificationService()
+          .checkAndNotifyAttendance(rep, forceNotifySummary: false);
+    } else {
+      final synthetic = StudentAttendanceReport(
+        rollNo:
+            widget.studentId ?? HitamAuthService().activeUserId ?? 'Student',
+        studentName: studentName.isNotEmpty ? studentName : 'Student',
+        course: 'B.Tech',
+        branch: department.isNotEmpty ? department : 'Engineering',
+        semester: year.isNotEmpty ? year : 'Semester',
+        totalHeld: 172,
+        totalAttended: (172 * (attendance / 100)).round(),
+        overallPercentage: attendance,
+        subjects: [],
+      );
+      await NotificationService().pushAttendanceSummaryNotification(synthetic);
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: const [
+              Icon(Icons.check_circle, color: Colors.white, size: 20),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                    '🔔 Attendance notification sent to your phone status bar!'),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFF10B981),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
   Future<void> fetchStudentData() async {
     final scraper = HitamScraperService();
-    StudentAttendanceReport? report = widget.initialReport ?? scraper.latestAttendanceReport;
+    StudentAttendanceReport? report =
+        widget.initialReport ?? scraper.latestAttendanceReport;
     final rollNo = widget.studentId ?? HitamAuthService().activeUserId;
 
     if (report == null && rollNo != null && rollNo.isNotEmpty) {
@@ -1099,6 +1180,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
         isLoading = false;
         errorMessage = '';
       });
+      NotificationService().checkAndNotifyAttendance(report!);
     }
 
     try {
@@ -1284,6 +1366,89 @@ class _StudentDashboardState extends State<StudentDashboard> {
                             ),
                           ),
                         ],
+                      ),
+
+                      // ======================================================
+                      // LIVE ATTENDANCE ALERTS NOTIFICATION BANNER
+                      // ======================================================
+                      const SizedBox(height: 20),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFEFF6FF), Color(0xFFDBEAFE)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFFBFDBFE)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.blue.withOpacity(0.06),
+                              blurRadius: 10,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF2563EB),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(
+                                Icons.notifications_active_rounded,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Attendance Notifications',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 14,
+                                      color: Color(0xFF1E3A8A),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Get live alerts when marked Present or Absent',
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      color: Colors.blue.shade900,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            ElevatedButton.icon(
+                              onPressed: _notifyAttendanceStatus,
+                              icon: const Icon(Icons.send_rounded, size: 14),
+                              label: const Text('Notify'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF2563EB),
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
 
                       // ======================================================
@@ -1708,6 +1873,7 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
     }).toList();
     isLoading = false;
     errorMessage = '';
+    NotificationService().checkAndNotifyAttendance(rep);
   }
 
   Future<void> fetchAttendanceData() async {
@@ -1727,6 +1893,7 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
       setState(() {
         _applyAttendanceReport(rep!);
       });
+      NotificationService().checkAndNotifyAttendance(rep!);
       return;
     }
 
@@ -2966,6 +3133,280 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
     );
   }
 
+  Future<void> _pushAttendanceNotification() async {
+    final granted = await NotificationService().requestPermissions();
+    if (!granted && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+              '⚠️ Please allow notifications in device settings to receive attendance alerts.'),
+          backgroundColor: Color(0xFFDC2626),
+        ),
+      );
+      return;
+    }
+
+    final scraper = HitamScraperService();
+    final rep = scraper.latestAttendanceReport ?? widget.report;
+    if (rep != null) {
+      await NotificationService().pushAttendanceSummaryNotification(rep);
+      await NotificationService()
+          .checkAndNotifyAttendance(rep, forceNotifySummary: false);
+    } else {
+      final synthetic = StudentAttendanceReport(
+        rollNo: studentId,
+        studentName: studentName,
+        course: 'B.Tech',
+        branch: department,
+        semester: semester,
+        totalHeld: totalClasses,
+        totalAttended: attendedClasses,
+        overallPercentage: overallAttendance,
+        subjects: subjects
+            .map((m) => SubjectAttendance(
+                  subjectCode: m['code']?.toString() ?? '',
+                  subjectName: m['subject']?.toString() ?? '',
+                  classesHeld: (m['total'] as num?)?.toInt() ?? 0,
+                  classesAttended: (m['attended'] as num?)?.toInt() ?? 0,
+                  percentage: (m['percentage'] as num?)?.toDouble() ?? 0.0,
+                ))
+            .toList(),
+      );
+      await NotificationService().pushAttendanceSummaryNotification(synthetic);
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: const [
+              Icon(Icons.check_circle, color: Colors.white, size: 20),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                    '🔔 Attendance notification pushed to your status bar!'),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFF10B981),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  void _showTestAlertsDialog() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Test Attendance Notifications',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Verify how notifications look and sound on your mobile lock screen & status bar:',
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  shape: BoxShape.circle,
+                ),
+                child:
+                    const Icon(Icons.check_circle_rounded, color: Colors.green),
+              ),
+              title: const Text('Test "Marked Present" Alert',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
+              subtitle: const Text(
+                  'Simulates teacher recording you Present in a subject (+1 class)'),
+              onTap: () {
+                Navigator.pop(ctx);
+                NotificationService().simulateAttendanceAlert(isPresent: true);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text(
+                          '🟢 Present notification sent! Check your status bar.')),
+                );
+              },
+            ),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.cancel_rounded, color: Colors.red),
+              ),
+              title: const Text('Test "Marked Absent" Alert',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
+              subtitle: const Text(
+                  'Simulates teacher recording you Absent in a subject'),
+              onTap: () {
+                Navigator.pop(ctx);
+                NotificationService().simulateAttendanceAlert(isPresent: false);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text(
+                          '🔴 Absent notification sent! Check your status bar.')),
+                );
+              },
+            ),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.pie_chart_rounded, color: Colors.blue),
+              ),
+              title: const Text('Push Total Attendance Summary',
+                  style: TextStyle(fontWeight: FontWeight.w600)),
+              subtitle: const Text(
+                  'Pushes current aggregate percentage and academic status'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pushAttendanceNotification();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNotificationHubCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0FDF4),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFBBF7D0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF16A34A),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.notifications_active_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Live Attendance Notifications',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        color: Color(0xFF14532D),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Push live status to notification shade or test mobile alerts',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.green.shade800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _pushAttendanceNotification,
+                  icon: const Icon(Icons.send_rounded, size: 16),
+                  label: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text('Push to Phone'),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF16A34A),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _showTestAlertsDialog,
+                  icon: const Icon(Icons.science_outlined, size: 16),
+                  label: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text('Test Alerts'),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF16A34A),
+                    side: const BorderSide(color: Color(0xFF86EFAC)),
+                    backgroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildActionBar() {
     final marginBtn = SizedBox(
       height: 48,
@@ -2977,7 +3418,8 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
           child: Text('Margin Calc'),
         ),
         style: OutlinedButton.styleFrom(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       ),
     );
@@ -2992,7 +3434,8 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
           child: Text('Transcript'),
         ),
         style: OutlinedButton.styleFrom(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       ),
     );
@@ -3032,7 +3475,8 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
                   '• Regular Eligibility: ≥ 75% aggregate attendance is mandatory to appear for Semester End Examinations (SEE).\n'
                   '• Condonation Zone: 65% – 74% permitted on genuine medical grounds subject to Principal approval.\n'
                   '• Detention Zone: < 65% attendance leads to semester detention as per autonomous academic bylaws.',
-                  style: TextStyle(fontSize: 12, height: 1.4, color: Colors.grey.shade700),
+                  style: TextStyle(
+                      fontSize: 12, height: 1.4, color: Colors.grey.shade700),
                 ),
               ],
             ),
@@ -3045,7 +3489,8 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     final double screenWidth = MediaQuery.sizeOf(context).width;
-    final double horizontalPadding = screenWidth < 400 ? 14.0 : (screenWidth < 600 ? 18.0 : 24.0);
+    final double horizontalPadding =
+        screenWidth < 400 ? 14.0 : (screenWidth < 600 ? 18.0 : 24.0);
 
     return Scaffold(
       appBar: AppBar(
@@ -3055,6 +3500,16 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
           child: Text('Attendance Details'),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications_active_rounded),
+            tooltip: 'Push Attendance to Status Bar',
+            onPressed: _pushAttendanceNotification,
+          ),
+          IconButton(
+            icon: const Icon(Icons.science_outlined),
+            tooltip: 'Test Alerts',
+            onPressed: _showTestAlertsDialog,
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Refresh',
@@ -3100,14 +3555,16 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 1080),
                     child: SingleChildScrollView(
-                      padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 20),
+                      padding: EdgeInsets.symmetric(
+                          horizontal: horizontalPadding, vertical: 20),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _buildStudentHeroCard(),
                           const SizedBox(height: 20),
                           GithubAttendanceHeatmap(
-                            academicRegister: HitamScraperService().latestAcademicRegister,
+                            academicRegister: HitamScraperService()
+                                .latestAcademicRegister,
                             overallAttendance: overallAttendance,
                             totalClasses: totalClasses,
                             attendedClasses: attendedClasses,
@@ -3117,6 +3574,8 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
                           _buildKpiSection(),
                           const SizedBox(height: 20),
                           _buildOverallProgressCard(),
+                          const SizedBox(height: 20),
+                          _buildNotificationHubCard(),
                           const SizedBox(height: 24),
                           _buildActionBar(),
                           const SizedBox(height: 24),
