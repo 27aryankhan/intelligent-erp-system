@@ -1028,13 +1028,6 @@ class _StudentDashboardState extends State<StudentDashboard> {
         title: const Text('Student Dashboard'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.system_update_rounded),
-            tooltip: 'Check for Updates',
-            onPressed: () {
-              UpdateService().promptUpdateIfAvailable(context, silent: false);
-            },
-          ),
-          IconButton(
             icon: const Icon(Icons.download_rounded),
             tooltip: 'Downloads',
             onPressed: () {
