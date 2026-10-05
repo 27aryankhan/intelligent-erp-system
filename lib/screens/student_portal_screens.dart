@@ -1487,9 +1487,9 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                     _buildInfoRow('Mother Occupation', p?.motherOccupation ?? '', Icons.work_outline),
                   ]),
 
-                  // SPF Band Performance
+                  // SPF Performance
                   if (p?.spfBands.isNotEmpty ?? false)
-                    _buildCardSection('SPF BAND PERFORMANCE', [
+                    _buildCardSection('SPF PERFORMANCE', [
                       Container(
                         decoration: BoxDecoration(
                           color: const Color(0xFFF8FAFC),
@@ -3368,7 +3368,7 @@ class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: const Text(
-          'SPF Band Performance',
+          'SPF Performance',
           style: TextStyle(
             fontWeight: FontWeight.w700,
             fontSize: 18,

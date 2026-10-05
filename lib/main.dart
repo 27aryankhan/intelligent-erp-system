@@ -1467,17 +1467,22 @@ class _StudentDashboardState extends State<StudentDashboard> {
                       ),
                       const SizedBox(height: 10),
 
-                      // 8. SPF BAND PERFORMANCE
+                      // 8. SPF PERFORMANCE
                       _buildPortalServiceCard(
                         context: context,
                         icon: Icons.military_tech_rounded,
                         iconColor: const Color(0xFF6366F1),
                         iconBgColor: const Color(0xFFEEF2FF),
-                        title: 'SPF Band',
-                        subtitle: 'Student Performance Framework cycle bands & tier rating',
+                        title: 'SPF',
+                        subtitle: 'Student Performance Framework cycle & tier rating',
                         trailingBadge: HitamScraperService().latestSpfBands != null &&
                                 HitamScraperService().latestSpfBands!.isNotEmpty
-                            ? 'Band ${HitamScraperService().latestSpfBands!.last.band}'
+                            ? HitamScraperService()
+                                .latestSpfBands!
+                                .last
+                                .band
+                                .replaceAll(RegExp(r'band\s*', caseSensitive: false), '')
+                                .trim()
                             : null,
                         badgeColor: const Color(0xFF6366F1),
                         onTap: () {
