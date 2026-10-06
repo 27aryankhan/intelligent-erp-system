@@ -46,6 +46,7 @@ dependencies:
   path_provider: ^2.1.6
   open_filex: ^4.7.0
   workmanager: ^0.10.10
+  ota_update: ^7.1.0
 
 dev_dependencies:
   flutter_test:

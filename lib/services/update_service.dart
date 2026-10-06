@@ -6,6 +6,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:open_filex/open_filex.dart';
+import 'package:ota_update/ota_update.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -412,6 +413,7 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
   String _etaText = '';
   String? _downloadedFilePath;
   http.Client? _activeClient;
+  StreamSubscription<OtaEvent>? _otaSubscription;
 
   @override
   void initState() {
@@ -446,6 +448,7 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
 
   @override
   void dispose() {
+    _otaSubscription?.cancel();
     _activeClient?.close();
     super.dispose();
   }
@@ -462,18 +465,100 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
       _etaText = '';
     });
 
+    final targetUrl =
+        UpdateService.resolveDirectDownloadUrl(widget.info.downloadUrl);
+
+    // Primary: Android Background OTA Service
+    if (Platform.isAndroid) {
+      try {
+        _otaSubscription?.cancel();
+        _otaSubscription = OtaUpdate().execute(
+          targetUrl,
+          destinationFilename: 'Intelligent_ERP_Update.apk',
+        ).listen(
+          (OtaEvent event) {
+            if (!mounted) return;
+            debugPrint('OTA Status: ${event.status}, Value: ${event.value}');
+            switch (event.status) {
+              case OtaStatus.DOWNLOADING:
+                final int progInt = int.tryParse(event.value ?? '0') ?? 0;
+                final double prog = (progInt / 100.0).clamp(0.0, 0.99);
+                const double totalMbVal = 22.0;
+                final double dlMbVal = totalMbVal * prog;
+                setState(() {
+                  _isDownloading = true;
+                  _isComplete = false;
+                  _progress = prog;
+                  _downloadedSize = '${dlMbVal.toStringAsFixed(1)} MB';
+                  _totalSize = '${totalMbVal.toStringAsFixed(1)} MB';
+                  _speedText = 'Background Service (${event.value}%)';
+                });
+                break;
+              case OtaStatus.INSTALLING:
+              case OtaStatus.INSTALLATION_DONE:
+                setState(() {
+                  _isDownloading = false;
+                  _isComplete = true;
+                  _progress = 1.0;
+                  _speedText = '';
+                });
+                break;
+              case OtaStatus.PERMISSION_NOT_GRANTED_ERROR:
+                setState(() {
+                  _isDownloading = false;
+                  _installError =
+                      'Permission Needed: Please enable "Install unknown apps" for Intelligent ERP in Android Settings, then tap Install Now.';
+                });
+                break;
+              case OtaStatus.ALREADY_RUNNING_ERROR:
+                setState(() {
+                  _isDownloading = true;
+                });
+                break;
+              case OtaStatus.DOWNLOAD_ERROR:
+              case OtaStatus.INTERNAL_ERROR:
+              case OtaStatus.CHECKSUM_ERROR:
+              case OtaStatus.INSTALLATION_ERROR:
+                setState(() {
+                  _isDownloading = false;
+                  _downloadError =
+                      event.value ?? 'Download failed. Please tap retry.';
+                });
+                break;
+              case OtaStatus.CANCELED:
+                setState(() {
+                  _isDownloading = false;
+                  _downloadError = 'Download cancelled';
+                });
+                break;
+            }
+          },
+          onError: (e) {
+            if (!mounted) return;
+            setState(() {
+              _isDownloading = false;
+              _downloadError = e.toString().replaceAll('Exception: ', '');
+            });
+          },
+        );
+        return;
+      } catch (e) {
+        debugPrint('OtaUpdate exception, falling back to direct stream: $e');
+      }
+    }
+
+    // Fallback: Direct streamed client
     final client = http.Client();
     _activeClient = client;
 
     try {
-      String targetUrl =
-          UpdateService.resolveDirectDownloadUrl(widget.info.downloadUrl);
       http.StreamedResponse? streamedResponse;
       int redirectHops = 0;
+      String currentUrl = targetUrl;
 
       // Robustly follow redirects across CDNs
       while (redirectHops < 8) {
-        final request = http.Request('GET', Uri.parse(targetUrl));
+        final request = http.Request('GET', Uri.parse(currentUrl));
         request.followRedirects = true;
         request.maxRedirects = 8;
 
@@ -481,7 +566,7 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
         if (res.statusCode >= 300 &&
             res.statusCode < 400 &&
             res.headers.containsKey('location')) {
-          targetUrl = res.headers['location']!;
+          currentUrl = res.headers['location']!;
           redirectHops++;
           continue;
         }
@@ -525,7 +610,6 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
       int lastSampleTimeMs = 0;
       double currentSpeedBytesPerSec = 0;
 
-      // 15 second chunk timeout
       final chunkStream = streamedResponse.stream.timeout(
         const Duration(seconds: 15),
         onTimeout: (sink) {
@@ -630,6 +714,11 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
   }
 
   void _cancelDownload() {
+    _otaSubscription?.cancel();
+    _otaSubscription = null;
+    try {
+      OtaUpdate().cancel();
+    } catch (_) {}
     _activeClient?.close();
     _activeClient = null;
     setState(() {
