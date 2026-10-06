@@ -152,9 +152,24 @@ class _LoginPageState extends State<LoginPage> {
   void initState() {
     super.initState();
     _initializeBackgroundVideo();
+    _loadSavedCredentials();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkForUpdatesOnLoginPage();
     });
+  }
+
+  Future<void> _loadSavedCredentials() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedId = prefs.getString('hitam_user_id');
+      final savedPwd = prefs.getString('hitam_user_pwd');
+      if (savedId != null && savedId.isNotEmpty && mounted) {
+        _emailController.text = savedId;
+      }
+      if (savedPwd != null && savedPwd.isNotEmpty && mounted) {
+        _passwordController.text = savedPwd;
+      }
+    } catch (_) {}
   }
 
   Future<void> _checkForUpdatesOnLoginPage() async {
@@ -278,6 +293,8 @@ class _LoginPageState extends State<LoginPage> {
           await NotificationService().pushAttendanceSummaryNotification(report);
           await NotificationService().checkShortageWarning(report, force: true);
           await NotificationService().checkAndNotifyAttendance(report);
+        } else {
+          unawaited(NotificationService().syncAttendanceNow());
         }
 
         if (!mounted) return;
@@ -1185,6 +1202,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
       });
       NotificationService().checkAndNotifyAttendance(report!);
       NotificationService().checkShortageWarning(report!);
+      NotificationService().pushAttendanceSummaryNotification(report!);
     }
 
     try {
@@ -1900,6 +1918,7 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
     isLoading = false;
     errorMessage = '';
     NotificationService().checkAndNotifyAttendance(rep);
+    NotificationService().pushAttendanceSummaryNotification(rep);
   }
 
   Future<void> fetchAttendanceData() async {
@@ -3159,280 +3178,6 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
     );
   }
 
-  Future<void> _pushAttendanceNotification() async {
-    final granted = await NotificationService().requestPermissions();
-    if (!granted && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-              '⚠️ Please allow notifications in device settings to receive attendance alerts.'),
-          backgroundColor: Color(0xFFDC2626),
-        ),
-      );
-      return;
-    }
-
-    final scraper = HitamScraperService();
-    final rep = scraper.latestAttendanceReport ?? widget.report;
-    if (rep != null) {
-      await NotificationService().pushAttendanceSummaryNotification(rep);
-      await NotificationService()
-          .checkAndNotifyAttendance(rep, forceNotifySummary: false);
-    } else {
-      final synthetic = StudentAttendanceReport(
-        rollNo: studentId,
-        studentName: studentName,
-        course: 'B.Tech',
-        branch: department,
-        semester: semester,
-        totalHeld: totalClasses,
-        totalAttended: attendedClasses,
-        overallPercentage: overallAttendance,
-        subjects: subjects
-            .map((m) => SubjectAttendance(
-                  subjectCode: m['code']?.toString() ?? '',
-                  subjectName: m['subject']?.toString() ?? '',
-                  classesHeld: (m['total'] as num?)?.toInt() ?? 0,
-                  classesAttended: (m['attended'] as num?)?.toInt() ?? 0,
-                  percentage: (m['percentage'] as num?)?.toDouble() ?? 0.0,
-                ))
-            .toList(),
-      );
-      await NotificationService().pushAttendanceSummaryNotification(synthetic);
-    }
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: const [
-              Icon(Icons.check_circle, color: Colors.white, size: 20),
-              SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                    '🔔 Attendance notification pushed to your status bar!'),
-              ),
-            ],
-          ),
-          backgroundColor: const Color(0xFF10B981),
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    }
-  }
-
-  void _showTestAlertsDialog() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Test Attendance Notifications',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Verify how notifications look and sound on your mobile lock screen & status bar:',
-              style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-            ),
-            const SizedBox(height: 16),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.green.shade50,
-                  shape: BoxShape.circle,
-                ),
-                child:
-                    const Icon(Icons.check_circle_rounded, color: Colors.green),
-              ),
-              title: const Text('Test "Marked Present" Alert',
-                  style: TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: const Text(
-                  'Simulates teacher recording you Present in a subject (+1 class)'),
-              onTap: () {
-                Navigator.pop(ctx);
-                NotificationService().simulateAttendanceAlert(isPresent: true);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text(
-                          '🟢 Present notification sent! Check your status bar.')),
-                );
-              },
-            ),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.cancel_rounded, color: Colors.red),
-              ),
-              title: const Text('Test "Marked Absent" Alert',
-                  style: TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: const Text(
-                  'Simulates teacher recording you Absent in a subject'),
-              onTap: () {
-                Navigator.pop(ctx);
-                NotificationService().simulateAttendanceAlert(isPresent: false);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text(
-                          '🔴 Absent notification sent! Check your status bar.')),
-                );
-              },
-            ),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.pie_chart_rounded, color: Colors.blue),
-              ),
-              title: const Text('Push Total Attendance Summary',
-                  style: TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: const Text(
-                  'Pushes current aggregate percentage and academic status'),
-              onTap: () {
-                Navigator.pop(ctx);
-                _pushAttendanceNotification();
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNotificationHubCard() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF0FDF4),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFBBF7D0)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF16A34A),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.notifications_active_rounded,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Live Attendance Notifications',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                        color: Color(0xFF14532D),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Push live status to notification shade or test mobile alerts',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.green.shade800,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: _pushAttendanceNotification,
-                  icon: const Icon(Icons.send_rounded, size: 16),
-                  label: const FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text('Push to Phone'),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF16A34A),
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _showTestAlertsDialog,
-                  icon: const Icon(Icons.science_outlined, size: 16),
-                  label: const FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text('Test Alerts'),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF16A34A),
-                    side: const BorderSide(color: Color(0xFF86EFAC)),
-                    backgroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildActionBar() {
     final marginBtn = SizedBox(
       height: 48,
@@ -3527,16 +3272,6 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications_active_rounded),
-            tooltip: 'Push Attendance to Status Bar',
-            onPressed: _pushAttendanceNotification,
-          ),
-          IconButton(
-            icon: const Icon(Icons.science_outlined),
-            tooltip: 'Test Alerts',
-            onPressed: _showTestAlertsDialog,
-          ),
-          IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Refresh',
             onPressed: fetchAttendanceData,
@@ -3600,8 +3335,6 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
                           _buildKpiSection(),
                           const SizedBox(height: 20),
                           _buildOverallProgressCard(),
-                          const SizedBox(height: 20),
-                          _buildNotificationHubCard(),
                           const SizedBox(height: 24),
                           _buildActionBar(),
                           const SizedBox(height: 24),
