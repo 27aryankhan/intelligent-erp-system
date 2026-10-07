@@ -121,7 +121,131 @@ class _IntelligentERPState extends State<IntelligentERP>
         ),
         useMaterial3: true,
       ),
-      home: const LoginPage(),
+      home: const AuthGate(),
+    );
+  }
+}
+
+// ============================================================
+// AUTH GATE - PERSISTENT SESSION AUTO-LOGIN
+// ============================================================
+
+class AuthGate extends StatefulWidget {
+  const AuthGate({super.key});
+
+  @override
+  State<AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<AuthGate> {
+  @override
+  void initState() {
+    super.initState();
+    _checkSavedSession();
+  }
+
+  Future<void> _checkSavedSession() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final isLoggedIn = prefs.getBool('hitam_is_logged_in') ?? false;
+      final savedId = prefs.getString('hitam_user_id');
+      final savedPwd = prefs.getString('hitam_user_pwd');
+      final savedRole = prefs.getString('hitam_user_role') ?? 'student';
+
+      if (isLoggedIn &&
+          savedId != null &&
+          savedId.isNotEmpty &&
+          savedPwd != null &&
+          savedPwd.isNotEmpty) {
+        final authService = HitamAuthService();
+        authService.activeUserId = savedId;
+        final role = UserRole.values.firstWhere(
+          (r) => r.name.toLowerCase() == savedRole.toLowerCase(),
+          orElse: () => UserRole.student,
+        );
+        authService.activeRole = role;
+
+        NotificationService().setUserSession(
+          role: savedRole,
+          userId: savedId,
+          email: savedId,
+        );
+
+        // Silently renew session cookies in background
+        unawaited(authService.ensureAuthenticated());
+
+        if (!mounted) return;
+
+        if (savedRole == 'faculty') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const FacultyClassSelectionScreen()),
+          );
+          return;
+        } else if (savedRole == 'parent') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const ParentDashboard()),
+          );
+          return;
+        } else {
+          // Reconstruct student report from cached SharedPreferences for instant 0ms entry
+          final cachedName = prefs.getString('hitam_student_name') ?? '';
+          final cachedBranch = prefs.getString('hitam_student_branch') ?? '';
+          final cachedSemester = prefs.getString('hitam_student_semester') ?? '';
+          final cachedCourse = prefs.getString('hitam_student_course') ?? 'B.Tech';
+          final cachedPct = prefs.getDouble('hitam_student_percentage') ?? 0.0;
+          final cachedHeld = prefs.getInt('hitam_student_held') ?? 0;
+          final cachedAttended = prefs.getInt('hitam_student_attended') ?? 0;
+
+          StudentAttendanceReport? cachedReport;
+          if (cachedName.isNotEmpty) {
+            cachedReport = StudentAttendanceReport(
+              rollNo: savedId,
+              studentName: cachedName,
+              course: cachedCourse,
+              branch: cachedBranch,
+              semester: cachedSemester,
+              totalHeld: cachedHeld,
+              totalAttended: cachedAttended,
+              overallPercentage: cachedPct,
+              subjects: [],
+            );
+          }
+
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => StudentDashboard(
+                initialReport: cachedReport,
+                studentId: savedId,
+              ),
+            ),
+          );
+          return;
+        }
+      }
+    } catch (e) {
+      debugPrint('AuthGate session check error: $e');
+    }
+
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      backgroundColor: Color(0xFF0F172A),
+      body: Center(
+        child: CircularProgressIndicator(
+          color: Color(0xFF2563EB),
+        ),
+      ),
     );
   }
 }
@@ -297,8 +421,26 @@ class _LoginPageState extends State<LoginPage> {
           unawaited(NotificationService().syncAttendanceNow());
         }
 
+        // Save persistent session credentials and student profile details
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('hitam_is_logged_in', true);
+          await prefs.setString('hitam_user_id', activeRoll);
+          await prefs.setString('hitam_user_pwd', password);
+          await prefs.setString('hitam_user_role', 'student');
+          if (report != null) {
+            await prefs.setString('hitam_student_name', report.studentName);
+            await prefs.setString('hitam_student_branch', report.branch);
+            await prefs.setString('hitam_student_semester', report.semester);
+            await prefs.setString('hitam_student_course', report.course);
+            await prefs.setDouble('hitam_student_percentage', report.overallPercentage);
+            await prefs.setInt('hitam_student_held', report.totalHeld);
+            await prefs.setInt('hitam_student_attended', report.totalAttended);
+          }
+        } catch (_) {}
+
         if (!mounted) return;
-        Navigator.push(
+        Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (context) => StudentDashboard(
@@ -320,13 +462,20 @@ class _LoginPageState extends State<LoginPage> {
           role: UserRole.faculty,
         );
         if (webprosFacultySuccess) {
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setBool('hitam_is_logged_in', true);
+            await prefs.setString('hitam_user_id', email);
+            await prefs.setString('hitam_user_pwd', password);
+            await prefs.setString('hitam_user_role', 'faculty');
+          } catch (_) {}
           NotificationService().setUserSession(
             role: 'faculty',
             userId: email,
             email: email,
           );
           if (!mounted) return;
-          Navigator.push(
+          Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (_) => const FacultyClassSelectionScreen()),
           );
@@ -339,13 +488,20 @@ class _LoginPageState extends State<LoginPage> {
           role: UserRole.parent,
         );
         if (webprosParentSuccess) {
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setBool('hitam_is_logged_in', true);
+            await prefs.setString('hitam_user_id', email);
+            await prefs.setString('hitam_user_pwd', password);
+            await prefs.setString('hitam_user_role', 'parent');
+          } catch (_) {}
           NotificationService().setUserSession(
             role: 'parent',
             userId: email,
             email: email,
           );
           if (!mounted) return;
-          Navigator.push(
+          Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (_) => const ParentDashboard()),
           );
@@ -1144,6 +1300,17 @@ class _StudentDashboardState extends State<StudentDashboard> {
         isLoading = false;
         errorMessage = '';
       });
+      // Save freshest data to SharedPreferences cache
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('hitam_student_name', report!.studentName);
+        await prefs.setString('hitam_student_branch', report!.branch);
+        await prefs.setString('hitam_student_semester', report!.semester);
+        await prefs.setString('hitam_student_course', report!.course);
+        await prefs.setDouble('hitam_student_percentage', report!.overallPercentage);
+        await prefs.setInt('hitam_student_held', report!.totalHeld);
+        await prefs.setInt('hitam_student_attended', report!.totalAttended);
+      } catch (_) {}
       NotificationService().checkAndNotifyAttendance(report!);
       NotificationService().checkShortageWarning(report!);
       NotificationService().pushAttendanceSummaryNotification(report!);
@@ -1210,6 +1377,51 @@ class _StudentDashboardState extends State<StudentDashboard> {
     }
   }
 
+  Future<void> _confirmLogout(BuildContext context) async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Log Out', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: const Text(
+          'Are you sure you want to log out of Intelligent ERP?\nYou will need to enter your credentials to log in again.',
+          style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel', style: TextStyle(color: Color(0xFF64748B))),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Log Out'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldLogout == true && context.mounted) {
+      await HitamAuthService().logout();
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('hitam_is_logged_in', false);
+        await prefs.remove('hitam_user_pwd');
+      } catch (_) {}
+      if (!context.mounted) return;
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+        (route) => false,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1229,6 +1441,11 @@ class _StudentDashboardState extends State<StudentDashboard> {
             },
           ),
           const NotificationBellIcon(role: 'student'),
+          IconButton(
+            icon: const Icon(Icons.logout_rounded),
+            tooltip: 'Log Out',
+            onPressed: () => _confirmLogout(context),
+          ),
         ],
       ),
       body: isLoading
@@ -1267,25 +1484,161 @@ class _StudentDashboardState extends State<StudentDashboard> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Welcome, $studentName',
-                        style: const TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.bold,
+                      // ==========================================
+                      // STUDENT USER DETAILS HERO CARD
+                      // ==========================================
+                      InkWell(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const StudentProfileScreen(),
+                            ),
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(18),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(
+                              color: const Color(0xFF334155).withValues(alpha: 0.6),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.25),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 25,
+                                    backgroundColor: const Color(0xFF2563EB),
+                                    child: Text(
+                                      studentName.trim().isNotEmpty
+                                          ? studentName
+                                              .trim()
+                                              .split(' ')
+                                              .where((s) => s.isNotEmpty)
+                                              .map((e) => e[0])
+                                              .take(2)
+                                              .join()
+                                              .toUpperCase()
+                                          : 'ST',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          studentName.isNotEmpty ? studentName : 'Student',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 17,
+                                            fontWeight: FontWeight.bold,
+                                            letterSpacing: -0.2,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Row(
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFF2563EB).withValues(alpha: 0.2),
+                                                borderRadius: BorderRadius.circular(6),
+                                                border: Border.all(
+                                                  color: const Color(0xFF3B82F6).withValues(alpha: 0.4),
+                                                ),
+                                              ),
+                                              child: Text(
+                                                (widget.studentId ?? HitamAuthService().activeUserId ?? '').toUpperCase(),
+                                                style: const TextStyle(
+                                                  color: Color(0xFF93C5FD),
+                                                  fontSize: 11.5,
+                                                  fontWeight: FontWeight.w700,
+                                                  letterSpacing: 0.5,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const Icon(
+                                    Icons.chevron_right_rounded,
+                                    color: Color(0xFF94A3B8),
+                                    size: 22,
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 14),
+                              Divider(
+                                color: const Color(0xFF334155).withValues(alpha: 0.6),
+                                height: 1,
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  if (department.isNotEmpty)
+                                    Expanded(
+                                      child: Row(
+                                        children: [
+                                          const Icon(Icons.school_rounded, size: 14, color: Color(0xFF94A3B8)),
+                                          const SizedBox(width: 6),
+                                          Expanded(
+                                            child: Text(
+                                              department,
+                                              style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 12, fontWeight: FontWeight.w500),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  if (year.isNotEmpty) ...[
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF334155).withValues(alpha: 0.4),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        year,
+                                        style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11, fontWeight: FontWeight.w600),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ),
 
-                      const SizedBox(height: 8),
-
-                      Text(
-                        '$department • $year',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey,
-                        ),
-                      ),
-
-                      const SizedBox(height: 30),
+                      const SizedBox(height: 24),
 
                       // DASHBOARD CARDS
                       Row(
