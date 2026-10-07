@@ -1,5 +1,6 @@
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html_parser;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'hitam_auth_service.dart';
 
 class SubjectAttendance {
@@ -1133,6 +1134,12 @@ class HitamScraperService {
         spfBands: parsedSpfBands,
       );
       latestProfile = profile;
+      final pUrl = photoUrl;
+      if (pUrl != null && pUrl.isNotEmpty) {
+        SharedPreferences.getInstance().then((prefs) {
+          prefs.setString('hitam_student_photo_url', pUrl);
+        }).catchError((_) {});
+      }
       return profile;
     } catch (_) {
       return null;

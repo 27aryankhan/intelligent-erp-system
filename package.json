@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "npm --prefix backend run dev",
     "start": "npm --prefix backend start",
-    "test:backend": "npm --prefix backend test"
+    "test:backend": "npm --prefix backend test",
+    "build:apk": "flutter build apk --release --target-platform android-arm,android-arm64 && cp build/app/outputs/flutter-apk/app-release.apk ~/Desktop/Intelligent.ERP.apk"
   }
 }
