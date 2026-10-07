@@ -1820,9 +1820,6 @@ class _StudentDashboardState extends State<StudentDashboard> {
                       // 1. ATTENDANCE
                       _buildPortalServiceCard(
                         context: context,
-                        icon: Icons.pie_chart_rounded,
-                        iconColor: const Color(0xFF2563EB),
-                        iconBgColor: const Color(0xFFEFF6FF),
                         title: 'Attendance',
                         subtitle: 'Live subject-wise & overall attendance percentage',
                         trailingBadge: '${attendance.toStringAsFixed(2)}%',
@@ -1848,9 +1845,6 @@ class _StudentDashboardState extends State<StudentDashboard> {
                       // 2. BACKLOGS
                       _buildPortalServiceCard(
                         context: context,
-                        icon: Icons.assignment_late_rounded,
-                        iconColor: const Color(0xFFDC2626),
-                        iconBgColor: const Color(0xFFFEF2F2),
                         title: 'Backlogs',
                         subtitle: 'Active arrears, subject history & exam schedule',
                         trailingBadge: HitamScraperService().latestBacklogs != null
@@ -1873,9 +1867,6 @@ class _StudentDashboardState extends State<StudentDashboard> {
                       // 3. FEE DETAILS
                       _buildPortalServiceCard(
                         context: context,
-                        icon: Icons.account_balance_wallet_rounded,
-                        iconColor: const Color(0xFF059669),
-                        iconBgColor: const Color(0xFFECFDF5),
                         title: 'Fee Details',
                         subtitle: 'Academic fee ledger, dues & payment receipts',
                         trailingBadge: HitamScraperService().latestFeeReport != null
@@ -1896,9 +1887,6 @@ class _StudentDashboardState extends State<StudentDashboard> {
                       // 4. MARKS
                       _buildPortalServiceCard(
                         context: context,
-                        icon: Icons.auto_graph_rounded,
-                        iconColor: const Color(0xFF7C3AED),
-                        iconBgColor: const Color(0xFFF5F3FF),
                         title: 'Marks',
                         subtitle: 'CIE internal exams & semester SGPA / CGPA',
                         onTap: () {
@@ -1915,9 +1903,6 @@ class _StudentDashboardState extends State<StudentDashboard> {
                       // 5. PROFILE
                       _buildPortalServiceCard(
                         context: context,
-                        icon: Icons.person_rounded,
-                        iconColor: const Color(0xFF0284C7),
-                        iconBgColor: const Color(0xFFF0F9FF),
                         title: 'Profile',
                         subtitle: 'Personal bio-data, academic records & contact info',
                         onTap: () {
@@ -1934,9 +1919,6 @@ class _StudentDashboardState extends State<StudentDashboard> {
                       // 6. TIME TABLE
                       _buildPortalServiceCard(
                         context: context,
-                        icon: Icons.calendar_today_rounded,
-                        iconColor: const Color(0xFFD97706),
-                        iconBgColor: const Color(0xFFFFFBEB),
                         title: 'Time table',
                         subtitle: 'Weekly day-wise period timings & faculty allocation',
                         onTap: () {
@@ -1953,9 +1935,6 @@ class _StudentDashboardState extends State<StudentDashboard> {
                       // 7. ACADEMIC REGISTER
                       _buildPortalServiceCard(
                         context: context,
-                        icon: Icons.menu_book_rounded,
-                        iconColor: const Color(0xFF0D9488),
-                        iconBgColor: const Color(0xFFF0FDFA),
                         title: 'Academic Register',
                         subtitle: 'Comprehensive day-by-day attendance & CIE register',
                         onTap: () {
@@ -1973,9 +1952,6 @@ class _StudentDashboardState extends State<StudentDashboard> {
                       // 8. SPF PERFORMANCE
                       _buildPortalServiceCard(
                         context: context,
-                        icon: Icons.military_tech_rounded,
-                        iconColor: const Color(0xFF6366F1),
-                        iconBgColor: const Color(0xFFEEF2FF),
                         title: 'SPF',
                         subtitle: 'Student Performance Framework cycle & tier rating',
                         trailingBadge: HitamScraperService().latestSpfBands != null &&
@@ -2026,9 +2002,6 @@ class _StudentDashboardState extends State<StudentDashboard> {
 
   Widget _buildPortalServiceCard({
     required BuildContext context,
-    required IconData icon,
-    required Color iconColor,
-    required Color iconBgColor,
     required String title,
     required String subtitle,
     String? trailingBadge,
@@ -2041,14 +2014,14 @@ class _StudentDashboardState extends State<StudentDashboard> {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: const Color(0xFFE2E8F0)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.02),
+                color: Colors.black.withValues(alpha: 0.02),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -2056,16 +2029,6 @@ class _StudentDashboardState extends State<StudentDashboard> {
           ),
           child: Row(
             children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: iconBgColor,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: iconColor, size: 22),
-              ),
-              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -2078,7 +2041,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
                         color: Color(0xFF0F172A),
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 3),
                     Text(
                       subtitle,
                       maxLines: 1,
@@ -2097,7 +2060,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: (badgeColor ?? Colors.blue).withOpacity(0.12),
+                    color: (badgeColor ?? Colors.blue).withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
