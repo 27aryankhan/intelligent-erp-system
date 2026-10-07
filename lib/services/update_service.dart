@@ -2,14 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:open_filex/open_filex.dart';
 import 'package:ota_update/ota_update.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_config.dart';
 
 class AppUpdateInfo {
@@ -32,9 +30,8 @@ class AppUpdateInfo {
   });
 
   bool get hasUpdate => latestVersionCode > UpdateService.effectiveVersionCode;
-  bool get isMandatory =>
-      isCritical ||
-      (UpdateService.effectiveVersionCode < minSupportedVersionCode);
+  // All updates are mandatory to ensure all user devices stay on the latest version
+  bool get isMandatory => true;
 
   factory AppUpdateInfo.fromJson(Map<String, dynamic> json) {
     List<String> notes = [];
@@ -66,9 +63,9 @@ class UpdateService {
   factory UpdateService() => _instance;
   UpdateService._internal();
 
-  /// Current running version of the app (matches pubspec.yaml version 1.0.9+10)
-  static const String currentVersion = '1.0.9';
-  static const int currentVersionCode = 10;
+  /// Current running version of the app (matches pubspec.yaml version 1.1.0+11)
+  static const String currentVersion = '1.1.0';
+  static const int currentVersionCode = 11;
 
   static int get effectiveVersionCode => currentVersionCode;
 
@@ -171,7 +168,7 @@ class UpdateService {
   void showUpdateDialog(BuildContext context, AppUpdateInfo info) {
     showDialog(
       context: context,
-      barrierDismissible: true,
+      barrierDismissible: !info.isMandatory,
       builder: (ctx) => _InAppUpdateDialog(info: info),
     );
   }
@@ -507,7 +504,7 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
                 setState(() {
                   _isDownloading = false;
                   _installError =
-                      'Permission Needed: Please enable "Install unknown apps" for Intelligent ERP in Android Settings, then tap Install Now.';
+                      'Permission Needed: Please enable "Install unknown apps" for Intelligent ERP in Android Settings, then tap Update Now.';
                 });
                 break;
               case OtaStatus.ALREADY_RUNNING_ERROR:
@@ -749,12 +746,12 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
         if (result.type == ResultType.permissionDenied && mounted) {
           setState(() {
             _installError =
-                'Permission Needed: Please allow "Install unknown apps" for Intelligent ERP in Android Settings, then tap Install Now.';
+                'Permission Needed: Please allow "Install unknown apps" for Intelligent ERP in Android Settings, then tap Update Now.';
           });
         } else if (result.type == ResultType.error && mounted) {
           setState(() {
             _installError =
-                'Could not launch installer: ${result.message}. Tap Install Now to retry.';
+                'Could not launch updater: ${result.message}. Tap Update Now to retry.';
           });
         } else if (result.type == ResultType.done && mounted) {
           setState(() {
@@ -777,7 +774,7 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: !_isDownloading,
+      canPop: !widget.info.isMandatory && !_isDownloading,
       child: Dialog(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -805,54 +802,27 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
   }
 
   Widget _buildHeader() {
-    IconData headerIcon;
-    Color iconColor;
-    Color iconBgColor;
     String titleText;
     String subtitleText;
 
     if (_isComplete) {
-      headerIcon = Icons.check_circle_outline_rounded;
-      iconColor = const Color(0xFF10B981);
-      iconBgColor = const Color(0xFF064E3B).withValues(alpha: 0.35);
-      titleText = 'Ready to Install';
-      subtitleText = 'Version ${widget.info.latestVersion}  •  Verified';
+      titleText = 'Ready to Update';
+      subtitleText = widget.info.isMandatory
+          ? 'Version ${widget.info.latestVersion}  •  Required Update'
+          : 'Version ${widget.info.latestVersion}  •  Verified';
     } else if (_isDownloading) {
-      headerIcon = Icons.downloading_rounded;
-      iconColor = const Color(0xFF60A5FA);
-      iconBgColor = const Color(0xFF1E3A8A).withValues(alpha: 0.35);
       titleText = 'Downloading Update';
       subtitleText = 'Intelligent ERP v${widget.info.latestVersion}';
     } else {
-      headerIcon = Icons.system_update_rounded;
-      iconColor = const Color(0xFF60A5FA);
-      iconBgColor = const Color(0xFF1E293B);
-      titleText = 'Update Available';
-      subtitleText = 'Version ${widget.info.latestVersion}  •  ${widget.info.fileSize}';
+      titleText = widget.info.isMandatory ? 'Update Required' : 'Update Available';
+      subtitleText = widget.info.isMandatory
+          ? 'Version ${widget.info.latestVersion}  •  Required Update'
+          : 'Version ${widget.info.latestVersion}  •  ${widget.info.fileSize}';
     }
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // Refined minimal icon container
-        Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: iconBgColor,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: iconColor.withValues(alpha: 0.25),
-              width: 1,
-            ),
-          ),
-          child: Icon(
-            headerIcon,
-            color: iconColor,
-            size: 22,
-          ),
-        ),
-        const SizedBox(width: 14),
         // Title & clean version subtitle
         Expanded(
           child: Column(
@@ -879,8 +849,8 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
             ],
           ),
         ),
-        // Close button if allowed
-        if (!_isDownloading)
+        // Close button if allowed (hidden for mandatory updates)
+        if (!widget.info.isMandatory && !_isDownloading)
           IconButton(
             onPressed: () => Navigator.of(context).pop(),
             icon: const Icon(Icons.close_rounded, size: 20),
@@ -1000,7 +970,7 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'The package ($_totalSize) is ready to install. Tap Install Now to complete the update.',
+                        'The update package ($_totalSize) is ready. Tap Update Now to complete the update.',
                         style: const TextStyle(
                           color: Color(0xFF94A3B8),
                           fontSize: 12,
@@ -1169,7 +1139,7 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
           SizedBox(
             width: double.infinity,
             height: 44,
-            child: ElevatedButton.icon(
+            child: ElevatedButton(
               onPressed: () {
                 if (_downloadedFilePath != null) {
                   _launchInstaller(_downloadedFilePath!);
@@ -1177,11 +1147,6 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
                   _startInAppDownload();
                 }
               },
-              icon: const Icon(Icons.install_mobile_rounded, size: 18),
-              label: const Text(
-                'Install Now',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF10B981),
                 foregroundColor: Colors.white,
@@ -1190,16 +1155,22 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
                   borderRadius: BorderRadius.circular(11),
                 ),
               ),
+              child: const Text(
+                'Update Now',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              ),
             ),
           ),
-          const SizedBox(height: 8),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text(
-              'Install Later',
-              style: TextStyle(color: Color(0xFF64748B), fontSize: 12.5),
+          if (!widget.info.isMandatory) ...[
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'Update Later',
+                style: TextStyle(color: Color(0xFF64748B), fontSize: 12.5),
+              ),
             ),
-          ),
+          ],
         ],
       );
     }
@@ -1211,13 +1182,8 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
         SizedBox(
           width: double.infinity,
           height: 44,
-          child: ElevatedButton.icon(
+          child: ElevatedButton(
             onPressed: _startInAppDownload,
-            icon: const Icon(Icons.arrow_downward_rounded, size: 18),
-            label: Text(
-              _downloadError != null ? 'Retry Download' : 'Update Now',
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-            ),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF2563EB),
               foregroundColor: Colors.white,
@@ -1225,6 +1191,10 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(11),
               ),
+            ),
+            child: Text(
+              _downloadError != null ? 'Retry Download' : 'Update Now',
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
             ),
           ),
         ),
