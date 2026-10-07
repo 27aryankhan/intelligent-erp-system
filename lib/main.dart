@@ -1526,6 +1526,11 @@ class _StudentDashboardState extends State<StudentDashboard> {
       appBar: AppBar(
         title: const Text('Student Dashboard'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded),
+            tooltip: 'Refresh Portal Data',
+            onPressed: fetchStudentData,
+          ),
           const NotificationBellIcon(role: 'student'),
           IconButton(
             icon: const Icon(Icons.logout_rounded),
@@ -1973,27 +1978,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
                           );
                         },
                       ),
-                      const SizedBox(height: 16),
-
-                      // REFRESH
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: fetchStudentData,
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            side: const BorderSide(color: Color(0xFFCBD5E1)),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          icon: const Icon(Icons.refresh_rounded, size: 20),
-                          label: const Text(
-                            'Refresh Portal Data',
-                            style: TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                        ),
-                      ),
+                      const SizedBox(height: 24),
                     ],
                   ),
                 ),
