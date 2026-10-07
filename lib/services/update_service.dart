@@ -950,34 +950,24 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
                 color: const Color(0xFF10B981).withValues(alpha: 0.3),
               ),
             ),
-            child: Row(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.check_circle_rounded,
-                    color: Color(0xFF34D399), size: 20),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Update Downloaded Successfully',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'The update package ($_totalSize) is ready. Tap Update Now to complete the update.',
-                        style: const TextStyle(
-                          color: Color(0xFF94A3B8),
-                          fontSize: 12,
-                          height: 1.35,
-                        ),
-                      ),
-                    ],
+                const Text(
+                  'Update Downloaded Successfully',
+                  style: TextStyle(
+                    color: Color(0xFF34D399),
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'The update package ($_totalSize) is ready. Tap Update Now to complete the update.',
+                  style: const TextStyle(
+                    color: Color(0xFF94A3B8),
+                    fontSize: 12,
+                    height: 1.35,
                   ),
                 ),
               ],
