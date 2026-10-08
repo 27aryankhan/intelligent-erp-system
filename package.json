@@ -1,11 +1,13 @@
 {
   "name": "intelligent-erp-system",
-  "version": "1.0.0",
+  "version": "1.1.1",
   "description": "HITAM Intelligent ERP System root helper scripts",
   "scripts": {
     "dev": "npm --prefix backend run dev",
     "start": "npm --prefix backend start",
-    "test:backend": "npm --prefix backend test",
+    "test:backend": "node --check backend/server.js",
+    "test:flutter": "flutter test",
+    "analyze": "flutter analyze --no-fatal-infos",
     "build:apk": "flutter build apk --release --target-platform android-arm,android-arm64 && cp build/app/outputs/flutter-apk/app-release.apk ~/Desktop/Intelligent.ERP.apk"
   }
 }

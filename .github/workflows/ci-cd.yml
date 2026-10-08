@@ -1,0 +1,125 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      create_release:
+        description: 'Publish as GitHub Release?'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  # -------------------------------------------------------------
+  # 1. CI: Quality, Lint Analysis & Automated Unit Tests
+  # -------------------------------------------------------------
+  test-and-analyze:
+    name: Lint & Automated Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Validate Backend Syntax
+        run: node --check backend/server.js
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Static Code Analysis
+        run: flutter analyze --no-fatal-infos
+
+      - name: Run Test Suite
+        run: flutter test
+
+  # -------------------------------------------------------------
+  # 2. CD: Build Release APK for Physical Mobile Devices (~40MB)
+  # -------------------------------------------------------------
+  build-apk:
+    name: Build Mobile Release APK
+    needs: test-and-analyze
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build Android Release APK (Physical Phones Only)
+        run: |
+          # Per AGENTS.md: target armeabi-v7a and arm64-v8a physical devices, exclude x86 emulators
+          flutter build apk --release --target-platform android-arm,android-arm64
+          cp build/app/outputs/flutter-apk/app-release.apk Intelligent.ERP.apk
+
+      - name: Upload APK as Workflow Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Intelligent.ERP-apk
+          path: Intelligent.ERP.apk
+          if-no-files-found: error
+          retention-days: 30
+
+  # -------------------------------------------------------------
+  # 3. CD: Automatic GitHub Release with Packaged APK Binary
+  # -------------------------------------------------------------
+  publish-release:
+    name: Publish GitHub Release
+    needs: build-apk
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.create_release == true)
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Download Compiled APK Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: Intelligent.ERP-apk
+
+      - name: Create or Update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: Intelligent.ERP.apk
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -462,11 +462,7 @@ class NotificationService {
       final Map<String, dynamic> prev = jsonDecode(prevRaw);
       final Map<String, dynamic> prevSubjects =
           (prev['subjects'] as Map<String, dynamic>?) ?? {};
-      final double prevOverall =
-          (prev['overallPercentage'] as num?)?.toDouble() ?? 0.0;
       final int prevTotalHeld = (prev['totalHeld'] as num?)?.toInt() ?? 0;
-      final int prevTotalAttended =
-          (prev['totalAttended'] as num?)?.toInt() ?? 0;
 
       int presentDetected = 0;
       int absentDetected = 0;
