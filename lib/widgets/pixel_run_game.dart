@@ -27,7 +27,6 @@ const double aFar = 0.15;
 const double aSprite = 0.75; // Enhanced contrast for mobile
 const double aCloud = 0.32;
 const double blockUnits = 11.0;
-const double idleResume = 4.0;
 const double aHudLabel = 0.40;
 const double aHudValue = 0.65;
 
@@ -232,7 +231,6 @@ class _PixelRunGameWidgetState extends State<PixelRunGameWidget>
   late PixelWorld _world;
   late Ticker _ticker;
   Duration _lastElapsed = Duration.zero;
-  double _idleTime = 1e9;
   Size _lastSize = Size.zero;
 
   @override
@@ -280,8 +278,8 @@ class _PixelRunGameWidgetState extends State<PixelRunGameWidget>
     final sp = widget.startSpeed * s;
     _world.obstacles = [];
     final initConfigs = [
-      (0.62, 2, 0),
-      (1.02, 1, 2),
+      (0.68, 1, 0),
+      (1.22, 2, 2),
     ];
 
     for (final cfg in initConfigs) {
@@ -313,14 +311,18 @@ class _PixelRunGameWidgetState extends State<PixelRunGameWidget>
     final disc = v * v - 2.0 * g * top;
 
     final tX = (10.0 * px + blockUnits * px * 0.76) / sp;
-    if (disc <= 0) return (ok: false, lead: 0.0);
+    if (disc <= 0) return (ok: false, lead: 0.22);
     final root = math.sqrt(disc);
     final t1 = (v - root) / g;
     final t2 = (v + root) / g;
 
+    final clearWindow = t2 - t1;
+    final ok = clearWindow > tX * 1.1;
+    final lead = t1 + (clearWindow - tX) / 2.0;
+
     return (
-      ok: t2 - t1 > tX * 1.25,
-      lead: t1 + (t2 - t1 - tX) / 2.0,
+      ok: ok,
+      lead: lead > 0 ? lead : 0.22,
     );
   }
 
@@ -333,7 +335,6 @@ class _PixelRunGameWidgetState extends State<PixelRunGameWidget>
     _world.playerV = widget.jump * s;
     _world.grounded = false;
     _world.played = true;
-    _idleTime = 0;
     widget.onJump?.call();
   }
 
@@ -344,10 +345,9 @@ class _PixelRunGameWidgetState extends State<PixelRunGameWidget>
     final playerX = w * 0.08;
 
     _world.t += dt;
-    _idleTime += dt;
 
     if (_world.dead) {
-      if (_world.t - _world.deadAt > 0.9) {
+      if (_world.t - _world.deadAt > 0.5) {
         final best = math.max(_world.best, _world.score);
         final played = _world.played;
         _world = PixelWorld(
@@ -391,7 +391,7 @@ class _PixelRunGameWidgetState extends State<PixelRunGameWidget>
     final clearDist = (sp / s) * flight + (blockUnits + 20.0) * art;
     if (lastX < w - (clearDist + _world.nextGap) * s) {
       final r = _rng(_world);
-      int stack = r < 0.55 ? 1 : (r < 0.87 ? 2 : 3);
+      int stack = r < 0.60 ? 1 : 2;
 
       while (stack > 0 && !_jumpWindow(stack, sp, s).ok) {
         stack--;
@@ -405,7 +405,7 @@ class _PixelRunGameWidgetState extends State<PixelRunGameWidget>
           ),
         );
       }
-      _world.nextGap = _rng(_world) * 380.0;
+      _world.nextGap = 160.0 + _rng(_world) * 320.0;
     }
 
     // Move clouds
@@ -424,8 +424,8 @@ class _PixelRunGameWidgetState extends State<PixelRunGameWidget>
       );
     }
 
-    // Autonomous attract mode (auto-jumps so game stays alive on idle)
-    final auto = widget.attract && (!_world.played || _idleTime > idleResume);
+    // Autonomous attract mode (auto-jumps so game stays alive and plays automatically)
+    final auto = widget.attract;
     if (auto && _world.grounded) {
       final bu = blockUnits * px;
       final plFront = playerX + 13.0 * px;
@@ -442,7 +442,9 @@ class _PixelRunGameWidgetState extends State<PixelRunGameWidget>
 
       if (nextOb != null) {
         final win = _jumpWindow(nextOb.stack, sp, s);
-        if (win.ok && gap <= sp * win.lead) {
+        final leadTime = win.lead;
+        final triggerDist = sp * leadTime;
+        if (gap <= triggerDist && gap > -5.0 * px) {
           _doJump();
         }
       }
@@ -450,18 +452,18 @@ class _PixelRunGameWidgetState extends State<PixelRunGameWidget>
 
     // Collision detection
     final plBox = Rect.fromLTWH(
-      playerX + 3.0 * px,
-      groundY - _world.playerY - 16.0 * px + 2.0 * px,
-      10.0 * px,
-      14.0 * px,
+      playerX + 5.0 * px,
+      groundY - _world.playerY - 14.0 * px,
+      6.0 * px,
+      12.0 * px,
     );
 
     for (final ob in _world.obstacles) {
       final bu = blockUnits * px;
       final obBox = Rect.fromLTWH(
-        ob.x + bu * 0.12,
+        ob.x + bu * 0.18,
         groundY - ob.stack * bu,
-        bu * 0.76,
+        bu * 0.64,
         ob.stack * bu,
       );
 
@@ -479,8 +481,6 @@ class _PixelRunGameWidgetState extends State<PixelRunGameWidget>
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () {
-        _world.played = true;
-        _idleTime = 0;
         _doJump();
       },
       child: LayoutBuilder(

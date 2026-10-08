@@ -1745,52 +1745,18 @@ class _StudentDashboardState extends State<StudentDashboard> {
                                 color: const Color(0xFF1E3A8A).withValues(alpha: 0.6),
                               ),
 
-                              // BOTTOM STAGE: Interactive Pixel Run Game (Originkit)
-                              Stack(
-                                children: [
-                                  const PixelRunGameWidget(
-                                    height: 112,
-                                    background: Color(0xFF00164C),
-                                    ink: Colors.white,
-                                    runnerColor: Color(0xFF38BDF8),
-                                    startSpeed: 420,
-                                    maxSpeed: 980,
-                                    gravity: 4780,
-                                    jump: 1480,
-                                    showHud: true,
-                                    attract: true,
-                                  ),
-                                  Positioned(
-                                    bottom: 7,
-                                    left: 12,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF000D2B).withValues(alpha: 0.8),
-                                        borderRadius: BorderRadius.circular(4),
-                                        border: Border.all(
-                                          color: const Color(0xFF38BDF8).withValues(alpha: 0.35),
-                                        ),
-                                      ),
-                                      child: const Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(Icons.touch_app_rounded, size: 10, color: Color(0xFF38BDF8)),
-                                          SizedBox(width: 4),
-                                          Text(
-                                            'TAP TO JUMP',
-                                            style: TextStyle(
-                                              color: Color(0xFF93C5FD),
-                                              fontSize: 8.5,
-                                              fontWeight: FontWeight.bold,
-                                              letterSpacing: 0.6,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                              // BOTTOM STAGE: Autonomous Pixel Run Game (Originkit)
+                              const PixelRunGameWidget(
+                                height: 112,
+                                background: Color(0xFF00164C),
+                                ink: Colors.white,
+                                runnerColor: Color(0xFF38BDF8),
+                                startSpeed: 420,
+                                maxSpeed: 980,
+                                gravity: 4780,
+                                jump: 1480,
+                                showHud: true,
+                                attract: true,
                               ),
                             ],
                           ),
