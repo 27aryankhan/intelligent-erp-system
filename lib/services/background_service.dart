@@ -26,10 +26,18 @@ void callbackDispatcher() {
       final authOk = await HitamAuthService().ensureAuthenticated();
       debugPrint('Background Worker: ensureAuthenticated result = $authOk');
 
-      // 3. Fetch latest live attendance from WebPros and push notifications
-      // Detects new Present / Absent marks, percentage diffs, and <75% shortages
-      await NotificationService().syncAttendanceNow();
-      debugPrint('Background Worker: Attendance sync & alert check completed.');
+      if (authOk) {
+        // 3. Fetch latest live attendance from WebPros and push notifications
+        // Detects new Present / Absent marks with faculty name, percentage diffs, <75% shortages, and evening summaries
+        await NotificationService().syncAttendanceNow();
+
+        // 4. Ensure weekly period timetable reminders and exact alarms are active
+        await NotificationService().syncTimetableAndReminders();
+
+        // 5. Check if evening attendance summary should be dispatched
+        await NotificationService().checkEveningSummaryNow();
+      }
+      debugPrint('Background Worker: Full attendance & timetable sync completed.');
     } catch (e) {
       debugPrint('Background Worker error: $e');
     }

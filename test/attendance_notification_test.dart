@@ -184,5 +184,114 @@ void main() {
       expect(lastNotifMs, greaterThan(0));
       expect(lastHeld, equals(100));
     });
+
+    test('Caches faculty allocations and resolves faculty member by subject', () async {
+      final notifService = NotificationService();
+      final allocations = [
+        SubjectFacultyAllocation(
+          code: '22CS601',
+          name: 'Computer Networks',
+          facultyName: 'Dr. K. Srinivas',
+        ),
+        SubjectFacultyAllocation(
+          code: '22CS602',
+          name: 'Operating Systems',
+          facultyName: 'Prof. M. Rajesh',
+        ),
+      ];
+
+      await notifService.cacheFacultyAllocations('22KD1A0505', allocations);
+
+      final faculty1 = await notifService.resolveFacultyName(
+          '22KD1A0505', '22CS601', 'Computer Networks');
+      final faculty2 = await notifService.resolveFacultyName(
+          '22KD1A0505', '22CS602', 'Operating Systems');
+      final facultyUnknown = await notifService.resolveFacultyName(
+          '22KD1A0505', 'UNKNOWN', 'Unknown Course');
+
+      expect(faculty1, equals('Dr. K. Srinivas'));
+      expect(faculty2, equals('Prof. M. Rajesh'));
+      expect(facultyUnknown, equals('Subject Faculty'));
+    });
+
+    test('Establishes daily baseline and calculates evening attendance summary metrics', () async {
+      final notifService = NotificationService();
+      final prefs = await SharedPreferences.getInstance();
+      final now = DateTime.now();
+      final dateKey =
+          '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+
+      // Morning baseline: 100 held, 80 attended
+      final morningBaseline = {'held': 100, 'attended': 80};
+      await prefs.setString(
+          'day_baseline_22KD1A0506_$dateKey', jsonEncode(morningBaseline));
+
+      // Evening report: 104 held (+4 classes conducted today), 83 attended (+3 attended, 1 missed)
+      final eveningReport = StudentAttendanceReport(
+        rollNo: '22KD1A0506',
+        studentName: 'Evening Student',
+        course: 'B.Tech',
+        branch: 'CSE',
+        semester: 'Semester 6',
+        totalHeld: 104,
+        totalAttended: 83,
+        overallPercentage: 79.8,
+        subjects: [
+          SubjectAttendance(
+            subjectCode: '22CS601',
+            subjectName: 'Computer Networks',
+            classesHeld: 29,
+            classesAttended: 25,
+            percentage: 86.2,
+          ),
+        ],
+      );
+
+      await notifService.checkAndPushEveningSummary(eveningReport, force: true);
+
+      final sentFlag =
+          prefs.getBool('evening_summary_sent_22KD1A0506_$dateKey');
+      expect(sentFlag, isTrue);
+    });
+
+    test('Schedules timetable period reminders without error', () async {
+      final notifService = NotificationService();
+      final timetable = StudentTimeTableReport(
+        periodHeaders: [
+          'Day of week',
+          'I (09:15-10:05)',
+          'II (10:05-10:55)',
+          'III (11:05-11:55)',
+        ],
+        schedules: [
+          DaySchedule(
+            day: 'Mon',
+            subjects: ['22CS601', '22CS602', '-'],
+          ),
+        ],
+        allocations: [
+          SubjectFacultyAllocation(
+            code: '22CS601',
+            name: 'Computer Networks',
+            facultyName: 'Dr. K. Srinivas',
+          ),
+          SubjectFacultyAllocation(
+            code: '22CS602',
+            name: 'Operating Systems',
+            facultyName: 'Prof. M. Rajesh',
+          ),
+        ],
+      );
+
+      await notifService.scheduleTimetablePeriodReminders(
+        timetable,
+        rollNo: '22KD1A0507',
+      );
+
+      // Verify faculty was cached from timetable allocations
+      final fac = await notifService.resolveFacultyName(
+          '22KD1A0507', '22CS601', 'Computer Networks');
+      expect(fac, equals('Dr. K. Srinivas'));
+    });
   });
 }

@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_player/video_player.dart';
@@ -84,6 +83,12 @@ class _IntelligentERPState extends State<IntelligentERP>
     if (state == AppLifecycleState.resumed) {
       // When user re-enters or switches back to app, silently sync attendance
       NotificationService().syncAttendanceNow();
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.detached) {
+      // When minimized or removed to background, schedule immediate worker and alarms
+      BackgroundService().triggerImmediateSync();
+      BackgroundService().checkAndScheduleIfLoggedIn();
     }
   }
 
@@ -4546,7 +4551,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     List<Map<String, String>> scenarios = [];
     if (activeRole == 'student') {
       scenarios = [
-        {'id': 'attendance', 'label': '+ Attendance Recorded (85%)'},
+        {'id': 'attendance_present', 'label': '🟢 Marked Present (Faculty)'},
+        {'id': 'attendance_absent', 'label': '🔴 Marked Absent (Faculty)'},
+        {'id': 'attendance_summary', 'label': '📊 Evening Attendance Summary'},
+        {'id': 'period_reminder', 'label': '🔔 Period / Class Alert'},
+        {'id': 'attendance', 'label': '+ Overall Attendance (85%)'},
         {'id': 'fee', 'label': '+ Tuition Fee Due (₹25k)'},
         {'id': 'assignment', 'label': '+ Assignment Due (24h)'},
         {'id': 'exam', 'label': '+ Hall Tickets Ready'},

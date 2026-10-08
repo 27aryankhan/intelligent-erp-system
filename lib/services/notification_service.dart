@@ -1,16 +1,20 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart' show TimeOfDay;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
 import '../config/api_config.dart';
 import 'hitam_auth_service.dart';
 import 'hitam_scraper_service.dart';
 
 /// Enterprise-grade Notification Service for Intelligent ERP.
 /// Handles native local notifications, OS system tray banners,
-/// background triggers, sound/vibration channels, and device token registration.
+/// background triggers, sound/vibration channels, exact period alarms,
+/// and evening daily summaries that work even when the app is closed or killed.
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
@@ -34,11 +38,29 @@ class NotificationService {
   static const String attendanceChannelId = 'intelligent_erp_attendance_channel_v2';
   static const String attendanceChannelName = 'HITAM Attendance & Academic Alerts';
   static const String attendanceChannelDescription =
-      'Real-time notifications for subject attendance (Present/Absent) and overall percentage.';
+      'Real-time notifications for subject attendance (Present/Absent) with faculty and subject details.';
+
+  static const String timetableChannelId = 'intelligent_erp_timetable_channel';
+  static const String timetableChannelName = 'HITAM Period & Class Reminders';
+  static const String timetableChannelDescription =
+      'Timetable period alerts with class schedule, subject, and faculty details.';
+
+  static const String summaryChannelId = 'intelligent_erp_daily_summary_channel';
+  static const String summaryChannelName = 'HITAM Daily Attendance Summary';
+  static const String summaryChannelDescription =
+      'Evening overview of classes conducted, attended, missed, and daily attendance percentage.';
 
   /// Initialize local and background notification handling
   Future<void> initialize() async {
     if (_isInitialized) return;
+
+    // 1. Initialize timezone database for exact period and evening alarms
+    try {
+      tz.initializeTimeZones();
+      tz.setLocalLocation(tz.getLocation('Asia/Kolkata'));
+    } catch (e) {
+      debugPrint('Timezone initialization note: $e');
+    }
 
     // Android Setup: use default launcher icon
     const AndroidInitializationSettings androidSettings =
@@ -101,10 +123,32 @@ class NotificationService {
             playSound: true,
           ),
         );
+
+        await androidImplementation?.createNotificationChannel(
+          const AndroidNotificationChannel(
+            timetableChannelId,
+            timetableChannelName,
+            description: timetableChannelDescription,
+            importance: Importance.max,
+            enableVibration: true,
+            playSound: true,
+          ),
+        );
+
+        await androidImplementation?.createNotificationChannel(
+          const AndroidNotificationChannel(
+            summaryChannelId,
+            summaryChannelName,
+            description: summaryChannelDescription,
+            importance: Importance.max,
+            enableVibration: true,
+            playSound: true,
+          ),
+        );
       }
 
       _isInitialized = true;
-      debugPrint('NotificationService initialized successfully.');
+      debugPrint('NotificationService initialized successfully with all channels.');
     } catch (e) {
       debugPrint('NotificationService initialization failed: $e');
     }
@@ -162,11 +206,36 @@ class NotificationService {
       await initialize();
     }
 
-    final isAttendance = type.toLowerCase() == 'attendance';
-    final targetChannelId = isAttendance ? attendanceChannelId : channelId;
-    final targetChannelName = isAttendance ? attendanceChannelName : channelName;
-    final targetChannelDesc =
-        isAttendance ? attendanceChannelDescription : channelDescription;
+    final tLower = type.toLowerCase();
+    final isAttendance = tLower == 'attendance';
+    final isTimetable = tLower == 'timetable' || tLower == 'period';
+    final isSummary = tLower == 'summary' || tLower == 'evening';
+
+    String targetChannelId = channelId;
+    String targetChannelName = channelName;
+    String targetChannelDesc = channelDescription;
+    String summaryHeader = 'HITAM ERP • ${type.toUpperCase()}';
+    AndroidNotificationCategory category = AndroidNotificationCategory.event;
+
+    if (isAttendance) {
+      targetChannelId = attendanceChannelId;
+      targetChannelName = attendanceChannelName;
+      targetChannelDesc = attendanceChannelDescription;
+      summaryHeader = 'HITAM ERP • ATTENDANCE';
+      category = AndroidNotificationCategory.status;
+    } else if (isTimetable) {
+      targetChannelId = timetableChannelId;
+      targetChannelName = timetableChannelName;
+      targetChannelDesc = timetableChannelDescription;
+      summaryHeader = 'HITAM ERP • TIMETABLE';
+      category = AndroidNotificationCategory.reminder;
+    } else if (isSummary) {
+      targetChannelId = summaryChannelId;
+      targetChannelName = summaryChannelName;
+      targetChannelDesc = summaryChannelDescription;
+      summaryHeader = 'HITAM ERP • DAILY SUMMARY';
+      category = AndroidNotificationCategory.status;
+    }
 
     final AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
@@ -179,15 +248,11 @@ class NotificationService {
       enableVibration: true,
       playSound: true,
       visibility: NotificationVisibility.public,
-      category: isAttendance
-          ? AndroidNotificationCategory.status
-          : AndroidNotificationCategory.event,
+      category: category,
       styleInformation: BigTextStyleInformation(
         body,
         contentTitle: title,
-        summaryText: isAttendance
-            ? 'HITAM ERP • ATTENDANCE'
-            : 'HITAM ERP • ${type.toUpperCase()}',
+        summaryText: summaryHeader,
       ),
     );
 
@@ -306,7 +371,10 @@ class NotificationService {
     _attendanceWatcherTimer?.cancel();
 
     // Trigger an immediate background sync on startup
-    Future.microtask(() => syncAttendanceNow());
+    Future.microtask(() async {
+      await syncAttendanceNow();
+      await syncTimetableAndReminders();
+    });
 
     // Check periodically every 10 minutes for live attendance updates
     _attendanceWatcherTimer =
@@ -349,6 +417,8 @@ class NotificationService {
       if (report != null && report.subjects.isNotEmpty) {
         await checkAndNotifyAttendance(report);
         await checkShortageWarning(report);
+        // Automatically check if evening attendance summary should be pushed
+        await checkAndPushEveningSummary(report);
       }
     } catch (e) {
       debugPrint('Background attendance sync error: $e');
@@ -403,9 +473,436 @@ class NotificationService {
     }
   }
 
+  // ===========================================================================
+  // FACULTY ALLOCATION CACHING & RESOLUTION
+  // ===========================================================================
+
+  /// Cache faculty allocations mapping for a student
+  Future<void> cacheFacultyAllocations(
+    String rollNo,
+    List<SubjectFacultyAllocation> allocations,
+  ) async {
+    if (rollNo.isEmpty || allocations.isEmpty) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final Map<String, dynamic> cacheMap = {};
+      for (var a in allocations) {
+        if (a.code.isNotEmpty) {
+          cacheMap[a.code.toLowerCase().trim()] = {
+            'code': a.code,
+            'name': a.name,
+            'faculty': a.facultyName,
+          };
+        }
+        if (a.name.isNotEmpty) {
+          cacheMap[a.name.toLowerCase().trim()] = {
+            'code': a.code,
+            'name': a.name,
+            'faculty': a.facultyName,
+          };
+        }
+      }
+      await prefs.setString('faculty_allocations_$rollNo', jsonEncode(cacheMap));
+      debugPrint('Cached ${allocations.length} faculty allocations for $rollNo');
+    } catch (e) {
+      debugPrint('Error caching faculty allocations: $e');
+    }
+  }
+
+  /// Resolves the faculty member assigned to a specific subject code or name
+  Future<String> resolveFacultyName(String rollNo, String code, String name) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('faculty_allocations_$rollNo');
+      if (raw != null) {
+        final Map<String, dynamic> cacheMap = jsonDecode(raw);
+        final cKey = code.toLowerCase().trim();
+        final nKey = name.toLowerCase().trim();
+        if (cacheMap.containsKey(cKey)) {
+          final f = cacheMap[cKey]['faculty']?.toString();
+          if (f != null && f.trim().isNotEmpty) return f.trim();
+        }
+        if (cacheMap.containsKey(nKey)) {
+          final f = cacheMap[nKey]['faculty']?.toString();
+          if (f != null && f.trim().isNotEmpty) return f.trim();
+        }
+      }
+    } catch (_) {}
+
+    // Check memory cache from HitamScraperService
+    final tt = HitamScraperService().latestTimeTable;
+    if (tt != null && tt.allocations.isNotEmpty) {
+      for (var a in tt.allocations) {
+        if (a.code.toLowerCase().trim() == code.toLowerCase().trim() ||
+            a.name.toLowerCase().trim() == name.toLowerCase().trim()) {
+          if (a.facultyName.trim().isNotEmpty) return a.facultyName.trim();
+        }
+      }
+    }
+
+    return 'Subject Faculty';
+  }
+
+  // ===========================================================================
+  // DAILY ATTENDANCE BASELINE & EVENING SUMMARY ENGINE
+  // ===========================================================================
+
+  /// Get or record today's morning baseline for attendance
+  /// (used to compute classes conducted today, attended today, missed today)
+  Future<Map<String, int>> getOrSetTodayBaseline(
+    String rollNo,
+    int currentTotalHeld,
+    int currentTotalAttended,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now();
+    final dateKey = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final baselineKey = 'day_baseline_${rollNo}_$dateKey';
+
+    final raw = prefs.getString(baselineKey);
+    if (raw != null) {
+      try {
+        final decoded = jsonDecode(raw) as Map<String, dynamic>;
+        return {
+          'held': (decoded['held'] as num?)?.toInt() ?? currentTotalHeld,
+          'attended': (decoded['attended'] as num?)?.toInt() ?? currentTotalAttended,
+        };
+      } catch (_) {}
+    }
+
+    // First snapshot recorded today: establish morning baseline
+    final baseline = {
+      'held': currentTotalHeld,
+      'attended': currentTotalAttended,
+    };
+    await prefs.setString(baselineKey, jsonEncode(baseline));
+    return baseline;
+  }
+
+  /// Checks and pushes the daily evening attendance summary.
+  /// Shows total classes conducted today, attended today, missed today,
+  /// and overall attendance percentage.
+  Future<void> checkAndPushEveningSummary(
+    StudentAttendanceReport report, {
+    bool force = false,
+  }) async {
+    final rollNo = report.rollNo.isNotEmpty
+        ? report.rollNo
+        : (HitamAuthService().activeUserId ?? 'student');
+    if (rollNo.isEmpty) return;
+
+    final now = DateTime.now();
+    final dateKey = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final sentKey = 'evening_summary_sent_${rollNo}_$dateKey';
+
+    final prefs = await SharedPreferences.getInstance();
+    final alreadySent = prefs.getBool(sentKey) ?? false;
+    if (!force && alreadySent) return;
+
+    // Evening delivery window: 4:00 PM to 10:00 PM (16:00 to 22:00)
+    if (!force && (now.hour < 16 || now.hour >= 22)) return;
+
+    final baseline = await getOrSetTodayBaseline(
+      rollNo,
+      report.totalHeld,
+      report.totalAttended,
+    );
+
+    final baselineHeld = baseline['held'] ?? report.totalHeld;
+    final baselineAttended = baseline['attended'] ?? report.totalAttended;
+
+    int conductedToday = report.totalHeld - baselineHeld;
+    int attendedToday = report.totalAttended - baselineAttended;
+    if (conductedToday < 0) conductedToday = 0;
+    if (attendedToday < 0) attendedToday = 0;
+    int missedToday = conductedToday - attendedToday;
+    if (missedToday < 0) missedToday = 0;
+
+    final int notifId =
+        ('evening_summary_${rollNo}_$dateKey'.hashCode).abs().remainder(100000);
+
+    String title;
+    String body;
+
+    if (conductedToday > 0) {
+      title = '📊 Daily Attendance Summary: $attendedToday/$conductedToday Attended';
+      body = 'Classes Today: $conductedToday conducted • $attendedToday attended • $missedToday missed.\n'
+          'Overall Attendance: ${report.totalAttended}/${report.totalHeld} (${report.overallPercentage.toStringAsFixed(1)}%) • ${report.academicStatus}';
+    } else {
+      title = '📊 Evening Attendance Summary: ${report.overallPercentage.toStringAsFixed(1)}%';
+      body = 'No additional lectures conducted today.\n'
+          'Overall Attendance: ${report.totalAttended}/${report.totalHeld} (${report.overallPercentage.toStringAsFixed(1)}%) • ${report.academicStatus}';
+    }
+
+    await showNotification(
+      id: notifId,
+      title: title,
+      body: body,
+      payload: 'attendance',
+      type: 'summary',
+    );
+
+    await prefs.setBool(sentKey, true);
+    debugPrint(
+        'Daily evening attendance summary delivered for $rollNo: $attendedToday/$conductedToday attended.');
+  }
+
+  /// Background helper for WorkManager to check evening summary
+  Future<void> checkEveningSummaryNow() async {
+    final now = DateTime.now();
+    if (now.hour < 16 || now.hour >= 22) return;
+
+    final roll = HitamAuthService().activeUserId ?? '';
+    if (roll.isEmpty) return;
+
+    try {
+      final scraper = HitamScraperService();
+      final report = await scraper.fetchStudentAttendanceReport(roll);
+      if (report != null && report.subjects.isNotEmpty) {
+        await checkAndPushEveningSummary(report);
+      }
+    } catch (_) {}
+  }
+
+  /// Simulate an Evening Attendance Summary Notification
+  Future<void> simulateEveningAttendanceSummary({
+    int conducted = 6,
+    int attended = 5,
+    double overall = 84.5,
+  }) async {
+    final missed = conducted - attended;
+    await showNotification(
+      id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
+      title: '📊 Daily Attendance Summary: $attended/$conducted Attended',
+      body: 'Classes Today: $conducted conducted • $attended attended • $missed missed.\n'
+          'Overall Attendance: 142/168 (${overall.toStringAsFixed(1)}%) • GOOD STANDING',
+      payload: 'attendance',
+      type: 'summary',
+    );
+  }
+
+  // ===========================================================================
+  // TIMETABLE PERIOD & CLASS NOTIFICATIONS ENGINE
+  // ===========================================================================
+
+  /// Schedules repeating exact alarms for all timetable periods in the week.
+  /// Works even when the app is completely closed or killed!
+  Future<void> scheduleTimetablePeriodReminders(
+    StudentTimeTableReport report, {
+    String? rollNo,
+  }) async {
+    if (kIsWeb) return;
+    if (report.schedules.isEmpty) return;
+
+    final studentId = rollNo ?? HitamAuthService().activeUserId ?? 'student';
+
+    // Cache faculty allocations
+    if (report.allocations.isNotEmpty) {
+      await cacheFacultyAllocations(studentId, report.allocations);
+    }
+
+    final dayMap = {
+      'mon': DateTime.monday,
+      'tue': DateTime.tuesday,
+      'wed': DateTime.wednesday,
+      'thu': DateTime.thursday,
+      'fri': DateTime.friday,
+      'sat': DateTime.saturday,
+      'sun': DateTime.sunday,
+    };
+
+    // Standard HITAM College Period Timings
+    final defaultPeriodTimes = [
+      const TimeOfDay(hour: 9, minute: 15),  // Period 1
+      const TimeOfDay(hour: 10, minute: 5),  // Period 2
+      const TimeOfDay(hour: 11, minute: 5),  // Period 3
+      const TimeOfDay(hour: 11, minute: 55), // Period 4
+      const TimeOfDay(hour: 13, minute: 25), // Period 5
+      const TimeOfDay(hour: 14, minute: 15), // Period 6
+      const TimeOfDay(hour: 15, minute: 5),  // Period 7
+    ];
+
+    int scheduledCount = 0;
+
+    for (var daySchedule in report.schedules) {
+      final dayKey = daySchedule.day.toLowerCase().trim();
+      final targetWeekday = dayMap[dayKey];
+      if (targetWeekday == null || targetWeekday == DateTime.sunday) continue;
+
+      for (int i = 0; i < daySchedule.subjects.length; i++) {
+        final code = daySchedule.subjects[i].trim();
+        if (code.isEmpty ||
+            code == '-' ||
+            code == '&nbsp;' ||
+            code.toLowerCase().contains('lunch')) {
+          continue;
+        }
+
+        // Resolve subject name and faculty name
+        String subName = code;
+        String facName = 'Faculty Department';
+        for (var alloc in report.allocations) {
+          if (alloc.code.toLowerCase().trim() == code.toLowerCase().trim()) {
+            subName = alloc.name;
+            facName = alloc.facultyName;
+            break;
+          }
+        }
+
+        // Determine period start time
+        TimeOfDay periodTime = i < defaultPeriodTimes.length
+            ? defaultPeriodTimes[i]
+            : TimeOfDay(hour: 9 + i, minute: 0);
+
+        if (i + 1 < report.periodHeaders.length) {
+          final hText = report.periodHeaders[i + 1];
+          final m = RegExp(r'(\d{1,2})[:.](\d{2})').firstMatch(hText);
+          if (m != null) {
+            int h = int.parse(m.group(1)!);
+            final min = int.parse(m.group(2)!);
+            if (h < 8) h += 12; // PM adjustment
+            periodTime = TimeOfDay(hour: h, minute: min);
+          }
+        }
+
+        final timingStr =
+            '${periodTime.hour.toString().padLeft(2, '0')}:${periodTime.minute.toString().padLeft(2, '0')}';
+        final periodNum = i + 1;
+        final notifId =
+            ('period_${targetWeekday}_${periodNum}_$code'.hashCode).abs().remainder(100000);
+
+        try {
+          final now = tz.TZDateTime.now(tz.local);
+          var scheduledDate = tz.TZDateTime(
+            tz.local,
+            now.year,
+            now.month,
+            now.day,
+            periodTime.hour,
+            periodTime.minute,
+          );
+
+          // Adjust to matching weekday
+          while (scheduledDate.weekday != targetWeekday ||
+              scheduledDate.isBefore(now)) {
+            scheduledDate = scheduledDate.add(const Duration(days: 1));
+          }
+
+          await _localNotifications.zonedSchedule(
+            id: notifId,
+            title: '🔔 Period $periodNum: $subName',
+            body: 'Faculty: $facName • Time: $timingStr\nYour scheduled class is starting. Tap to open timetable.',
+            scheduledDate: scheduledDate,
+            notificationDetails: const NotificationDetails(
+              android: AndroidNotificationDetails(
+                timetableChannelId,
+                timetableChannelName,
+                channelDescription: timetableChannelDescription,
+                importance: Importance.max,
+                priority: Priority.high,
+                enableVibration: true,
+                playSound: true,
+                category: AndroidNotificationCategory.reminder,
+              ),
+              iOS: DarwinNotificationDetails(
+                presentAlert: true,
+                presentSound: true,
+              ),
+            ),
+            androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+            matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+            payload: 'timetable',
+          );
+          scheduledCount++;
+        } catch (e) {
+          debugPrint('Could not schedule period $periodNum for $dayKey: $e');
+        }
+      }
+    }
+
+    // Also schedule daily evening summary alarm at 16:45 (4:45 PM)
+    try {
+      final now = tz.TZDateTime.now(tz.local);
+      var eveningTime =
+          tz.TZDateTime(tz.local, now.year, now.month, now.day, 16, 45);
+      if (eveningTime.isBefore(now)) {
+        eveningTime = eveningTime.add(const Duration(days: 1));
+      }
+      await _localNotifications.zonedSchedule(
+        id: 88888,
+        title: '📊 Daily Attendance Summary',
+        body: 'Today\'s lectures are concluded. Tap to see classes attended, missed, and overall percentage.',
+        scheduledDate: eveningTime,
+        notificationDetails: const NotificationDetails(
+          android: AndroidNotificationDetails(
+            summaryChannelId,
+            summaryChannelName,
+            channelDescription: summaryChannelDescription,
+            importance: Importance.max,
+            priority: Priority.high,
+            enableVibration: true,
+            playSound: true,
+            category: AndroidNotificationCategory.status,
+          ),
+          iOS: DarwinNotificationDetails(
+            presentAlert: true,
+            presentSound: true,
+          ),
+        ),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        matchDateTimeComponents: DateTimeComponents.time,
+        payload: 'attendance',
+      );
+    } catch (e) {
+      debugPrint('Error scheduling evening summary alarm: $e');
+    }
+
+    debugPrint(
+        'Scheduled $scheduledCount timetable period reminders + evening summary exact alarm.');
+  }
+
+  /// Syncs student timetable and registers period alarms
+  Future<void> syncTimetableAndReminders() async {
+    try {
+      await HitamAuthService().ensureAuthenticated();
+      final scraper = HitamScraperService();
+      final ttReport = await scraper.fetchStudentTimeTable();
+      if (ttReport != null && ttReport.schedules.isNotEmpty) {
+        await scheduleTimetablePeriodReminders(ttReport);
+      }
+    } catch (e) {
+      debugPrint('Error syncing timetable and reminders: $e');
+    }
+  }
+
+  /// Simulate a period / class reminder notification
+  Future<void> simulatePeriodReminder({
+    String? periodNum,
+    String? subject,
+    String? faculty,
+    String? timing,
+  }) async {
+    final pNum = periodNum ?? '2';
+    final sub = subject ?? 'Compiler Design';
+    final fac = faculty ?? 'Dr. P. Anitha (CSE)';
+    final tStr = timing ?? '10:05 AM';
+
+    await showNotification(
+      id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
+      title: '🔔 Period $pNum ($tStr): $sub',
+      body: 'Faculty: $fac\nYour lecture is starting now. Tap to view today\'s timetable.',
+      payload: 'timetable',
+      type: 'timetable',
+    );
+  }
+
+  // ===========================================================================
+  // ATTENDANCE DIFFING ENGINE WITH FACULTY MAPPING
+  // ===========================================================================
+
   /// Compare fresh attendance report against previously stored local snapshot.
   /// Detects whether student was marked PRESENT or ABSENT in any subject,
-  /// detects overall percentage changes, and pushes heads-up notifications!
+  /// resolves faculty member name, and pushes heads-up notifications!
   Future<void> checkAndNotifyAttendance(
     StudentAttendanceReport currentReport, {
     bool forceNotifySummary = false,
@@ -419,6 +916,13 @@ class NotificationService {
       final prefs = await SharedPreferences.getInstance();
       final key = 'last_attendance_snapshot_$rollNo';
       final prevRaw = prefs.getString(key);
+
+      // Record / maintain daily morning baseline for evening summary
+      await getOrSetTodayBaseline(
+        rollNo,
+        currentReport.totalHeld,
+        currentReport.totalAttended,
+      );
 
       // Build new snapshot map for saving
       final Map<String, dynamic> newSnapshot = {
@@ -480,6 +984,10 @@ class NotificationService {
           final int attendedDiff = s.classesAttended - prevAttended;
 
           if (heldDiff > 0) {
+            // Resolve the faculty member who marked attendance
+            final faculty =
+                await resolveFacultyName(rollNo, s.subjectCode, s.subjectName);
+
             if (attendedDiff > 0) {
               // Student was marked PRESENT in this subject
               presentDetected++;
@@ -488,7 +996,7 @@ class NotificationService {
               await showNotification(
                 id: notifId,
                 title: '🟢 Marked Present: ${s.subjectName}',
-                body: 'You were marked PRESENT today (+$attendedDiff class).\n'
+                body: 'You were marked PRESENT by $faculty (+$attendedDiff class).\n'
                     'Subject: ${s.classesAttended}/${s.classesHeld} (${s.percentage.toStringAsFixed(1)}%) • Overall: ${currentReport.overallPercentage.toStringAsFixed(1)}%',
                 payload: 'attendance',
                 type: 'attendance',
@@ -500,8 +1008,8 @@ class NotificationService {
                   ('absent_${s.subjectCode}_${s.classesHeld}'.hashCode).abs().remainder(100000);
               await showNotification(
                 id: notifId,
-                title: '🔴 Attendance Alert: Marked ABSENT in ${s.subjectName}',
-                body: 'You were marked ABSENT today ($heldDiff missed class).\n'
+                title: '🔴 Marked ABSENT: ${s.subjectName}',
+                body: 'You were marked ABSENT by $faculty ($heldDiff missed class).\n'
                     'Subject: ${s.classesAttended}/${s.classesHeld} (${s.percentage.toStringAsFixed(1)}%) • Overall: ${currentReport.overallPercentage.toStringAsFixed(1)}%',
                 payload: 'attendance',
                 type: 'attendance',
@@ -557,37 +1065,6 @@ class NotificationService {
       payload: 'attendance',
       type: 'attendance',
     );
-  }
-
-  /// Simulate a Present or Absent subject attendance notification
-  /// so users and students can immediately test how alerts look on their phone!
-  Future<void> simulateAttendanceAlert({
-    required bool isPresent,
-    String? subjectName,
-    double? overallPct,
-  }) async {
-    final sub = subjectName ?? (isPresent ? 'Database Management Systems' : 'Computer Networks');
-    final overall = overallPct ?? (isPresent ? 84.6 : 74.2);
-
-    if (isPresent) {
-      await showNotification(
-        id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
-        title: '🟢 Marked Present: $sub',
-        body: 'You were marked PRESENT for today\'s lecture (+1 class).\n'
-            'Subject: 24/28 (85.7%) • Overall Attendance: ${overall.toStringAsFixed(1)}% (SAFE)',
-        payload: 'attendance',
-        type: 'attendance',
-      );
-    } else {
-      await showNotification(
-        id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
-        title: '🔴 Attendance Alert: Marked ABSENT in $sub',
-        body: 'You were marked ABSENT for today\'s lecture (1 missed lecture).\n'
-            'Subject: 18/26 (69.2%) • Overall Attendance: ${overall.toStringAsFixed(1)}% (WARNING)',
-        payload: 'attendance',
-        type: 'attendance',
-      );
-    }
   }
 
   /// Starts the continuous zero-delay real-time pulse monitor
@@ -669,18 +1146,34 @@ class NotificationService {
     if (normalizedRole == 'student') {
       switch (scenario) {
         case 'attendance_present':
-          title = '🟢 Attendance: Marked PRESENT in Computer Networks';
+          title = '🟢 Marked Present: Computer Networks';
           body =
-              'You were marked PRESENT for today\'s lecture (+1 class).\nSubject: 24/28 (85.7%) • Overall Attendance: 84.6% (SAFE)';
+              'You were marked PRESENT by Dr. K. Srinivas (CSE) for today\'s lecture (+1 class).\nSubject: 24/28 (85.7%) • Overall Attendance: 84.6% (SAFE)';
           type = 'attendance';
           screen = 'attendance';
           break;
         case 'attendance_absent':
-          title = '🔴 Attendance Alert: Marked ABSENT in Operating Systems';
+          title = '🔴 Marked ABSENT: Operating Systems';
           body =
-              'You were marked ABSENT for today\'s lecture (1 missed lecture).\nSubject: 18/26 (69.2%) • Overall Attendance: 74.2% (WARNING)';
+              'You were marked ABSENT by Prof. M. Rajesh for today\'s lecture (1 missed lecture).\nSubject: 18/26 (69.2%) • Overall Attendance: 74.2% (WARNING)';
           type = 'attendance';
           screen = 'attendance';
+          break;
+        case 'attendance_summary':
+        case 'evening_summary':
+          title = '📊 Daily Attendance Summary: 5/6 Classes Attended';
+          body =
+              'Classes Today: 6 conducted • 5 attended • 1 missed.\nOverall Attendance: 142/168 (84.5%) • GOOD STANDING';
+          type = 'summary';
+          screen = 'attendance';
+          break;
+        case 'period_reminder':
+        case 'period':
+          title = '🔔 Period 2 (10:05 AM): Compiler Design';
+          body =
+              'Faculty: Dr. P. Anitha (CSE) • Room: LH-204\nNext lecture starting soon. Tap to view today\'s timetable.';
+          type = 'timetable';
+          screen = 'timetable';
           break;
         case 'attendance':
           title = '📊 Total Attendance: 84.6% (GOOD STANDING)';
