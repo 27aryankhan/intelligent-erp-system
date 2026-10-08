@@ -191,7 +191,7 @@ class UpdateService {
 }
 
 /// Authentic VengeanceUI Animated Rays background
-/// Source: https://raw.githubusercontent.com/Ashutoshx7/VengeanceUI/main/public/r/animated-rays.json
+/// Source: https://www.vengenceui.com/components/animated-rays
 /// Implements 100° angled repeating linear ray beams with aurora color stops
 /// (#60a5fa Sky Blue, #e879f9 Fuchsia, #5eead4 Mint Teal)
 /// and a radial mask anchored at the top-right (100% 0%) with smooth drifting animation.
@@ -224,7 +224,7 @@ class _AnimatedRaysState extends State<AnimatedRays>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 30),
+      duration: const Duration(seconds: 22),
     )..repeat();
   }
 
@@ -236,7 +236,7 @@ class _AnimatedRaysState extends State<AnimatedRays>
 
   @override
   Widget build(BuildContext context) {
-    final radius = widget.borderRadius ?? BorderRadius.circular(20);
+    final radius = widget.borderRadius ?? BorderRadius.circular(24);
 
     return Container(
       decoration: BoxDecoration(
@@ -245,14 +245,14 @@ class _AnimatedRaysState extends State<AnimatedRays>
             ? [widget.glowShadow!]
             : [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.55),
-                  blurRadius: 36,
-                  spreadRadius: 2,
-                  offset: const Offset(0, 12),
+                  color: Colors.black.withValues(alpha: 0.65),
+                  blurRadius: 40,
+                  spreadRadius: 4,
+                  offset: const Offset(0, 16),
                 ),
                 BoxShadow(
-                  color: const Color(0xFF60A5FA).withValues(alpha: 0.12),
-                  blurRadius: 40,
+                  color: const Color(0xFF60A5FA).withValues(alpha: 0.20),
+                  blurRadius: 44,
                   spreadRadius: 0,
                   offset: const Offset(0, 4),
                 ),
@@ -262,7 +262,7 @@ class _AnimatedRaysState extends State<AnimatedRays>
         borderRadius: radius,
         child: Stack(
           children: [
-            // VengeanceUI Animated Rays Canvas
+            // 1. VengeanceUI Animated Rays Canvas (Aurora & 100° Repeating Beams)
             Positioned.fill(
               child: AnimatedBuilder(
                 animation: _controller,
@@ -277,20 +277,36 @@ class _AnimatedRaysState extends State<AnimatedRays>
                 },
               ),
             ),
-            // Sleek card edge border & subtle gradient overlay
+            // 2. Subtle translucent glassmorphic dark surface to guarantee contrast
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: radius,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      const Color(0xFF0D1424).withValues(alpha: 0.70),
+                      const Color(0xFF080C16).withValues(alpha: 0.85),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            // 3. Sleek neon card edge border
             Positioned.fill(
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: radius,
                   border: widget.border ??
                       Border.all(
-                        color: Colors.white.withValues(alpha: 0.08),
-                        width: 1.0,
+                        color: const Color(0xFF60A5FA).withValues(alpha: 0.22),
+                        width: 1.2,
                       ),
                 ),
               ),
             ),
-            // Foreground Content
+            // 4. Foreground Content
             Padding(
               padding: widget.padding ?? EdgeInsets.zero,
               child: widget.child,
@@ -311,16 +327,16 @@ class _AnimatedRaysPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
 
-    // 1. Deep cosmic obsidian base background (VengeanceUI dark mode)
-    final bgPaint = Paint()..color = const Color(0xFF090D16);
+    // 1. Deep cosmic dark base background (VengeanceUI Dark Mode)
+    final bgPaint = Paint()..color = const Color(0xFF070B14);
     canvas.drawRect(rect, bgPaint);
 
     // 2. Save layer for masked aurora rays
     canvas.saveLayer(rect, Paint());
 
-    // 3. Draw angled ray beams (100 degrees = ~1.745 rad)
-    final double rayAngle = (100 - 90) * math.pi / 180; // 10 degrees tilt from vertical
-    final double stripePeriod = 64.0;
+    // 3. Draw 100° angled ray beams (10° tilt from vertical: (100 - 90) deg)
+    final double rayAngle = (100 - 90) * math.pi / 180;
+    final double stripePeriod = 72.0;
     final double driftOffset = animationValue * stripePeriod;
 
     canvas.save();
@@ -328,26 +344,28 @@ class _AnimatedRaysPainter extends CustomPainter {
     canvas.rotate(rayAngle);
     canvas.translate(-size.width / 2, -size.height / 2);
 
-    final double expandedW = size.width * 2.4;
-    final double expandedH = size.height * 2.4;
+    final double expandedW = size.width * 2.5;
+    final double expandedH = size.height * 2.5;
 
-    // Draw repeating aurora rainbow stripes: #60a5fa -> #e879f9 -> #60a5fa -> #5eead4 -> #60a5fa
-    for (double x = -expandedW * 0.4 + driftOffset; x < expandedW * 1.3; x += stripePeriod) {
+    // Repeating aurora rainbow stops: #60a5fa -> #e879f9 -> #60a5fa -> #5eead4 -> #60a5fa
+    for (double x = -expandedW * 0.4 + driftOffset;
+        x < expandedW * 1.3;
+        x += stripePeriod) {
       final double normalized = ((x + expandedW) / (expandedW * 1.6)) % 1.0;
 
       Color rayColor;
       if (normalized < 0.25) {
-        rayColor = Color.lerp(
-            const Color(0xFF60A5FA), const Color(0xFFE879F9), normalized / 0.25)!;
+        rayColor = Color.lerp(const Color(0xFF60A5FA), const Color(0xFFE879F9),
+            normalized / 0.25)!;
       } else if (normalized < 0.50) {
-        rayColor = Color.lerp(
-            const Color(0xFFE879F9), const Color(0xFF60A5FA), (normalized - 0.25) / 0.25)!;
+        rayColor = Color.lerp(const Color(0xFFE879F9), const Color(0xFF60A5FA),
+            (normalized - 0.25) / 0.25)!;
       } else if (normalized < 0.75) {
-        rayColor = Color.lerp(
-            const Color(0xFF60A5FA), const Color(0xFF5EEAD4), (normalized - 0.50) / 0.25)!;
+        rayColor = Color.lerp(const Color(0xFF60A5FA), const Color(0xFF5EEAD4),
+            (normalized - 0.50) / 0.25)!;
       } else {
-        rayColor = Color.lerp(
-            const Color(0xFF5EEAD4), const Color(0xFF60A5FA), (normalized - 0.75) / 0.25)!;
+        rayColor = Color.lerp(const Color(0xFF5EEAD4), const Color(0xFF60A5FA),
+            (normalized - 0.75) / 0.25)!;
       }
 
       final rayPaint = Paint()
@@ -355,49 +373,38 @@ class _AnimatedRaysPainter extends CustomPainter {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            rayColor.withValues(alpha: 0.35),
-            rayColor.withValues(alpha: 0.18),
-            rayColor.withValues(alpha: 0.04),
+            rayColor.withValues(alpha: 0.55),
+            rayColor.withValues(alpha: 0.30),
+            rayColor.withValues(alpha: 0.08),
           ],
           stops: const [0.0, 0.45, 1.0],
-        ).createShader(Rect.fromLTWH(x, -expandedH * 0.4, stripePeriod * 0.65, expandedH))
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
+        ).createShader(
+            Rect.fromLTWH(x, -expandedH * 0.4, stripePeriod * 0.60, expandedH))
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14);
 
       canvas.drawRect(
-        Rect.fromLTWH(x, -expandedH * 0.4, stripePeriod * 0.65, expandedH),
+        Rect.fromLTWH(x, -expandedH * 0.4, stripePeriod * 0.60, expandedH),
         rayPaint,
       );
     }
     canvas.restore();
 
-    // 4. Top-Right Radial Mask: radial-gradient(ellipse at 100% 0%, black 40%, transparent 70%)
+    // 4. VengeanceUI Radial Mask: radial-gradient(ellipse at 100% 0%, black 40%, transparent 75%)
     final maskPaint = Paint()
       ..blendMode = BlendMode.dstIn
       ..shader = RadialGradient(
-        center: const Alignment(1.0, -1.0), // Top Right corner
-        radius: 1.35,
+        center: const Alignment(1.0, -1.0), // Top-Right Corner
+        radius: 1.45,
         colors: [
-          Colors.black.withValues(alpha: 0.90),
-          Colors.black.withValues(alpha: 0.55),
+          Colors.black.withValues(alpha: 0.95),
+          Colors.black.withValues(alpha: 0.65),
           Colors.transparent,
         ],
-        stops: const [0.0, 0.40, 0.75],
+        stops: const [0.0, 0.45, 0.80],
       ).createShader(rect);
     canvas.drawRect(rect, maskPaint);
 
     canvas.restore(); // End masked aurora layer
-
-    // 5. Deep glassmorphic surface gradient for content readability & contrast
-    final surfacePaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          const Color(0xFF0F172A).withValues(alpha: 0.75),
-          const Color(0xFF090D16).withValues(alpha: 0.90),
-        ],
-      ).createShader(rect);
-    canvas.drawRect(rect, surfacePaint);
   }
 
   @override
@@ -421,7 +428,7 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
   String? _installError;
   double _progress = 0.0;
   String _downloadedSize = '0.0 MB';
-  String _totalSize = '22.0 MB';
+  String _totalSize = '40.0 MB';
   String _speedText = '';
   String _etaText = '';
   String? _downloadedFilePath;
@@ -433,6 +440,14 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
     super.initState();
     _totalSize = widget.info.fileSize;
     _checkExistingApk();
+  }
+
+  double _parseExpectedTotalMb() {
+    final match = RegExp(r'([\d\.]+)').firstMatch(widget.info.fileSize);
+    if (match != null) {
+      return double.tryParse(match.group(1) ?? '40.0') ?? 40.0;
+    }
+    return 40.0;
   }
 
   /// If the APK was already downloaded in cache, offer instant installation
@@ -467,6 +482,7 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
   }
 
   Future<void> _startInAppDownload() async {
+    final expectedMb = _parseExpectedTotalMb();
     setState(() {
       _isDownloading = true;
       _isComplete = false;
@@ -474,6 +490,7 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
       _installError = null;
       _progress = 0.0;
       _downloadedSize = '0.0 MB';
+      _totalSize = '${expectedMb.toStringAsFixed(1)} MB';
       _speedText = 'Connecting...';
       _etaText = '';
     });
@@ -496,7 +513,7 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
               case OtaStatus.DOWNLOADING:
                 final int progInt = int.tryParse(event.value ?? '0') ?? 0;
                 final double prog = (progInt / 100.0).clamp(0.0, 0.99);
-                const double totalMbVal = 22.0;
+                final double totalMbVal = expectedMb;
                 final double dlMbVal = totalMbVal * prog;
                 setState(() {
                   _isDownloading = true;
@@ -504,7 +521,7 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
                   _progress = prog;
                   _downloadedSize = '${dlMbVal.toStringAsFixed(1)} MB';
                   _totalSize = '${totalMbVal.toStringAsFixed(1)} MB';
-                  _speedText = 'Background Service (${event.value}%)';
+                  _speedText = 'OTA Service';
                 });
                 break;
               case OtaStatus.INSTALLING:
@@ -596,7 +613,7 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
       final int? reportedLength = streamedResponse.contentLength;
       final int totalBytes = (reportedLength != null && reportedLength > 0)
           ? reportedLength
-          : (22 * 1024 * 1024);
+          : (expectedMb * 1024 * 1024).round();
 
       Directory? saveDir;
       if (Platform.isAndroid) {
@@ -822,10 +839,10 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
     String subtitleText;
 
     if (_isComplete) {
-      titleText = 'Ready to Update';
+      titleText = 'Ready to Install';
       subtitleText = widget.info.isMandatory
           ? 'Version ${widget.info.latestVersion}  •  Required Update'
-          : 'Version ${widget.info.latestVersion}  •  Verified';
+          : 'Version ${widget.info.latestVersion}  •  Package Verified';
     } else if (_isDownloading) {
       titleText = 'Downloading Update';
       subtitleText = 'Intelligent ERP v${widget.info.latestVersion}';
@@ -839,6 +856,31 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
+        // Squircle App/Update Icon
+        Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E293B).withValues(alpha: 0.70),
+            borderRadius: BorderRadius.circular(13),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.12),
+              width: 1,
+            ),
+          ),
+          child: Icon(
+            _isComplete
+                ? Icons.check_circle_rounded
+                : (_isDownloading
+                    ? Icons.downloading_rounded
+                    : Icons.install_mobile_rounded),
+            color: _isComplete
+                ? const Color(0xFF34D399)
+                : const Color(0xFF60A5FA),
+            size: 22,
+          ),
+        ),
+        const SizedBox(width: 12),
         // Title & clean version subtitle
         Expanded(
           child: Column(
@@ -853,7 +895,7 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
                   letterSpacing: -0.2,
                 ),
               ),
-              const SizedBox(height: 3),
+              const SizedBox(height: 2),
               Text(
                 subtitleText,
                 style: const TextStyle(
@@ -865,15 +907,26 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
             ],
           ),
         ),
-        // Close button if allowed (hidden for mandatory updates)
+        // Close button if allowed (hidden for mandatory updates or while downloading)
         if (!widget.info.isMandatory && !_isDownloading)
-          IconButton(
-            onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(Icons.close_rounded, size: 20),
-            color: const Color(0xFF94A3B8),
-            splashRadius: 18,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => Navigator.of(context).pop(),
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.05),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.close_rounded,
+                  size: 18,
+                  color: Color(0xFF94A3B8),
+                ),
+              ),
+            ),
           ),
       ],
     );
@@ -890,7 +943,7 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
             style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
           ),
           const SizedBox(height: 16),
-          // Clean progress bar with rounded ends
+          // Clean progress bar with rounded ends and neon gradient
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
             child: SizedBox(
@@ -930,12 +983,33 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
                 ),
               ),
               if (_speedText.isNotEmpty)
-                Text(
-                  _etaText.isNotEmpty ? '$_speedText • $_etaText' : _speedText,
-                  style: const TextStyle(
-                    color: Color(0xFF5EEAD4),
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w600,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF60A5FA).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: const Color(0xFF60A5FA).withValues(alpha: 0.35),
+                      width: 0.8,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.bolt_rounded,
+                          size: 12, color: Color(0xFF5EEAD4)),
+                      const SizedBox(width: 3),
+                      Text(
+                        _etaText.isNotEmpty
+                            ? '$_speedText • $_etaText'
+                            : _speedText,
+                        style: const TextStyle(
+                          color: Color(0xFF5EEAD4),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
             ],
@@ -969,17 +1043,24 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Update Downloaded Successfully',
-                  style: TextStyle(
-                    color: Color(0xFF34D399),
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w600,
-                  ),
+                const Row(
+                  children: [
+                    Icon(Icons.check_circle_rounded,
+                        color: Color(0xFF34D399), size: 18),
+                    SizedBox(width: 8),
+                    Text(
+                      'Update Ready to Install',
+                      style: TextStyle(
+                        color: Color(0xFF34D399),
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 Text(
-                  'The update package ($_totalSize) is ready. Tap Update Now to complete the update.',
+                  'The update package ($_totalSize) has been downloaded and verified. Tap Update Now to complete installation.',
                   style: const TextStyle(
                     color: Color(0xFF94A3B8),
                     fontSize: 12,
@@ -1036,51 +1117,92 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
               color: Color(0xFF94A3B8),
               fontSize: 11,
               fontWeight: FontWeight.w700,
-              letterSpacing: 0.6,
+              letterSpacing: 0.8,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Container(
-            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFF0D1526).withValues(alpha: 0.8),
-              borderRadius: BorderRadius.circular(12),
+              color: const Color(0xFF0F172A).withValues(alpha: 0.65),
+              borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: Colors.white.withValues(alpha: 0.06),
+                color: Colors.white.withValues(alpha: 0.08),
+                width: 1,
               ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: widget.info.releaseNotes.map((note) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 7.0),
-                  child: Row(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 235),
+              child: Scrollbar(
+                thumbVisibility: widget.info.releaseNotes.length > 4,
+                radius: const Radius.circular(4),
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        margin: const EdgeInsets.only(top: 6),
-                        width: 5,
-                        height: 5,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF60A5FA),
-                          shape: BoxShape.circle,
+                    children: widget.info.releaseNotes.map((note) {
+                      final int colonIdx = note.indexOf(': ');
+                      final bool hasColon = colonIdx != -1;
+                      final String title = hasColon ? note.substring(0, colonIdx + 1) : '';
+                      final String desc = hasColon ? note.substring(colonIdx + 2) : note;
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              margin: const EdgeInsets.only(top: 6),
+                              width: 5,
+                              height: 5,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF60A5FA),
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: hasColon
+                                  ? RichText(
+                                      text: TextSpan(
+                                        style: const TextStyle(
+                                          fontSize: 12.5,
+                                          height: 1.38,
+                                        ),
+                                        children: [
+                                          TextSpan(
+                                            text: '$title ',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          TextSpan(
+                                            text: desc,
+                                            style: const TextStyle(
+                                              color: Color(0xFFCBD5E1),
+                                              fontWeight: FontWeight.w400,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  : Text(
+                                      note,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12.5,
+                                        height: 1.38,
+                                      ),
+                                    ),
+                            ),
+                          ],
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          note,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12.5,
-                            height: 1.35,
-                          ),
-                        ),
-                      ),
-                    ],
+                      );
+                    }).toList(),
                   ),
-                );
-              }).toList(),
+                ),
+              ),
             ),
           ),
         ],
@@ -1119,7 +1241,7 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
     if (_isDownloading) {
       return SizedBox(
         width: double.infinity,
-        height: 42,
+        height: 44,
         child: OutlinedButton(
           onPressed: _cancelDownload,
           style: OutlinedButton.styleFrom(
@@ -1128,7 +1250,7 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
               color: Colors.white.withValues(alpha: 0.15),
             ),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
             ),
           ),
           child: const Text(
@@ -1144,7 +1266,7 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
         children: [
           SizedBox(
             width: double.infinity,
-            height: 44,
+            height: 48,
             child: ElevatedButton(
               onPressed: () {
                 if (_downloadedFilePath != null) {
@@ -1158,12 +1280,19 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
                 foregroundColor: Colors.white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(11),
+                  borderRadius: BorderRadius.circular(14),
                 ),
               ),
-              child: const Text(
-                'Update Now',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.system_update_alt_rounded, size: 18),
+                  SizedBox(width: 8),
+                  Text(
+                    'Update Now',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  ),
+                ],
               ),
             ),
           ),
@@ -1173,7 +1302,7 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
               onPressed: () => Navigator.of(context).pop(),
               child: const Text(
                 'Update Later',
-                style: TextStyle(color: Color(0xFF64748B), fontSize: 12.5),
+                style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
               ),
             ),
           ],
@@ -1182,12 +1311,12 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
     }
 
     // IDLE / NOT STARTED:
-    // Clean solid Royal Blue button & discrete Later link
+    // Electric Royal Blue button with download arrow & discrete Later button
     return Column(
       children: [
         SizedBox(
           width: double.infinity,
-          height: 44,
+          height: 48,
           child: ElevatedButton(
             onPressed: _startInAppDownload,
             style: ElevatedButton.styleFrom(
@@ -1195,22 +1324,29 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
               foregroundColor: Colors.white,
               elevation: 0,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(11),
+                borderRadius: BorderRadius.circular(14),
               ),
             ),
-            child: Text(
-              _downloadError != null ? 'Retry Download' : 'Update Now',
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.arrow_downward_rounded, size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  _downloadError != null ? 'Retry Download' : 'Update Now',
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                ),
+              ],
             ),
           ),
         ),
         if (!widget.info.isMandatory) ...[
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text(
               'Later',
-              style: TextStyle(color: Color(0xFF64748B), fontSize: 12.5),
+              style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
             ),
           ),
         ],
