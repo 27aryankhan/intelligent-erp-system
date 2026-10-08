@@ -16,6 +16,8 @@ const announcementRoutes = require("./src/routes/announcementRoutes");
 const notificationRoutes = require("./src/routes/notificationRoutes");
 const authRoutes = require("./src/routes/authRoutes");
 const aiRoutes = require("./src/routes/aiRoutes");
+const updateRoutes = require("./src/routes/updateRoutes");
+const updateController = require("./src/controllers/updateController");
 const { authRateLimiter, generalApiLimiter } = require("./src/middleware/authMiddleware");
 
 const app = express();
@@ -49,7 +51,9 @@ app.get("/", (req, res) => {
             admin: "/api/admin/summary",
             announcements: "/api/announcements",
             notifications: "/api/notifications",
-            aiChat: "/api/ai/chat"
+            aiChat: "/api/ai/chat",
+            update: "/api/update",
+            version: "/version.json"
         }
     });
 });
@@ -67,6 +71,11 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/announcements", announcementRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/update", updateRoutes);
+
+// Universal App Update Endpoints (root version.json for backward and cross-platform compatibility)
+app.get("/version.json", updateController.getVersionJson);
+app.get("/api/version", updateController.getVersionJson);
 
 // Global Error Handler
 app.use((err, req, res, next) => {

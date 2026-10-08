@@ -98,9 +98,25 @@ class UpdateService {
 
       // 2. Try Secondary Cloud Backend endpoint
       try {
-        final secondaryUrl = '${ApiConfig.baseUrl}/version.json';
+        final secondaryUrl =
+            '${ApiConfig.baseUrl}/version.json?t=${DateTime.now().millisecondsSinceEpoch}';
         final res = await client
             .get(Uri.parse(secondaryUrl))
+            .timeout(const Duration(seconds: 4));
+        if (res.statusCode == 200 && res.body.trim().isNotEmpty) {
+          final data = jsonDecode(res.body);
+          if (data is Map<String, dynamic>) {
+            return AppUpdateInfo.fromJson(data);
+          }
+        }
+      } catch (_) {}
+
+      // 3. Try Dedicated Cloud Backend API route
+      try {
+        final apiUrl =
+            '${ApiConfig.baseUrl}/api/update?current_code=$effectiveVersionCode&t=${DateTime.now().millisecondsSinceEpoch}';
+        final res = await client
+            .get(Uri.parse(apiUrl))
             .timeout(const Duration(seconds: 4));
         if (res.statusCode == 200 && res.body.trim().isNotEmpty) {
           final data = jsonDecode(res.body);
