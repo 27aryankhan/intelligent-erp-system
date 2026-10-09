@@ -188,6 +188,33 @@ class UpdateService {
       builder: (ctx) => _InAppUpdateDialog(info: info),
     );
   }
+
+  /// Displays the update dialog in preview mode for UI & UX testing
+  void showTestPreviewDialog(BuildContext context) {
+    final previewInfo = AppUpdateInfo(
+      latestVersion: '1.2.0',
+      latestVersionCode: 14,
+      minSupportedVersionCode: 11,
+      downloadUrl:
+          'https://github.com/27aryankhan/intelligent-erp-system/releases/latest/download/Intelligent.ERP.apk',
+      fileSize: '40 MB',
+      releaseNotes: const [
+        'Autonomous Background & Killed-App Notifications: Receive updates even when the app is closed or minimized',
+        'Faculty-Specific Real-Time Attendance Alerts: Details Subject, Faculty Name, and Present/Absent status with live percentage',
+        'Daily Evening Attendance Summary: End-of-day report with classes conducted, attended, missed, and aggregate percentage',
+        'Timetable Period & Class Reminders: 10-minute alerts before each scheduled lecture with timing and faculty info',
+        'Persistent User Session: Safe credential storage keeps users logged in until explicit logout',
+        'Pixel Run Mini-Game: Autonomous continuous runner integrated directly on the student dashboard',
+        'Optimized mobile APK build (~40 MB) for physical devices (armeabi-v7a & arm64-v8a)',
+      ],
+      isCritical: false,
+    );
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => _InAppUpdateDialog(info: previewInfo),
+    );
+  }
 }
 
 /// Authentic VengeanceUI Animated Rays background

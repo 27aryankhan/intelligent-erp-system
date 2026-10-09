@@ -1039,8 +1039,24 @@ class _LoginPageState extends State<LoginPage> {
                                       ),
                               ),
                             ),
-
-
+                            const SizedBox(height: 14),
+                            Center(
+                              child: TextButton.icon(
+                                onPressed: () {
+                                  UpdateService().showTestPreviewDialog(context);
+                                },
+                                icon: const Icon(Icons.auto_awesome,
+                                    size: 14, color: Color(0xFF60A5FA)),
+                                label: const Text(
+                                  'Preview Update Dialog (VengeanceUI)',
+                                  style: TextStyle(
+                                    color: Color(0xFF94A3B8),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -1534,6 +1550,11 @@ class _StudentDashboardState extends State<StudentDashboard> {
             icon: const Icon(Icons.refresh_rounded),
             tooltip: 'Refresh Portal Data',
             onPressed: fetchStudentData,
+          ),
+          IconButton(
+            icon: const Icon(Icons.system_update_rounded),
+            tooltip: 'Preview Update Dialog (VengeanceUI)',
+            onPressed: () => UpdateService().showTestPreviewDialog(context),
           ),
           const NotificationBellIcon(role: 'student'),
           IconButton(
