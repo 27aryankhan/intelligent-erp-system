@@ -3,6 +3,7 @@ import 'package:html/parser.dart' as html_parser;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'crypto_service.dart';
 import 'background_service.dart';
+import 'hitam_scraper_service.dart';
 
 enum UserRole { faculty, student, parent }
 
@@ -107,6 +108,10 @@ class HitamAuthService {
           !location.contains('default.aspx');
 
       if (isRedirectToMaster) {
+        // Clear in-memory scraper cache whenever switching users or logging in fresh
+        if (activeUserId != userId) {
+          HitamScraperService().clearCache();
+        }
         // Harvest cookies only on confirmed successful redirect
         final rawCookie = postResponse.headers['set-cookie'];
         if (rawCookie != null) {
@@ -184,12 +189,22 @@ class HitamAuthService {
     sessionCookies.clear();
     activeUserId = null;
     activeRole = null;
+    HitamScraperService().clearCache();
     try {
       await BackgroundService().cancelAttendanceSyncTask();
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('hitam_user_id');
       await prefs.remove('hitam_user_pwd');
       await prefs.remove('hitam_user_role');
+      await prefs.remove('hitam_is_logged_in');
+      await prefs.remove('hitam_student_photo_url');
+      await prefs.remove('hitam_student_name');
+      await prefs.remove('hitam_student_branch');
+      await prefs.remove('hitam_student_semester');
+      await prefs.remove('hitam_student_course');
+      await prefs.remove('hitam_student_percentage');
+      await prefs.remove('hitam_student_held');
+      await prefs.remove('hitam_student_attended');
     } catch (_) {}
   }
 }

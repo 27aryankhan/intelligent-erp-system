@@ -191,7 +191,8 @@ class _AuthGateState extends State<AuthGate> {
           final cachedPct = prefs.getDouble('hitam_student_percentage') ?? 0.0;
           final cachedHeld = prefs.getInt('hitam_student_held') ?? 0;
           final cachedAttended = prefs.getInt('hitam_student_attended') ?? 0;
-          final cachedPhoto = prefs.getString('hitam_student_photo_url');
+          final cachedPhoto =
+              prefs.getString('hitam_student_photo_url_${savedId.toUpperCase()}');
 
           StudentAttendanceReport? cachedReport;
           if (cachedName.isNotEmpty) {
@@ -384,8 +385,10 @@ class _LoginPageState extends State<LoginPage> {
       }
 
       if (webprosStudentSuccess) {
-        final activeRoll = authService.activeUserId ?? rollNo;
+        final activeRoll =
+            (authService.activeUserId ?? rollNo).toUpperCase().trim();
         final scraper = HitamScraperService(auth: authService);
+        scraper.clearCache();
 
         // Fetch real-time student attendance report AND profile (with profile picture) in parallel
         final results = await Future.wait([
@@ -431,8 +434,10 @@ class _LoginPageState extends State<LoginPage> {
           await prefs.setString('hitam_user_pwd', password);
           await prefs.setString('hitam_user_role', 'student');
           if (profile?.photoUrl != null && profile!.photoUrl!.isNotEmpty) {
-            await prefs.setString('hitam_student_photo_url', profile.photoUrl!);
+            await prefs.setString(
+                'hitam_student_photo_url_$activeRoll', profile.photoUrl!);
           }
+          await prefs.remove('hitam_student_photo_url');
           if (report != null) {
             await prefs.setString('hitam_student_name', report.studentName);
             await prefs.setString('hitam_student_branch', report.branch);
@@ -1275,8 +1280,13 @@ class _StudentDashboardState extends State<StudentDashboard> {
   @override
   void initState() {
     super.initState();
-    photoUrl = widget.initialPhotoUrl ??
-        HitamScraperService().latestProfile?.photoUrl;
+    final activeRoll = (widget.studentId ??
+            HitamAuthService().activeUserId ??
+            '')
+        .toUpperCase()
+        .trim();
+    final matchingProf = HitamScraperService().getProfileFor(activeRoll);
+    photoUrl = widget.initialPhotoUrl ?? matchingProf?.photoUrl;
     _loadStudentProfileAndPhoto();
     if (widget.initialReport != null) {
       final rep = widget.initialReport!;
@@ -1395,39 +1405,66 @@ class _StudentDashboardState extends State<StudentDashboard> {
   }
 
   Future<void> _loadStudentProfileAndPhoto() async {
-    final inMemoryProf = HitamScraperService().latestProfile;
-    if (inMemoryProf?.photoUrl != null && inMemoryProf!.photoUrl!.isNotEmpty) {
+    final activeRoll = (widget.studentId ??
+            HitamAuthService().activeUserId ??
+            '')
+        .toUpperCase()
+        .trim();
+
+    final matchingProf = HitamScraperService().getProfileFor(activeRoll);
+    if (matchingProf?.photoUrl != null && matchingProf!.photoUrl!.isNotEmpty) {
       if (mounted) {
         setState(() {
-          photoUrl = inMemoryProf.photoUrl;
+          photoUrl = matchingProf.photoUrl;
         });
+      }
+    } else {
+      // Clear mismatched in-memory photo from another student
+      if (HitamScraperService().latestProfile != null &&
+          HitamScraperService().latestProfile!.rollNo.toUpperCase().trim() !=
+              activeRoll) {
+        HitamScraperService().clearCache();
+        if (mounted && widget.initialPhotoUrl == null) {
+          setState(() {
+            photoUrl = null;
+          });
+        }
       }
     }
 
     try {
       final prefs = await SharedPreferences.getInstance();
-      final cachedPhoto = prefs.getString('hitam_student_photo_url');
-      if (cachedPhoto != null && cachedPhoto.isNotEmpty && mounted) {
-        if (photoUrl == null || photoUrl!.isEmpty) {
-          setState(() {
-            photoUrl = cachedPhoto;
-          });
+      if (activeRoll.isNotEmpty) {
+        final cachedPhoto =
+            prefs.getString('hitam_student_photo_url_$activeRoll');
+        if (cachedPhoto != null && cachedPhoto.isNotEmpty && mounted) {
+          if (photoUrl == null || photoUrl!.isEmpty) {
+            setState(() {
+              photoUrl = cachedPhoto;
+            });
+          }
         }
       }
 
-      final rollNo = widget.studentId ??
-          HitamAuthService().activeUserId ??
-          prefs.getString('hitam_user_id') ??
-          '';
+      final rollNo = activeRoll.isNotEmpty
+          ? activeRoll
+          : (prefs.getString('hitam_user_id') ?? '').toUpperCase().trim();
+
       if (rollNo.isNotEmpty) {
-        final prof = (inMemoryProf != null && inMemoryProf.photoUrl != null && inMemoryProf.photoUrl!.isNotEmpty)
-            ? inMemoryProf
+        final prof = (matchingProf != null &&
+                matchingProf.photoUrl != null &&
+                matchingProf.photoUrl!.isNotEmpty)
+            ? matchingProf
             : await HitamScraperService().fetchStudentProfile(rollNo);
-        if (prof != null && mounted) {
+
+        if (prof != null &&
+            prof.rollNo.toUpperCase().trim() == rollNo &&
+            mounted) {
           setState(() {
             if (prof.photoUrl != null && prof.photoUrl!.isNotEmpty) {
               photoUrl = prof.photoUrl;
-              prefs.setString('hitam_student_photo_url', prof.photoUrl!);
+              prefs.setString(
+                  'hitam_student_photo_url_$rollNo', prof.photoUrl!);
             }
             if (studentName.isEmpty && prof.name.isNotEmpty) {
               studentName = prof.name;
@@ -2797,10 +2834,12 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
               children: [
                 Builder(
                   builder: (context) {
-                    final photoUrl = HitamScraperService().latestProfile?.photoUrl;
+                    final activeRoll = studentId.toUpperCase().trim();
+                    final resolvedPhoto =
+                        HitamScraperService().getProfileFor(activeRoll)?.photoUrl;
                     final double r = isNarrow ? 26 : 30;
                     return StudentPhotoWidget(
-                      photoUrl: photoUrl,
+                      photoUrl: resolvedPhoto,
                       name: studentName,
                       size: r * 2,
                       border: Border.all(color: Colors.blue.shade200, width: 2),
@@ -14001,10 +14040,12 @@ class _ParentFeeDetailsScreenState
               children: [
                 Builder(
                   builder: (context) {
-                    final photoUrl = HitamScraperService().latestProfile?.photoUrl;
+                    final activeRoll = studentId.toUpperCase().trim();
+                    final resolvedPhoto =
+                        HitamScraperService().getProfileFor(activeRoll)?.photoUrl;
                     final double r = isNarrow ? 26 : 30;
                     return StudentPhotoWidget(
-                      photoUrl: photoUrl,
+                      photoUrl: resolvedPhoto,
                       name: studentName,
                       size: r * 2,
                       border: Border.all(color: Colors.blue.shade200, width: 2),

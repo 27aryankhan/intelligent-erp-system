@@ -405,6 +405,29 @@ class HitamScraperService {
   StudentAcademicRegisterReport? latestAcademicRegister;
   List<SpfBandEntry>? latestSpfBands;
 
+  /// Resets all cached in-memory singleton reports (called on logout/login)
+  void clearCache() {
+    latestAttendanceReport = null;
+    latestMarksReport = null;
+    latestFeeReport = null;
+    latestBacklogs = null;
+    latestProfile = null;
+    latestTimeTable = null;
+    latestAcademicRegister = null;
+    latestSpfBands = null;
+  }
+
+  /// Returns cached student profile details strictly if it matches the requested roll number
+  StudentProfileDetails? getProfileFor(String rollNo) {
+    final r = rollNo.toUpperCase().trim();
+    if (r.isEmpty) return null;
+    if (latestProfile != null &&
+        latestProfile!.rollNo.toUpperCase().trim() == r) {
+      return latestProfile;
+    }
+    return null;
+  }
+
   static const String attendancePageUrl =
       'https://www.webprosindia.com/hitam/Academics/StudentAttendance.aspx?showtype=SA';
   static const String backlogsPageUrl =
@@ -1072,7 +1095,7 @@ class HitamScraperService {
       if (photoUrl == null || photoUrl.isEmpty) {
         try {
           final prefs = await SharedPreferences.getInstance();
-          final cached = prefs.getString('hitam_student_photo_url');
+          final cached = prefs.getString('hitam_student_photo_url_${safeRoll.toUpperCase()}');
           if (cached != null && cached.isNotEmpty) {
             photoUrl = cached;
           }
@@ -1253,7 +1276,10 @@ class HitamScraperService {
       final pUrl = photoUrl;
       if (pUrl != null && pUrl.isNotEmpty) {
         SharedPreferences.getInstance().then((prefs) {
-          prefs.setString('hitam_student_photo_url', pUrl);
+          prefs.setString(
+              'hitam_student_photo_url_${safeRoll.toUpperCase()}', pUrl);
+          // Purge stale unscoped key to prevent cross-account pollution
+          prefs.remove('hitam_student_photo_url');
         }).catchError((_) {});
       }
       return profile;

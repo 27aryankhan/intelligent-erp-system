@@ -1029,15 +1029,18 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     });
 
     try {
-      final rollNo = HitamAuthService().activeUserId ?? '';
+      final rollNo = (HitamAuthService().activeUserId ?? '').toUpperCase().trim();
       final scraper = HitamScraperService();
       final p = await scraper.fetchStudentProfile(rollNo);
       if (mounted) {
-        final loaded = p ?? scraper.latestProfile;
+        final loaded = (p != null && p.rollNo.toUpperCase().trim() == rollNo)
+            ? p
+            : scraper.getProfileFor(rollNo);
         if (loaded != null && (loaded.photoUrl == null || loaded.photoUrl!.isEmpty)) {
           try {
             final prefs = await SharedPreferences.getInstance();
-            final cachedPhoto = prefs.getString('hitam_student_photo_url');
+            final cachedPhoto =
+                prefs.getString('hitam_student_photo_url_$rollNo');
             if (cachedPhoto != null && cachedPhoto.isNotEmpty) {
               _profile = StudentProfileDetails(
                 rollNo: loaded.rollNo,
@@ -1955,13 +1958,14 @@ class _StudentAcademicRegisterScreenState
     });
 
     try {
-      final rollNo = HitamAuthService().activeUserId ?? '';
+      final rollNo =
+          (HitamAuthService().activeUserId ?? '').toUpperCase().trim();
       final scraper = HitamScraperService();
 
-      // Load cached photo if available
+      // Load cached photo strictly scoped to this student
       try {
         final prefs = await SharedPreferences.getInstance();
-        final cached = prefs.getString('hitam_student_photo_url');
+        final cached = prefs.getString('hitam_student_photo_url_$rollNo');
         if (cached != null && cached.isNotEmpty && mounted) {
           setState(() {
             _cachedPhotoUrl = cached;
@@ -1969,10 +1973,17 @@ class _StudentAcademicRegisterScreenState
         }
       } catch (_) {}
 
-      // Prefetch student photo in background if not already loaded
-      if (scraper.latestProfile?.photoUrl == null && rollNo.isNotEmpty) {
-        unawaited(scraper.fetchStudentProfile(rollNo).then((_) {
-          if (mounted) setState(() {});
+      // Prefetch student photo in background if not already loaded for rollNo
+      final matchingProfile = scraper.getProfileFor(rollNo);
+      if (matchingProfile?.photoUrl == null && rollNo.isNotEmpty) {
+        unawaited(scraper.fetchStudentProfile(rollNo).then((prof) {
+          if (mounted &&
+              prof != null &&
+              prof.rollNo.toUpperCase().trim() == rollNo) {
+            setState(() {
+              _cachedPhotoUrl = prof.photoUrl;
+            });
+          }
         }));
       }
 
@@ -2147,7 +2158,8 @@ class _StudentAcademicRegisterScreenState
         'Engineering';
 
     final photoUrl =
-        HitamScraperService().latestProfile?.photoUrl ?? _cachedPhotoUrl;
+        HitamScraperService().getProfileFor(rollNo)?.photoUrl ??
+            _cachedPhotoUrl;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
