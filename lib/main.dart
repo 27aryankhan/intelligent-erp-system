@@ -1567,11 +1567,6 @@ class _StudentDashboardState extends State<StudentDashboard> {
             tooltip: 'Refresh Portal Data',
             onPressed: fetchStudentData,
           ),
-          IconButton(
-            icon: const Icon(Icons.system_update_rounded),
-            tooltip: 'Preview Update Dialog (VengeanceUI)',
-            onPressed: () => UpdateService().showTestPreviewDialog(context),
-          ),
           const NotificationBellIcon(role: 'student'),
           IconButton(
             icon: const Icon(Icons.logout_rounded),
