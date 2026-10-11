@@ -1682,23 +1682,14 @@ class _StudentDashboardState extends State<StudentDashboard> {
                                                                 width: 1,
                                                               ),
                                                             ),
-                                                            child: Row(
-                                                              mainAxisSize: MainAxisSize.min,
-                                                              children: [
-                                                                Icon(Icons.school_rounded, size: 12, color: Colors.white.withValues(alpha: 0.8)),
-                                                                const SizedBox(width: 4),
-                                                                Flexible(
-                                                                  child: Text(
-                                                                    department,
-                                                                    style: const TextStyle(
-                                                                      color: Colors.white,
-                                                                      fontSize: 11.5,
-                                                                      fontWeight: FontWeight.w500,
-                                                                    ),
-                                                                    overflow: TextOverflow.ellipsis,
-                                                                  ),
-                                                                ),
-                                                              ],
+                                                            child: Text(
+                                                              department,
+                                                              style: const TextStyle(
+                                                                color: Colors.white,
+                                                                fontSize: 11.5,
+                                                                fontWeight: FontWeight.w500,
+                                                              ),
+                                                              overflow: TextOverflow.ellipsis,
                                                             ),
                                                           ),
                                                         ),
