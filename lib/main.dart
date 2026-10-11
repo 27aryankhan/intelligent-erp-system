@@ -359,7 +359,7 @@ class _LoginPageState extends State<LoginPage> {
 
     if (email.isEmpty || password.isEmpty) {
       setState(() {
-        _errorMessage = 'Please enter your Roll Number / User ID and Password';
+        _errorMessage = 'Please enter your Roll Number and Password';
       });
       return;
     }
@@ -946,14 +946,14 @@ class _LoginPageState extends State<LoginPage> {
                                 ),
                               ),
 
-                            // Frosted Glass Roll Number / User ID field
+                            // Frosted Glass Roll Number field
                             TextField(
                               controller: _emailController,
                               style: const TextStyle(
                                   color: Colors.white, fontWeight: FontWeight.w500),
                               cursorColor: const Color(0xFF38BDF8),
                               decoration: InputDecoration(
-                                labelText: 'Roll Number / User ID / Email',
+                                labelText: 'Roll Number',
                                 labelStyle: TextStyle(
                                     color: Colors.white.withOpacity(0.80)),
                                 prefixIcon: const Icon(Icons.person_outline,
@@ -991,9 +991,6 @@ class _LoginPageState extends State<LoginPage> {
                                 labelText: 'Password',
                                 labelStyle: TextStyle(
                                     color: Colors.white.withOpacity(0.80)),
-                                hintText: 'e.g. webcap',
-                                hintStyle: TextStyle(
-                                    color: Colors.white.withOpacity(0.45)),
                                 prefixIcon: const Icon(Icons.lock_outline,
                                     color: Color(0xFF38BDF8)),
                                 filled: true,
@@ -1065,24 +1062,6 @@ class _LoginPageState extends State<LoginPage> {
                                             fontWeight: FontWeight.bold,
                                             letterSpacing: 0.5),
                                       ),
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            Center(
-                              child: TextButton.icon(
-                                onPressed: () {
-                                  UpdateService().showTestPreviewDialog(context);
-                                },
-                                icon: const Icon(Icons.auto_awesome,
-                                    size: 14, color: Color(0xFF60A5FA)),
-                                label: const Text(
-                                  'Preview Update Dialog (VengeanceUI)',
-                                  style: TextStyle(
-                                    color: Color(0xFF94A3B8),
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
                               ),
                             ),
                           ],
@@ -1165,15 +1144,10 @@ class RolePage extends StatelessWidget {
               icon: Icons.person,
               title: 'Faculty',
               onPressed: () {
-                NotificationService().setUserSession(
-                  role: 'faculty',
-                  userId: 'FAC001',
-                  email: 'ramesh@hitam.edu',
-                );
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const FacultyClassSelectionScreen(),
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Faculty portal is currently under development. Please login as a student.'),
+                    duration: Duration(seconds: 3),
                   ),
                 );
               },
@@ -1183,15 +1157,10 @@ class RolePage extends StatelessWidget {
               icon: Icons.family_restroom,
               title: 'Parent',
               onPressed: () {
-                NotificationService().setUserSession(
-                  role: 'parent',
-                  userId: 'PAR001',
-                  email: 'narayana@hitam.edu',
-                );
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ParentDashboard(),
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Parent portal is currently under development. Please login as a student.'),
+                    duration: Duration(seconds: 3),
                   ),
                 );
               },
@@ -1201,15 +1170,10 @@ class RolePage extends StatelessWidget {
               icon: Icons.admin_panel_settings,
               title: 'Administrator',
               onPressed: () {
-                NotificationService().setUserSession(
-                  role: 'admin',
-                  userId: 'ADM001',
-                  email: 'admin@hitam.edu',
-                );
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const AdminDashboard(),
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Administration portal is currently under development. Please login as a student.'),
+                    duration: Duration(seconds: 3),
                   ),
                 );
               },

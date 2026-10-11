@@ -49,15 +49,15 @@ void main() {
 
     test('Allows genuine student photo URLs', () {
       expect(
-        HitamScraperService.isBlacklistedPhoto('https://www.webprosindia.com/hitam/photos/23E51A05I9.jpg'),
+        HitamScraperService.isBlacklistedPhoto('https://www.webprosindia.com/hitam/photos/24E51A0001.jpg'),
         isFalse,
       );
       expect(
-        HitamScraperService.isBlacklistedPhoto('https://www.webprosindia.com/hitam/StudentPhotos/23E51A05I9.jpg'),
+        HitamScraperService.isBlacklistedPhoto('https://www.webprosindia.com/hitam/StudentPhotos/24E51A0001.jpg'),
         isFalse,
       );
       expect(
-        HitamScraperService.isBlacklistedPhoto('https://www.webprosindia.com/hitam/Academics/photos/23E51A05I9.jpg'),
+        HitamScraperService.isBlacklistedPhoto('https://www.webprosindia.com/hitam/Academics/photos/24E51A0001.jpg'),
         isFalse,
       );
     });
