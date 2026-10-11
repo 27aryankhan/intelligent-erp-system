@@ -1202,9 +1202,10 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                                             ),
                                             child: ClipRRect(
                                               borderRadius: BorderRadius.circular(14),
-                                              child: Image.network(
-                                                p.photoUrl!,
+                                              child: HitamScraperService.buildAvatarImage(
+                                                photoUrl: p.photoUrl,
                                                 fit: BoxFit.contain,
+                                                fallback: const SizedBox.shrink(),
                                               ),
                                             ),
                                           ),
@@ -1251,44 +1252,21 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                               radius: 46,
                               backgroundColor: Colors.blue.shade700,
                               child: ClipOval(
-                                child: (p?.photoUrl != null && p!.photoUrl!.isNotEmpty)
-                                    ? Image.network(
-                                        p.photoUrl!,
-                                        width: 92,
-                                        height: 92,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) => Text(
-                                          (p.name.isNotEmpty) ? p.name[0].toUpperCase() : 'S',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 34,
-                                            fontWeight: FontWeight.w800,
-                                          ),
-                                        ),
-                                        loadingBuilder: (context, child, loadingProgress) {
-                                          if (loadingProgress == null) return child;
-                                          return const Center(
-                                            child: SizedBox(
-                                              width: 24,
-                                              height: 24,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2.5,
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                      )
-                                    : Text(
-                                        (p?.name.isNotEmpty ?? false)
-                                            ? p!.name[0].toUpperCase()
-                                            : 'S',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 34,
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                      ),
+                                child: HitamScraperService.buildAvatarImage(
+                                  width: 92,
+                                  height: 92,
+                                  photoUrl: p?.photoUrl,
+                                  fallback: Text(
+                                    (p?.name.isNotEmpty ?? false)
+                                        ? p!.name[0].toUpperCase()
+                                        : 'S',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 34,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -2303,9 +2281,10 @@ class _StudentAcademicRegisterScreenState
                                                     ),
                                                     child: ClipRRect(
                                                       borderRadius: BorderRadius.circular(14),
-                                                      child: Image.network(
-                                                        photoUrl,
+                                                      child: HitamScraperService.buildAvatarImage(
+                                                        photoUrl: photoUrl,
                                                         fit: BoxFit.contain,
+                                                        fallback: const SizedBox.shrink(),
                                                       ),
                                                     ),
                                                   ),
@@ -2341,36 +2320,16 @@ class _StudentAcademicRegisterScreenState
                                       shape: BoxShape.circle,
                                     ),
                                     child: ClipOval(
-                                      child: (photoUrl != null && photoUrl.isNotEmpty)
-                                          ? Image.network(
-                                              photoUrl,
-                                              width: 48,
-                                              height: 48,
-                                              fit: BoxFit.cover,
-                                              errorBuilder: (context, error, stackTrace) => const Icon(
-                                                Icons.school_rounded,
-                                                color: Color(0xFF38BDF8),
-                                                size: 24,
-                                              ),
-                                              loadingBuilder: (context, child, loadingProgress) {
-                                                if (loadingProgress == null) return child;
-                                                return const Center(
-                                                  child: SizedBox(
-                                                    width: 16,
-                                                    height: 16,
-                                                    child: CircularProgressIndicator(
-                                                      strokeWidth: 2,
-                                                      color: Color(0xFF38BDF8),
-                                                    ),
-                                                  ),
-                                                );
-                                              },
-                                            )
-                                          : const Icon(
-                                              Icons.school_rounded,
-                                              color: Color(0xFF38BDF8),
-                                              size: 24,
-                                            ),
+                                      child: HitamScraperService.buildAvatarImage(
+                                        width: 48,
+                                        height: 48,
+                                        photoUrl: photoUrl,
+                                        fallback: const Icon(
+                                          Icons.school_rounded,
+                                          color: Color(0xFF38BDF8),
+                                          size: 24,
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),

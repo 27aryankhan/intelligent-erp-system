@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -191,6 +193,37 @@ class _AuthGateState extends State<AuthGate> {
           final cachedHeld = prefs.getInt('hitam_student_held') ?? 0;
           final cachedAttended = prefs.getInt('hitam_student_attended') ?? 0;
 
+          final cachedPhoto = prefs.getString('hitam_student_photo_url');
+          final cachedPhotoB64 = prefs.getString('hitam_student_photo_base64');
+          final cachedPhotoFile = prefs.getString('hitam_student_photo_file');
+
+          Uint8List? initialBytes;
+          if (cachedPhotoB64 != null && cachedPhotoB64.isNotEmpty) {
+            try {
+              initialBytes = base64Decode(cachedPhotoB64);
+              HitamScraperService.cachedAvatarBytes = initialBytes;
+            } catch (_) {}
+          }
+          if (initialBytes == null && cachedPhotoFile != null && cachedPhotoFile.isNotEmpty) {
+            try {
+              final f = File(cachedPhotoFile);
+              if (f.existsSync()) {
+                initialBytes = f.readAsBytesSync();
+                HitamScraperService.cachedAvatarBytes = initialBytes;
+              }
+            } catch (_) {}
+          }
+          if (cachedPhoto != null) {
+            HitamScraperService.cachedPhotoUrl = cachedPhoto;
+          }
+          if (cachedPhotoFile != null) {
+            HitamScraperService.cachedAvatarFilePath = cachedPhotoFile;
+          }
+
+          if (initialBytes == null && cachedPhoto != null && cachedPhoto.isNotEmpty) {
+            unawaited(HitamScraperService.cacheStudentPhoto(savedId, cachedPhoto));
+          }
+
           StudentAttendanceReport? cachedReport;
           if (cachedName.isNotEmpty) {
             cachedReport = StudentAttendanceReport(
@@ -212,6 +245,9 @@ class _AuthGateState extends State<AuthGate> {
               builder: (_) => StudentDashboard(
                 initialReport: cachedReport,
                 studentId: savedId,
+                initialPhotoUrl: cachedPhoto,
+                initialPhotoBytes: initialBytes,
+                initialPhotoFilePath: cachedPhotoFile,
               ),
             ),
           );
@@ -439,6 +475,9 @@ class _LoginPageState extends State<LoginPage> {
             builder: (context) => StudentDashboard(
               initialReport: report,
               studentId: activeRoll,
+              initialPhotoUrl: HitamScraperService.cachedPhotoUrl,
+              initialPhotoBytes: HitamScraperService.cachedAvatarBytes,
+              initialPhotoFilePath: HitamScraperService.cachedAvatarFilePath,
             ),
           ),
         );
@@ -1236,7 +1275,18 @@ class RoleButton extends StatelessWidget {
 class StudentDashboard extends StatefulWidget {
   final StudentAttendanceReport? initialReport;
   final String? studentId;
-  const StudentDashboard({super.key, this.initialReport, this.studentId});
+  final String? initialPhotoUrl;
+  final Uint8List? initialPhotoBytes;
+  final String? initialPhotoFilePath;
+
+  const StudentDashboard({
+    super.key,
+    this.initialReport,
+    this.studentId,
+    this.initialPhotoUrl,
+    this.initialPhotoBytes,
+    this.initialPhotoFilePath,
+  });
 
   @override
   State<StudentDashboard> createState() => _StudentDashboardState();
@@ -1250,13 +1300,19 @@ class _StudentDashboardState extends State<StudentDashboard> {
   String department = '';
   String year = '';
   String? photoUrl;
+  Uint8List? photoBytes;
+  String? photoFilePath;
 
   double attendance = 0.0;
 
   @override
   void initState() {
     super.initState();
-    photoUrl = HitamScraperService().latestProfile?.photoUrl;
+    photoBytes = widget.initialPhotoBytes ?? HitamScraperService.cachedAvatarBytes;
+    photoFilePath = widget.initialPhotoFilePath ?? HitamScraperService.cachedAvatarFilePath;
+    photoUrl = widget.initialPhotoUrl ??
+        HitamScraperService().latestProfile?.photoUrl ??
+        HitamScraperService.cachedPhotoUrl;
     _loadStudentProfileAndPhoto();
     if (widget.initialReport != null) {
       final rep = widget.initialReport!;
@@ -1399,6 +1455,16 @@ class _StudentDashboardState extends State<StudentDashboard> {
           HitamAuthService().activeUserId ??
           prefs.getString('hitam_user_id') ??
           '';
+
+      if (photoBytes == null) {
+        final cached = await HitamScraperService.loadCachedAvatar(rollNo);
+        if (cached != null && mounted) {
+          setState(() {
+            photoBytes = cached;
+          });
+        }
+      }
+
       if (rollNo.isNotEmpty) {
         final prof = inMemoryProf ?? await HitamScraperService().fetchStudentProfile(rollNo);
         if (prof != null && mounted) {
@@ -1417,6 +1483,16 @@ class _StudentDashboardState extends State<StudentDashboard> {
               year = prof.semester;
             }
           });
+
+          if (prof.photoUrl != null && prof.photoUrl!.isNotEmpty) {
+            HitamScraperService.cacheStudentPhoto(rollNo, prof.photoUrl!).then((_) {
+              if (mounted && HitamScraperService.cachedAvatarBytes != null) {
+                setState(() {
+                  photoBytes = HitamScraperService.cachedAvatarBytes;
+                });
+              }
+            });
+          }
         }
       }
     } catch (_) {}
@@ -1427,31 +1503,14 @@ class _StudentDashboardState extends State<StudentDashboard> {
       width: 50,
       height: 50,
       child: ClipOval(
-        child: (photoUrl != null && photoUrl!.isNotEmpty)
-            ? Image.network(
-                photoUrl!,
-                width: 50,
-                height: 50,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => _buildInitialsAvatar(),
-                loadingBuilder: (context, child, progress) {
-                  if (progress == null) return child;
-                  return Container(
-                    color: const Color(0xFF0F172A),
-                    child: const Center(
-                      child: SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Color(0xFF38BDF8),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              )
-            : _buildInitialsAvatar(),
+        child: HitamScraperService.buildAvatarImage(
+          width: 50,
+          height: 50,
+          photoUrl: photoUrl,
+          photoBytes: photoBytes,
+          photoFilePath: photoFilePath,
+          fallback: _buildInitialsAvatar(),
+        ),
       ),
     );
   }
@@ -2809,23 +2868,16 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
                         radius: r,
                         backgroundColor: Colors.blue.shade50,
                         child: ClipOval(
-                          child: (photoUrl != null && photoUrl.isNotEmpty)
-                              ? Image.network(
-                                  photoUrl,
-                                  width: r * 2,
-                                  height: r * 2,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) => Icon(
-                                    Icons.school,
-                                    size: isNarrow ? 28 : 32,
-                                    color: Colors.blue,
-                                  ),
-                                )
-                              : Icon(
-                                  Icons.school,
-                                  size: isNarrow ? 28 : 32,
-                                  color: Colors.blue,
-                                ),
+                          child: HitamScraperService.buildAvatarImage(
+                            width: r * 2,
+                            height: r * 2,
+                            photoUrl: photoUrl,
+                            fallback: Icon(
+                              Icons.school,
+                              size: isNarrow ? 28 : 32,
+                              color: Colors.blue,
+                            ),
+                          ),
                         ),
                       ),
                     );
@@ -14034,23 +14086,16 @@ class _ParentFeeDetailsScreenState
                         radius: r,
                         backgroundColor: Colors.blue.shade50,
                         child: ClipOval(
-                          child: (photoUrl != null && photoUrl.isNotEmpty)
-                              ? Image.network(
-                                  photoUrl,
-                                  width: r * 2,
-                                  height: r * 2,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) => Icon(
-                                    Icons.school,
-                                    size: isNarrow ? 28 : 32,
-                                    color: Colors.blue,
-                                  ),
-                                )
-                              : Icon(
-                                  Icons.school,
-                                  size: isNarrow ? 28 : 32,
-                                  color: Colors.blue,
-                                ),
+                          child: HitamScraperService.buildAvatarImage(
+                            width: r * 2,
+                            height: r * 2,
+                            photoUrl: photoUrl,
+                            fallback: Icon(
+                              Icons.school,
+                              size: isNarrow ? 28 : 32,
+                              color: Colors.blue,
+                            ),
+                          ),
                         ),
                       ),
                     );

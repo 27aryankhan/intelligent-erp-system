@@ -1,3 +1,10 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/material.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html_parser;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -402,6 +409,134 @@ class HitamScraperService {
   StudentTimeTableReport? latestTimeTable;
   StudentAcademicRegisterReport? latestAcademicRegister;
   List<SpfBandEntry>? latestSpfBands;
+
+  static Uint8List? cachedAvatarBytes;
+  static String? cachedAvatarFilePath;
+  static String? cachedPhotoUrl;
+
+  /// Pre-caches student profile photo in memory, base64 (SharedPreferences), and local disk
+  static Future<void> cacheStudentPhoto(String rollNo, String photoUrl) async {
+    cachedPhotoUrl = photoUrl;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('hitam_student_photo_url', photoUrl);
+
+      // If we already have memory bytes, verify SharedPreferences base64
+      if (cachedAvatarBytes != null && cachedAvatarBytes!.isNotEmpty) {
+        if (!prefs.containsKey('hitam_student_photo_base64')) {
+          await prefs.setString('hitam_student_photo_base64', base64Encode(cachedAvatarBytes!));
+        }
+        return;
+      }
+
+      final res = await http.get(
+        Uri.parse(photoUrl),
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+          'Referer': 'https://www.webprosindia.com/hitam/',
+        },
+      );
+
+      if (res.statusCode == 200 && res.bodyBytes.isNotEmpty) {
+        cachedAvatarBytes = res.bodyBytes;
+        final b64 = base64Encode(res.bodyBytes);
+        await prefs.setString('hitam_student_photo_base64', b64);
+
+        try {
+          final docDir = await getApplicationDocumentsDirectory();
+          final file = File(p.join(docDir.path, 'student_avatar_${rollNo.trim()}.jpg'));
+          await file.writeAsBytes(res.bodyBytes);
+          cachedAvatarFilePath = file.path;
+          await prefs.setString('hitam_student_photo_file', file.path);
+        } catch (_) {}
+      }
+    } catch (_) {}
+  }
+
+  /// Loads cached avatar bytes from memory, base64, or local disk
+  static Future<Uint8List?> loadCachedAvatar([String? rollNo]) async {
+    if (cachedAvatarBytes != null && cachedAvatarBytes!.isNotEmpty) {
+      return cachedAvatarBytes;
+    }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final b64 = prefs.getString('hitam_student_photo_base64');
+      if (b64 != null && b64.isNotEmpty) {
+        cachedAvatarBytes = base64Decode(b64);
+        return cachedAvatarBytes;
+      }
+      final filePath = prefs.getString('hitam_student_photo_file');
+      if (filePath != null && filePath.isNotEmpty) {
+        final f = File(filePath);
+        if (await f.exists()) {
+          final bytes = await f.readAsBytes();
+          if (bytes.isNotEmpty) {
+            cachedAvatarBytes = bytes;
+            cachedAvatarFilePath = filePath;
+            return bytes;
+          }
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// Instant 0ms avatar image builder using in-memory bytes, local disk cache, or network with fallback
+  static Widget buildAvatarImage({
+    double? width,
+    double? height,
+    String? photoUrl,
+    Uint8List? photoBytes,
+    String? photoFilePath,
+    Widget? fallback,
+    BoxFit fit = BoxFit.cover,
+  }) {
+    final bytes = photoBytes ?? cachedAvatarBytes;
+    if (bytes != null && bytes.isNotEmpty) {
+      return Image.memory(
+        bytes,
+        width: width,
+        height: height,
+        fit: fit,
+        gaplessPlayback: true,
+      );
+    }
+    final filePath = photoFilePath ?? cachedAvatarFilePath;
+    if (filePath != null && filePath.isNotEmpty) {
+      try {
+        final file = File(filePath);
+        if (file.existsSync()) {
+          return Image.file(
+            file,
+            width: width,
+            height: height,
+            fit: fit,
+            gaplessPlayback: true,
+          );
+        }
+      } catch (_) {}
+    }
+    final url = photoUrl ?? cachedPhotoUrl;
+    if (url != null && url.isNotEmpty) {
+      return Image.network(
+        url,
+        width: width,
+        height: height,
+        fit: fit,
+        gaplessPlayback: true,
+        headers: const {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        },
+        errorBuilder: (context, error, stackTrace) => fallback ?? const SizedBox.shrink(),
+        loadingBuilder: (context, child, progress) {
+          if (progress == null) return child;
+          return fallback ?? const SizedBox.shrink();
+        },
+      );
+    }
+    return fallback ?? const SizedBox.shrink();
+  }
 
   static const String attendancePageUrl =
       'https://www.webprosindia.com/hitam/Academics/StudentAttendance.aspx?showtype=SA';
@@ -1136,9 +1271,7 @@ class HitamScraperService {
       latestProfile = profile;
       final pUrl = photoUrl;
       if (pUrl != null && pUrl.isNotEmpty) {
-        SharedPreferences.getInstance().then((prefs) {
-          prefs.setString('hitam_student_photo_url', pUrl);
-        }).catchError((_) {});
+        unawaited(cacheStudentPhoto(rollNo, pUrl));
       }
       return profile;
     } catch (_) {
