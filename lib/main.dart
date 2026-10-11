@@ -193,6 +193,12 @@ class _AuthGateState extends State<AuthGate> {
           final cachedAttended = prefs.getInt('hitam_student_attended') ?? 0;
           final cachedPhoto =
               prefs.getString('hitam_student_photo_url_${savedId.toUpperCase()}');
+          String? cleanPhoto = cachedPhoto;
+          if (HitamScraperService.isBlacklistedPhoto(cleanPhoto)) {
+            cleanPhoto = null;
+            prefs.remove('hitam_student_photo_url_${savedId.toUpperCase()}');
+          }
+          prefs.remove('hitam_student_photo_url');
 
           StudentAttendanceReport? cachedReport;
           if (cachedName.isNotEmpty) {
@@ -215,7 +221,7 @@ class _AuthGateState extends State<AuthGate> {
               builder: (_) => StudentDashboard(
                 initialReport: cachedReport,
                 studentId: savedId,
-                initialPhotoUrl: cachedPhoto,
+                initialPhotoUrl: cleanPhoto,
               ),
             ),
           );
@@ -433,9 +439,13 @@ class _LoginPageState extends State<LoginPage> {
           await prefs.setString('hitam_user_id', activeRoll);
           await prefs.setString('hitam_user_pwd', password);
           await prefs.setString('hitam_user_role', 'student');
-          if (profile?.photoUrl != null && profile!.photoUrl!.isNotEmpty) {
+          if (profile?.photoUrl != null &&
+              profile!.photoUrl!.isNotEmpty &&
+              !HitamScraperService.isBlacklistedPhoto(profile!.photoUrl)) {
             await prefs.setString(
-                'hitam_student_photo_url_$activeRoll', profile.photoUrl!);
+                'hitam_student_photo_url_$activeRoll', profile!.photoUrl!);
+          } else {
+            await prefs.remove('hitam_student_photo_url_$activeRoll');
           }
           await prefs.remove('hitam_student_photo_url');
           if (report != null) {
@@ -1286,7 +1296,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
         .toUpperCase()
         .trim();
     final matchingProf = HitamScraperService().getProfileFor(activeRoll);
-    photoUrl = widget.initialPhotoUrl ?? matchingProf?.photoUrl;
+    final rawInitial = widget.initialPhotoUrl ?? matchingProf?.photoUrl;
+    photoUrl = HitamScraperService.isBlacklistedPhoto(rawInitial) ? null : rawInitial;
     _loadStudentProfileAndPhoto();
     if (widget.initialReport != null) {
       final rep = widget.initialReport!;
@@ -1412,7 +1423,9 @@ class _StudentDashboardState extends State<StudentDashboard> {
         .trim();
 
     final matchingProf = HitamScraperService().getProfileFor(activeRoll);
-    if (matchingProf?.photoUrl != null && matchingProf!.photoUrl!.isNotEmpty) {
+    if (matchingProf?.photoUrl != null &&
+        matchingProf!.photoUrl!.isNotEmpty &&
+        !HitamScraperService.isBlacklistedPhoto(matchingProf!.photoUrl)) {
       if (mounted) {
         setState(() {
           photoUrl = matchingProf.photoUrl;
@@ -1437,11 +1450,21 @@ class _StudentDashboardState extends State<StudentDashboard> {
       if (activeRoll.isNotEmpty) {
         final cachedPhoto =
             prefs.getString('hitam_student_photo_url_$activeRoll');
-        if (cachedPhoto != null && cachedPhoto.isNotEmpty && mounted) {
-          if (photoUrl == null || photoUrl!.isEmpty) {
-            setState(() {
-              photoUrl = cachedPhoto;
-            });
+        if (cachedPhoto != null && cachedPhoto.isNotEmpty) {
+          if (HitamScraperService.isBlacklistedPhoto(cachedPhoto)) {
+            await prefs.remove('hitam_student_photo_url_$activeRoll');
+            await prefs.remove('hitam_student_photo_url');
+            if (mounted && (photoUrl == null || HitamScraperService.isBlacklistedPhoto(photoUrl))) {
+              setState(() {
+                photoUrl = null;
+              });
+            }
+          } else if (mounted) {
+            if (photoUrl == null || photoUrl!.isEmpty) {
+              setState(() {
+                photoUrl = cachedPhoto;
+              });
+            }
           }
         }
       }
@@ -1453,7 +1476,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
       if (rollNo.isNotEmpty) {
         final prof = (matchingProf != null &&
                 matchingProf.photoUrl != null &&
-                matchingProf.photoUrl!.isNotEmpty)
+                matchingProf.photoUrl!.isNotEmpty &&
+                !HitamScraperService.isBlacklistedPhoto(matchingProf.photoUrl))
             ? matchingProf
             : await HitamScraperService().fetchStudentProfile(rollNo);
 
@@ -1461,11 +1485,17 @@ class _StudentDashboardState extends State<StudentDashboard> {
             prof.rollNo.toUpperCase().trim() == rollNo &&
             mounted) {
           setState(() {
-            if (prof.photoUrl != null && prof.photoUrl!.isNotEmpty) {
+            if (prof.photoUrl != null &&
+                prof.photoUrl!.isNotEmpty &&
+                !HitamScraperService.isBlacklistedPhoto(prof.photoUrl)) {
               photoUrl = prof.photoUrl;
               prefs.setString(
                   'hitam_student_photo_url_$rollNo', prof.photoUrl!);
+            } else {
+              photoUrl = null;
+              prefs.remove('hitam_student_photo_url_$rollNo');
             }
+            prefs.remove('hitam_student_photo_url');
             if (studentName.isEmpty && prof.name.isNotEmpty) {
               studentName = prof.name;
             }

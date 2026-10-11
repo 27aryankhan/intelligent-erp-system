@@ -42,9 +42,61 @@ class StudentPhotoWidget extends StatelessWidget {
     this.onTap,
   });
 
+  static bool _isBlacklisted(String? url, [Uint8List? bytes]) {
+    if (url == null || url.trim().isEmpty) return true;
+    final trimmed = url.trim();
+    final lower = trimmed.toLowerCase();
+
+    if (lower.contains('title_head') ||
+        lower.contains('collegeimages') ||
+        lower.contains('collegeimage') ||
+        lower.contains('title_') ||
+        lower.contains('head.jpg') ||
+        lower.contains('head.png') ||
+        lower.contains('head.gif') ||
+        lower.contains('banner') ||
+        lower.contains('logo') ||
+        lower.contains('header') ||
+        lower.contains('footer') ||
+        lower.contains('spacer') ||
+        lower.contains('dot.gif')) {
+      return true;
+    }
+
+    if (bytes != null) {
+      if (bytes.length == 52868 || bytes.length < 500) {
+        return true;
+      }
+    }
+
+    if (lower.startsWith('data:image') ||
+        lower.startsWith('data:application') ||
+        lower.startsWith('/9j/')) {
+      if (trimmed.contains('7AARRHVja3k')) {
+        return true;
+      }
+      try {
+        final clean = trimmed.contains(',') ? trimmed.split(',').last : trimmed;
+        final sanitized = clean.replaceAll(RegExp(r'\s+'), '');
+        final approxLen = (sanitized.length * 3) ~/ 4;
+        if (approxLen >= 52800 && approxLen <= 52950) {
+          final decoded = base64Decode(sanitized);
+          if (decoded.length == 52868 || decoded.length < 500) {
+            return true;
+          }
+        } else if (approxLen < 400) {
+          return true;
+        }
+      } catch (_) {}
+    }
+
+    return false;
+  }
+
   bool get _isBase64 {
     if (photoUrl == null || photoUrl!.trim().isEmpty) return false;
     final trimmed = photoUrl!.trim();
+    if (_isBlacklisted(trimmed)) return false;
     return trimmed.startsWith('data:image') ||
         trimmed.startsWith('data:application') ||
         trimmed.startsWith('/9j/') ||
@@ -52,10 +104,13 @@ class StudentPhotoWidget extends StatelessWidget {
   }
 
   Uint8List? _decodeBase64(String raw) {
+    if (_isBlacklisted(raw)) return null;
     try {
       final clean = raw.contains(',') ? raw.split(',').last : raw;
       final sanitized = clean.replaceAll(RegExp(r'\s+'), '');
-      return base64Decode(sanitized);
+      final bytes = base64Decode(sanitized);
+      if (_isBlacklisted(raw, bytes)) return null;
+      return bytes;
     } catch (_) {
       return null;
     }
@@ -94,14 +149,14 @@ class StudentPhotoWidget extends StatelessWidget {
 
   Widget _buildImageContent() {
     final rawUrl = photoUrl?.trim();
-    if (rawUrl == null || rawUrl.isEmpty) {
+    if (rawUrl == null || rawUrl.isEmpty || _isBlacklisted(rawUrl)) {
       return _buildFallback();
     }
 
     // 1. Base64 / Data URI image
     if (_isBase64) {
       final bytes = _decodeBase64(rawUrl);
-      if (bytes != null && bytes.isNotEmpty) {
+      if (bytes != null && bytes.isNotEmpty && !_isBlacklisted(rawUrl, bytes)) {
         return Image.memory(
           bytes,
           width: size,
@@ -158,6 +213,7 @@ class StudentPhotoWidget extends StatelessWidget {
   }
 
   void _showZoomDialog(BuildContext context) {
+    if (_isBlacklisted(photoUrl)) return;
     showStudentPhotoPreviewDialog(
       context,
       photoUrl: photoUrl,
@@ -206,6 +262,7 @@ void showStudentPhotoPreviewDialog(
 }) {
   if (photoUrl == null || photoUrl.trim().isEmpty) return;
   final rawUrl = photoUrl.trim();
+  if (StudentPhotoWidget._isBlacklisted(rawUrl)) return;
 
   final bool isBase64 = rawUrl.startsWith('data:image') ||
       rawUrl.startsWith('data:application') ||
@@ -217,6 +274,9 @@ void showStudentPhotoPreviewDialog(
     try {
       final clean = rawUrl.contains(',') ? rawUrl.split(',').last : rawUrl;
       bytes = base64Decode(clean.replaceAll(RegExp(r'\s+'), ''));
+      if (StudentPhotoWidget._isBlacklisted(rawUrl, bytes)) {
+        return;
+      }
     } catch (_) {}
   }
 

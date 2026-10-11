@@ -1032,7 +1032,7 @@ class HitamScraperService {
         }
       }
 
-      // Stage 3: If photo is still missing, probe StudentMaster.aspx master page
+      // Stage 3: If photo is still missing, check #imgstudent on StudentMaster.aspx
       if (photoUrl == null || photoUrl.isEmpty) {
         try {
           final masterRes = await http.get(
@@ -1047,9 +1047,12 @@ class HitamScraperService {
 
           if (masterRes.statusCode == 200 && masterRes.body.isNotEmpty) {
             final masterDoc = html_parser.parse(masterRes.body);
-            final masterPhoto = _extractPhotoUrlFromDoc(masterDoc, safeRoll);
-            if (masterPhoto != null && masterPhoto.isNotEmpty) {
-              photoUrl = masterPhoto;
+            final studentImg = masterDoc.querySelector('#imgstudent, #imgStudent');
+            if (studentImg != null) {
+              final src = (studentImg.attributes['src'] ?? '').trim();
+              if (src.isNotEmpty && !_isBlacklistedPhotoUrl(src)) {
+                photoUrl = _formatPhotoUrl(src);
+              }
             }
           }
         } catch (_) {}
@@ -1082,7 +1085,9 @@ class HitamScraperService {
 
             if (headRes.statusCode == 200) {
               final ct = (headRes.headers['content-type'] ?? '').toLowerCase();
-              if (ct.isEmpty || ct.contains('image')) {
+              final len = int.tryParse(headRes.headers['content-length'] ?? '') ?? 0;
+              // Guard against college logo redirect or empty
+              if ((ct.isEmpty || ct.contains('image')) && len != 52868 && len > 500) {
                 photoUrl = cand;
                 break;
               }
@@ -1096,14 +1101,16 @@ class HitamScraperService {
         try {
           final prefs = await SharedPreferences.getInstance();
           final cached = prefs.getString('hitam_student_photo_url_${safeRoll.toUpperCase()}');
-          if (cached != null && cached.isNotEmpty) {
+          if (cached != null && cached.isNotEmpty && !_isBlacklistedPhotoUrl(cached)) {
             photoUrl = cached;
+          } else if (cached != null) {
+            prefs.remove('hitam_student_photo_url_${safeRoll.toUpperCase()}');
           }
         } catch (_) {}
       }
 
       // Stage 6: Pre-cache image bytes as persistent data URI so it renders instantly and offline
-      if (photoUrl != null && photoUrl.startsWith('http')) {
+      if (photoUrl != null && photoUrl.startsWith('http') && !_isBlacklistedPhotoUrl(photoUrl)) {
         try {
           final imgRes = await http.get(
             Uri.parse(photoUrl),
@@ -1116,11 +1123,20 @@ class HitamScraperService {
           ).timeout(const Duration(seconds: 4));
 
           if (imgRes.statusCode == 200 && imgRes.bodyBytes.isNotEmpty) {
-            final mime = imgRes.headers['content-type'] ?? 'image/jpeg';
-            final b64 = base64Encode(imgRes.bodyBytes);
-            photoUrl = 'data:$mime;base64,$b64';
+            // Guard: Never cache title_head.jpg (52868 bytes) or empty image
+            if (imgRes.bodyBytes.length != 52868 && imgRes.bodyBytes.length > 500) {
+              final mime = imgRes.headers['content-type'] ?? 'image/jpeg';
+              final b64 = base64Encode(imgRes.bodyBytes);
+              photoUrl = 'data:$mime;base64,$b64';
+            } else {
+              photoUrl = null;
+            }
           }
         } catch (_) {}
+      }
+
+      if (photoUrl != null && _isBlacklistedPhotoUrl(photoUrl)) {
+        photoUrl = null;
       }
 
       final Map<String, String> kv = {};
@@ -1268,17 +1284,22 @@ class HitamScraperService {
         cgpa: cgpa,
         credits: credits,
         percentage: percentage,
-        photoUrl: photoUrl,
+        photoUrl: (photoUrl != null && !isBlacklistedPhoto(photoUrl)) ? photoUrl : null,
         extraDetails: kv,
         spfBands: parsedSpfBands,
       );
       latestProfile = profile;
-      final pUrl = photoUrl;
+      final pUrl = profile.photoUrl;
       if (pUrl != null && pUrl.isNotEmpty) {
         SharedPreferences.getInstance().then((prefs) {
           prefs.setString(
               'hitam_student_photo_url_${safeRoll.toUpperCase()}', pUrl);
           // Purge stale unscoped key to prevent cross-account pollution
+          prefs.remove('hitam_student_photo_url');
+        }).catchError((_) {});
+      } else {
+        SharedPreferences.getInstance().then((prefs) {
+          prefs.remove('hitam_student_photo_url_${safeRoll.toUpperCase()}');
           prefs.remove('hitam_student_photo_url');
         }).catchError((_) {});
       }
@@ -1288,60 +1309,84 @@ class HitamScraperService {
     }
   }
 
+  /// Returns true if the image URL or base64 data URI corresponds to a college
+  /// logo, banner, spacer, or placeholder rather than an actual student photo.
+  static bool isBlacklistedPhoto(String? url) {
+    if (url == null || url.trim().isEmpty) return true;
+    final trimmed = url.trim();
+    final lower = trimmed.toLowerCase();
+
+    if (lower.contains('title_head') ||
+        lower.contains('collegeimages') ||
+        lower.contains('collegeimage') ||
+        lower.contains('title_') ||
+        lower.contains('head.jpg') ||
+        lower.contains('head.png') ||
+        lower.contains('head.gif') ||
+        lower.contains('banner') ||
+        lower.contains('logo') ||
+        lower.contains('header') ||
+        lower.contains('footer') ||
+        lower.contains('spacer') ||
+        lower.contains('dot.gif')) {
+      return true;
+    }
+
+    // Check base64 encoded title_head.jpg signature or exact size (52,868 bytes)
+    if (lower.startsWith('data:image') ||
+        lower.startsWith('data:application') ||
+        lower.startsWith('/9j/')) {
+      if (trimmed.contains('7AARRHVja3k')) {
+        return true;
+      }
+      try {
+        final clean = trimmed.contains(',') ? trimmed.split(',').last : trimmed;
+        final sanitized = clean.replaceAll(RegExp(r'\s+'), '');
+        final approxLen = (sanitized.length * 3) ~/ 4;
+        if (approxLen >= 52800 && approxLen <= 52950) {
+          final bytes = base64Decode(sanitized);
+          if (bytes.length == 52868 || bytes.length < 500) {
+            return true;
+          }
+        } else if (approxLen < 400) {
+          return true;
+        }
+      } catch (_) {}
+    }
+
+    return false;
+  }
+
+  bool _isBlacklistedPhotoUrl(String? url) => isBlacklistedPhoto(url);
+
   /// Extracts student photo URL or base64 data URI from parsed HTML Document
   String? _extractPhotoUrlFromDoc(html_dom.Document doc, String rollNo) {
     final imgElements = doc.querySelectorAll('img');
     final upperRoll = rollNo.toUpperCase();
     final lowerRoll = rollNo.toLowerCase();
 
-    // Priority 1: Match student-specific identifiers
     for (final img in imgElements) {
       final src = (img.attributes['src'] ?? '').replaceAll("'", '').replaceAll('"', '').trim();
       if (src.isEmpty) continue;
+      if (_isBlacklistedPhotoUrl(src)) continue;
+
       final srcLower = src.toLowerCase();
       final id = (img.attributes['id'] ?? '').toLowerCase();
       final alt = (img.attributes['alt'] ?? '').toLowerCase();
       final className = (img.attributes['class'] ?? '').toLowerCase();
 
-      if (srcLower.contains('spacer') ||
-          srcLower.contains('icon') ||
-          srcLower.contains('logo') ||
-          srcLower.contains('banner') ||
-          srcLower.contains('button') ||
-          srcLower.contains('dot.gif')) {
-        continue;
-      }
+      final isStudentId = id == 'imgstudent' || id == 'img_student' || id.contains('studentphoto');
+      final hasRollNo = rollNo.isNotEmpty && (srcLower.contains(lowerRoll) || src.contains(upperRoll));
+      final isStudentPath = srcLower.contains('studentphotos/') ||
+          srcLower.contains('studentphotos') ||
+          srcLower.contains('/photos/') ||
+          srcLower.contains('showimage');
 
-      if ((rollNo.isNotEmpty && (srcLower.contains(lowerRoll) || src.contains(upperRoll))) ||
-          id.contains('student') ||
-          id.contains('photo') ||
-          className.contains('photo') ||
-          alt.contains('student') ||
-          alt.contains('photo') ||
-          srcLower.contains('studentphoto') ||
-          srcLower.contains('showimage') ||
-          srcLower.contains('/photos/')) {
+      if (isStudentId || hasRollNo || isStudentPath || alt.contains('student photo')) {
         return _formatPhotoUrl(src);
       }
     }
 
-    // Priority 2: Non-icon, non-spacer image
-    for (final img in imgElements) {
-      final src = (img.attributes['src'] ?? '').replaceAll("'", '').replaceAll('"', '').trim();
-      if (src.isEmpty) continue;
-      final srcLower = src.toLowerCase();
-      if (srcLower.contains('spacer') ||
-          srcLower.contains('icon') ||
-          srcLower.contains('logo') ||
-          srcLower.contains('banner') ||
-          srcLower.contains('button') ||
-          srcLower.contains('dot.gif') ||
-          srcLower.contains('header') ||
-          srcLower.contains('footer')) {
-        continue;
-      }
-      return _formatPhotoUrl(src);
-    }
     return null;
   }
 

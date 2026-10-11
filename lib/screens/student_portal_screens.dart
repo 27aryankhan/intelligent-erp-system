@@ -1041,7 +1041,9 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
             final prefs = await SharedPreferences.getInstance();
             final cachedPhoto =
                 prefs.getString('hitam_student_photo_url_$rollNo');
-            if (cachedPhoto != null && cachedPhoto.isNotEmpty) {
+            if (cachedPhoto != null &&
+                cachedPhoto.isNotEmpty &&
+                !HitamScraperService.isBlacklistedPhoto(cachedPhoto)) {
               _profile = StudentProfileDetails(
                 rollNo: loaded.rollNo,
                 name: loaded.name,
@@ -1079,6 +1081,9 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                 spfBands: loaded.spfBands,
               );
             } else {
+              if (cachedPhoto != null && HitamScraperService.isBlacklistedPhoto(cachedPhoto)) {
+                prefs.remove('hitam_student_photo_url_$rollNo');
+              }
               _profile = loaded;
             }
           } catch (_) {
@@ -1967,9 +1972,13 @@ class _StudentAcademicRegisterScreenState
         final prefs = await SharedPreferences.getInstance();
         final cached = prefs.getString('hitam_student_photo_url_$rollNo');
         if (cached != null && cached.isNotEmpty && mounted) {
-          setState(() {
-            _cachedPhotoUrl = cached;
-          });
+          if (HitamScraperService.isBlacklistedPhoto(cached)) {
+            prefs.remove('hitam_student_photo_url_$rollNo');
+          } else {
+            setState(() {
+              _cachedPhotoUrl = cached;
+            });
+          }
         }
       } catch (_) {}
 
@@ -1981,7 +1990,9 @@ class _StudentAcademicRegisterScreenState
               prof != null &&
               prof.rollNo.toUpperCase().trim() == rollNo) {
             setState(() {
-              _cachedPhotoUrl = prof.photoUrl;
+              _cachedPhotoUrl = (prof.photoUrl != null && !HitamScraperService.isBlacklistedPhoto(prof.photoUrl))
+                  ? prof.photoUrl
+                  : null;
             });
           }
         }));
@@ -2157,9 +2168,10 @@ class _StudentAcademicRegisterScreenState
         HitamScraperService().latestAttendanceReport?.branch ??
         'Engineering';
 
-    final photoUrl =
+    final rawPhoto =
         HitamScraperService().getProfileFor(rollNo)?.photoUrl ??
             _cachedPhotoUrl;
+    final photoUrl = HitamScraperService.isBlacklistedPhoto(rawPhoto) ? null : rawPhoto;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
