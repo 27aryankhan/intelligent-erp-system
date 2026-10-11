@@ -1,7 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
-import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -17,6 +15,7 @@ import 'screens/student_portal_screens.dart';
 import 'services/update_service.dart';
 import 'widgets/github_attendance_heatmap.dart';
 import 'widgets/pixel_run_game.dart';
+import 'widgets/student_photo_widget.dart';
 import 'services/background_service.dart';
 
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
@@ -192,37 +191,7 @@ class _AuthGateState extends State<AuthGate> {
           final cachedPct = prefs.getDouble('hitam_student_percentage') ?? 0.0;
           final cachedHeld = prefs.getInt('hitam_student_held') ?? 0;
           final cachedAttended = prefs.getInt('hitam_student_attended') ?? 0;
-
           final cachedPhoto = prefs.getString('hitam_student_photo_url');
-          final cachedPhotoB64 = prefs.getString('hitam_student_photo_base64');
-          final cachedPhotoFile = prefs.getString('hitam_student_photo_file');
-
-          Uint8List? initialBytes;
-          if (cachedPhotoB64 != null && cachedPhotoB64.isNotEmpty) {
-            try {
-              initialBytes = base64Decode(cachedPhotoB64);
-              HitamScraperService.cachedAvatarBytes = initialBytes;
-            } catch (_) {}
-          }
-          if (initialBytes == null && cachedPhotoFile != null && cachedPhotoFile.isNotEmpty) {
-            try {
-              final f = File(cachedPhotoFile);
-              if (f.existsSync()) {
-                initialBytes = f.readAsBytesSync();
-                HitamScraperService.cachedAvatarBytes = initialBytes;
-              }
-            } catch (_) {}
-          }
-          if (cachedPhoto != null) {
-            HitamScraperService.cachedPhotoUrl = cachedPhoto;
-          }
-          if (cachedPhotoFile != null) {
-            HitamScraperService.cachedAvatarFilePath = cachedPhotoFile;
-          }
-
-          if (initialBytes == null && cachedPhoto != null && cachedPhoto.isNotEmpty) {
-            unawaited(HitamScraperService.cacheStudentPhoto(savedId, cachedPhoto));
-          }
 
           StudentAttendanceReport? cachedReport;
           if (cachedName.isNotEmpty) {
@@ -246,8 +215,6 @@ class _AuthGateState extends State<AuthGate> {
                 initialReport: cachedReport,
                 studentId: savedId,
                 initialPhotoUrl: cachedPhoto,
-                initialPhotoBytes: initialBytes,
-                initialPhotoFilePath: cachedPhotoFile,
               ),
             ),
           );
@@ -419,8 +386,15 @@ class _LoginPageState extends State<LoginPage> {
       if (webprosStudentSuccess) {
         final activeRoll = authService.activeUserId ?? rollNo;
         final scraper = HitamScraperService(auth: authService);
-        // Fetch real-time student attendance report
-        final report = await scraper.fetchStudentAttendanceReport(activeRoll);
+
+        // Fetch real-time student attendance report AND profile (with profile picture) in parallel
+        final results = await Future.wait([
+          scraper.fetchStudentAttendanceReport(activeRoll),
+          scraper.fetchStudentProfile(activeRoll),
+        ]);
+        final report = results[0] as StudentAttendanceReport?;
+        final profile = results[1] as StudentProfileDetails?;
+
         if (report != null && report.subjects.isNotEmpty) {
           try {
             await DatabaseService().cacheAttendance(activeRoll, report.subjects);
@@ -428,8 +402,7 @@ class _LoginPageState extends State<LoginPage> {
           } catch (_) {}
         }
 
-        // Pre-fetch profile, marks, fees & academic register in background
-        unawaited(scraper.fetchStudentProfile(activeRoll));
+        // Pre-fetch remaining modules (marks, fees & academic register) in background
         unawaited(scraper.fetchStudentMarks(activeRoll));
         unawaited(scraper.fetchStudentFees(activeRoll));
         unawaited(scraper.fetchStudentAcademicRegister(activeRoll));
@@ -450,13 +423,16 @@ class _LoginPageState extends State<LoginPage> {
           unawaited(NotificationService().syncAttendanceNow());
         }
 
-        // Save persistent session credentials and student profile details
+        // Save persistent session credentials, student profile & photo details
         try {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setBool('hitam_is_logged_in', true);
           await prefs.setString('hitam_user_id', activeRoll);
           await prefs.setString('hitam_user_pwd', password);
           await prefs.setString('hitam_user_role', 'student');
+          if (profile?.photoUrl != null && profile!.photoUrl!.isNotEmpty) {
+            await prefs.setString('hitam_student_photo_url', profile.photoUrl!);
+          }
           if (report != null) {
             await prefs.setString('hitam_student_name', report.studentName);
             await prefs.setString('hitam_student_branch', report.branch);
@@ -475,9 +451,7 @@ class _LoginPageState extends State<LoginPage> {
             builder: (context) => StudentDashboard(
               initialReport: report,
               studentId: activeRoll,
-              initialPhotoUrl: HitamScraperService.cachedPhotoUrl,
-              initialPhotoBytes: HitamScraperService.cachedAvatarBytes,
-              initialPhotoFilePath: HitamScraperService.cachedAvatarFilePath,
+              initialPhotoUrl: profile?.photoUrl,
             ),
           ),
         );
@@ -1276,16 +1250,11 @@ class StudentDashboard extends StatefulWidget {
   final StudentAttendanceReport? initialReport;
   final String? studentId;
   final String? initialPhotoUrl;
-  final Uint8List? initialPhotoBytes;
-  final String? initialPhotoFilePath;
-
   const StudentDashboard({
     super.key,
     this.initialReport,
     this.studentId,
     this.initialPhotoUrl,
-    this.initialPhotoBytes,
-    this.initialPhotoFilePath,
   });
 
   @override
@@ -1300,19 +1269,14 @@ class _StudentDashboardState extends State<StudentDashboard> {
   String department = '';
   String year = '';
   String? photoUrl;
-  Uint8List? photoBytes;
-  String? photoFilePath;
 
   double attendance = 0.0;
 
   @override
   void initState() {
     super.initState();
-    photoBytes = widget.initialPhotoBytes ?? HitamScraperService.cachedAvatarBytes;
-    photoFilePath = widget.initialPhotoFilePath ?? HitamScraperService.cachedAvatarFilePath;
     photoUrl = widget.initialPhotoUrl ??
-        HitamScraperService().latestProfile?.photoUrl ??
-        HitamScraperService.cachedPhotoUrl;
+        HitamScraperService().latestProfile?.photoUrl;
     _loadStudentProfileAndPhoto();
     if (widget.initialReport != null) {
       final rep = widget.initialReport!;
@@ -1455,18 +1419,10 @@ class _StudentDashboardState extends State<StudentDashboard> {
           HitamAuthService().activeUserId ??
           prefs.getString('hitam_user_id') ??
           '';
-
-      if (photoBytes == null) {
-        final cached = await HitamScraperService.loadCachedAvatar(rollNo);
-        if (cached != null && mounted) {
-          setState(() {
-            photoBytes = cached;
-          });
-        }
-      }
-
       if (rollNo.isNotEmpty) {
-        final prof = inMemoryProf ?? await HitamScraperService().fetchStudentProfile(rollNo);
+        final prof = (inMemoryProf != null && inMemoryProf.photoUrl != null && inMemoryProf.photoUrl!.isNotEmpty)
+            ? inMemoryProf
+            : await HitamScraperService().fetchStudentProfile(rollNo);
         if (prof != null && mounted) {
           setState(() {
             if (prof.photoUrl != null && prof.photoUrl!.isNotEmpty) {
@@ -1483,35 +1439,19 @@ class _StudentDashboardState extends State<StudentDashboard> {
               year = prof.semester;
             }
           });
-
-          if (prof.photoUrl != null && prof.photoUrl!.isNotEmpty) {
-            HitamScraperService.cacheStudentPhoto(rollNo, prof.photoUrl!).then((_) {
-              if (mounted && HitamScraperService.cachedAvatarBytes != null) {
-                setState(() {
-                  photoBytes = HitamScraperService.cachedAvatarBytes;
-                });
-              }
-            });
-          }
         }
       }
     } catch (_) {}
   }
 
   Widget _buildStudentAvatar() {
-    return SizedBox(
-      width: 50,
-      height: 50,
-      child: ClipOval(
-        child: HitamScraperService.buildAvatarImage(
-          width: 50,
-          height: 50,
-          photoUrl: photoUrl,
-          photoBytes: photoBytes,
-          photoFilePath: photoFilePath,
-          fallback: _buildInitialsAvatar(),
-        ),
-      ),
+    return StudentPhotoWidget(
+      photoUrl: photoUrl,
+      name: studentName,
+      rollNo: widget.studentId ?? HitamAuthService().activeUserId,
+      size: 50,
+      enableZoom: true,
+      backgroundColor: const Color(0xFF1E293B),
     );
   }
 
@@ -2859,27 +2799,13 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
                   builder: (context) {
                     final photoUrl = HitamScraperService().latestProfile?.photoUrl;
                     final double r = isNarrow ? 26 : 30;
-                    return Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.blue.shade200, width: 2),
-                      ),
-                      child: CircleAvatar(
-                        radius: r,
-                        backgroundColor: Colors.blue.shade50,
-                        child: ClipOval(
-                          child: HitamScraperService.buildAvatarImage(
-                            width: r * 2,
-                            height: r * 2,
-                            photoUrl: photoUrl,
-                            fallback: Icon(
-                              Icons.school,
-                              size: isNarrow ? 28 : 32,
-                              color: Colors.blue,
-                            ),
-                          ),
-                        ),
-                      ),
+                    return StudentPhotoWidget(
+                      photoUrl: photoUrl,
+                      name: studentName,
+                      size: r * 2,
+                      border: Border.all(color: Colors.blue.shade200, width: 2),
+                      backgroundColor: Colors.blue.shade50,
+                      enableZoom: true,
                     );
                   },
                 ),
@@ -14077,27 +14003,13 @@ class _ParentFeeDetailsScreenState
                   builder: (context) {
                     final photoUrl = HitamScraperService().latestProfile?.photoUrl;
                     final double r = isNarrow ? 26 : 30;
-                    return Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.blue.shade200, width: 2),
-                      ),
-                      child: CircleAvatar(
-                        radius: r,
-                        backgroundColor: Colors.blue.shade50,
-                        child: ClipOval(
-                          child: HitamScraperService.buildAvatarImage(
-                            width: r * 2,
-                            height: r * 2,
-                            photoUrl: photoUrl,
-                            fallback: Icon(
-                              Icons.school,
-                              size: isNarrow ? 28 : 32,
-                              color: Colors.blue,
-                            ),
-                          ),
-                        ),
-                      ),
+                    return StudentPhotoWidget(
+                      photoUrl: photoUrl,
+                      name: studentName,
+                      size: r * 2,
+                      border: Border.all(color: Colors.blue.shade200, width: 2),
+                      backgroundColor: Colors.blue.shade50,
+                      enableZoom: true,
                     );
                   },
                 ),

@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/hitam_auth_service.dart';
 import '../services/hitam_scraper_service.dart';
+import '../widgets/student_photo_widget.dart';
 
 // ============================================================================
 // 1. STUDENT BACKLOGS SCREEN
@@ -1031,10 +1033,59 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
       final scraper = HitamScraperService();
       final p = await scraper.fetchStudentProfile(rollNo);
       if (mounted) {
-        setState(() {
-          _profile = p ?? scraper.latestProfile;
-          _isLoading = false;
-        });
+        final loaded = p ?? scraper.latestProfile;
+        if (loaded != null && (loaded.photoUrl == null || loaded.photoUrl!.isEmpty)) {
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            final cachedPhoto = prefs.getString('hitam_student_photo_url');
+            if (cachedPhoto != null && cachedPhoto.isNotEmpty) {
+              _profile = StudentProfileDetails(
+                rollNo: loaded.rollNo,
+                name: loaded.name,
+                admissionNo: loaded.admissionNo,
+                course: loaded.course,
+                branch: loaded.branch,
+                semester: loaded.semester,
+                gender: loaded.gender,
+                dob: loaded.dob,
+                nationality: loaded.nationality,
+                religion: loaded.religion,
+                entranceType: loaded.entranceType,
+                rank: loaded.rank,
+                seatType: loaded.seatType,
+                caste: loaded.caste,
+                lastStudied: loaded.lastStudied,
+                joiningDate: loaded.joiningDate,
+                mobile: loaded.mobile,
+                email: loaded.email,
+                aadharNo: loaded.aadharNo,
+                guardianName: loaded.guardianName,
+                guardianMobile: loaded.guardianMobile,
+                fatherName: loaded.fatherName,
+                fatherMobile: loaded.fatherMobile,
+                fatherOccupation: loaded.fatherOccupation,
+                motherName: loaded.motherName,
+                motherMobile: loaded.motherMobile,
+                motherOccupation: loaded.motherOccupation,
+                annualIncome: loaded.annualIncome,
+                cgpa: loaded.cgpa,
+                credits: loaded.credits,
+                percentage: loaded.percentage,
+                photoUrl: cachedPhoto,
+                extraDetails: loaded.extraDetails,
+                spfBands: loaded.spfBands,
+              );
+            } else {
+              _profile = loaded;
+            }
+          } catch (_) {
+            _profile = loaded;
+          }
+        } else {
+          _profile = loaded;
+        }
+        _isLoading = false;
+        setState(() {});
       }
     } catch (e) {
       if (mounted) {
@@ -1174,102 +1225,24 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                     ),
                     child: Column(
                       children: [
-                        GestureDetector(
-                          onTap: (p?.photoUrl != null && p!.photoUrl!.isNotEmpty)
-                              ? () {
-                                  showDialog(
-                                    context: context,
-                                    builder: (ctx) => Dialog(
-                                      backgroundColor: Colors.transparent,
-                                      insetPadding: const EdgeInsets.all(24),
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Container(
-                                            decoration: BoxDecoration(
-                                              borderRadius: BorderRadius.circular(16),
-                                              border: Border.all(
-                                                color: Colors.white.withOpacity(0.3),
-                                                width: 2,
-                                              ),
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: Colors.black.withOpacity(0.5),
-                                                  blurRadius: 20,
-                                                  spreadRadius: 2,
-                                                ),
-                                              ],
-                                            ),
-                                            child: ClipRRect(
-                                              borderRadius: BorderRadius.circular(14),
-                                              child: HitamScraperService.buildAvatarImage(
-                                                photoUrl: p.photoUrl,
-                                                fit: BoxFit.contain,
-                                                fallback: const SizedBox.shrink(),
-                                              ),
-                                            ),
-                                          ),
-                                          const SizedBox(height: 14),
-                                          Text(
-                                            p.name,
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            p.rollNo,
-                                            style: TextStyle(
-                                              color: Colors.white.withOpacity(0.85),
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                }
-                              : null,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.9),
-                                width: 3.5,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.35),
-                                  blurRadius: 14,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: CircleAvatar(
-                              radius: 46,
-                              backgroundColor: Colors.blue.shade700,
-                              child: ClipOval(
-                                child: HitamScraperService.buildAvatarImage(
-                                  width: 92,
-                                  height: 92,
-                                  photoUrl: p?.photoUrl,
-                                  fallback: Text(
-                                    (p?.name.isNotEmpty ?? false)
-                                        ? p!.name[0].toUpperCase()
-                                        : 'S',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 34,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
+                        StudentPhotoWidget(
+                          photoUrl: p?.photoUrl,
+                          name: p?.name ?? '',
+                          rollNo: p?.rollNo,
+                          size: 92,
+                          enableZoom: true,
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.9),
+                            width: 3.5,
                           ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.35),
+                              blurRadius: 14,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                          backgroundColor: Colors.blue.shade700,
                         ),
                         const SizedBox(height: 12),
                         Text(
@@ -1964,6 +1937,7 @@ class _StudentAcademicRegisterScreenState
   bool _isLoading = true;
   String? _errorMessage;
   StudentAcademicRegisterReport? _report;
+  String? _cachedPhotoUrl;
   String _searchQuery = '';
   String _selectedFilter = 'ALL'; // ALL, SAFE, WARNING, CRITICAL, ACTIVE
   final Map<String, String> _dayLogFilterBySubject = {}; // Subject code -> ALL, PRESENT, ABSENT
@@ -1983,6 +1957,17 @@ class _StudentAcademicRegisterScreenState
     try {
       final rollNo = HitamAuthService().activeUserId ?? '';
       final scraper = HitamScraperService();
+
+      // Load cached photo if available
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final cached = prefs.getString('hitam_student_photo_url');
+        if (cached != null && cached.isNotEmpty && mounted) {
+          setState(() {
+            _cachedPhotoUrl = cached;
+          });
+        }
+      } catch (_) {}
 
       // Prefetch student photo in background if not already loaded
       if (scraper.latestProfile?.photoUrl == null && rollNo.isNotEmpty) {
@@ -2161,7 +2146,8 @@ class _StudentAcademicRegisterScreenState
         HitamScraperService().latestAttendanceReport?.branch ??
         'Engineering';
 
-    final photoUrl = HitamScraperService().latestProfile?.photoUrl;
+    final photoUrl =
+        HitamScraperService().latestProfile?.photoUrl ?? _cachedPhotoUrl;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -2253,85 +2239,13 @@ class _StudentAcademicRegisterScreenState
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                GestureDetector(
-                                  onTap: (photoUrl != null && photoUrl.isNotEmpty)
-                                      ? () {
-                                          showDialog(
-                                            context: context,
-                                            builder: (ctx) => Dialog(
-                                              backgroundColor: Colors.transparent,
-                                              insetPadding: const EdgeInsets.all(24),
-                                              child: Column(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  Container(
-                                                    decoration: BoxDecoration(
-                                                      borderRadius: BorderRadius.circular(16),
-                                                      border: Border.all(
-                                                        color: Colors.white.withOpacity(0.3),
-                                                        width: 2,
-                                                      ),
-                                                      boxShadow: [
-                                                        BoxShadow(
-                                                          color: Colors.black.withOpacity(0.5),
-                                                          blurRadius: 20,
-                                                          spreadRadius: 2,
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    child: ClipRRect(
-                                                      borderRadius: BorderRadius.circular(14),
-                                                      child: HitamScraperService.buildAvatarImage(
-                                                        photoUrl: photoUrl,
-                                                        fit: BoxFit.contain,
-                                                        fallback: const SizedBox.shrink(),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  const SizedBox(height: 14),
-                                                  Text(
-                                                    studentName,
-                                                    style: const TextStyle(
-                                                      color: Colors.white,
-                                                      fontSize: 16,
-                                                      fontWeight: FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                  const SizedBox(height: 4),
-                                                  Text(
-                                                    rollNo,
-                                                    style: TextStyle(
-                                                      color: Colors.white.withOpacity(0.85),
-                                                      fontSize: 14,
-                                                      fontWeight: FontWeight.w600,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          );
-                                        }
-                                      : null,
-                                  child: Container(
-                                    width: 48,
-                                    height: 48,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.1),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: ClipOval(
-                                      child: HitamScraperService.buildAvatarImage(
-                                        width: 48,
-                                        height: 48,
-                                        photoUrl: photoUrl,
-                                        fallback: const Icon(
-                                          Icons.school_rounded,
-                                          color: Color(0xFF38BDF8),
-                                          size: 24,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
+                                StudentPhotoWidget(
+                                  photoUrl: photoUrl,
+                                  name: studentName,
+                                  rollNo: rollNo,
+                                  size: 48,
+                                  enableZoom: true,
+                                  fallbackIcon: Icons.school_rounded,
                                 ),
                                 const SizedBox(width: 14),
                                 Expanded(

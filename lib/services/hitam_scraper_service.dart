@@ -1,12 +1,7 @@
-import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
-import 'dart:typed_data';
-import 'package:flutter/material.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html_parser;
+import 'package:html/dom.dart' as html_dom;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'hitam_auth_service.dart';
 
@@ -409,134 +404,6 @@ class HitamScraperService {
   StudentTimeTableReport? latestTimeTable;
   StudentAcademicRegisterReport? latestAcademicRegister;
   List<SpfBandEntry>? latestSpfBands;
-
-  static Uint8List? cachedAvatarBytes;
-  static String? cachedAvatarFilePath;
-  static String? cachedPhotoUrl;
-
-  /// Pre-caches student profile photo in memory, base64 (SharedPreferences), and local disk
-  static Future<void> cacheStudentPhoto(String rollNo, String photoUrl) async {
-    cachedPhotoUrl = photoUrl;
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('hitam_student_photo_url', photoUrl);
-
-      // If we already have memory bytes, verify SharedPreferences base64
-      if (cachedAvatarBytes != null && cachedAvatarBytes!.isNotEmpty) {
-        if (!prefs.containsKey('hitam_student_photo_base64')) {
-          await prefs.setString('hitam_student_photo_base64', base64Encode(cachedAvatarBytes!));
-        }
-        return;
-      }
-
-      final res = await http.get(
-        Uri.parse(photoUrl),
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
-          'Referer': 'https://www.webprosindia.com/hitam/',
-        },
-      );
-
-      if (res.statusCode == 200 && res.bodyBytes.isNotEmpty) {
-        cachedAvatarBytes = res.bodyBytes;
-        final b64 = base64Encode(res.bodyBytes);
-        await prefs.setString('hitam_student_photo_base64', b64);
-
-        try {
-          final docDir = await getApplicationDocumentsDirectory();
-          final file = File(p.join(docDir.path, 'student_avatar_${rollNo.trim()}.jpg'));
-          await file.writeAsBytes(res.bodyBytes);
-          cachedAvatarFilePath = file.path;
-          await prefs.setString('hitam_student_photo_file', file.path);
-        } catch (_) {}
-      }
-    } catch (_) {}
-  }
-
-  /// Loads cached avatar bytes from memory, base64, or local disk
-  static Future<Uint8List?> loadCachedAvatar([String? rollNo]) async {
-    if (cachedAvatarBytes != null && cachedAvatarBytes!.isNotEmpty) {
-      return cachedAvatarBytes;
-    }
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final b64 = prefs.getString('hitam_student_photo_base64');
-      if (b64 != null && b64.isNotEmpty) {
-        cachedAvatarBytes = base64Decode(b64);
-        return cachedAvatarBytes;
-      }
-      final filePath = prefs.getString('hitam_student_photo_file');
-      if (filePath != null && filePath.isNotEmpty) {
-        final f = File(filePath);
-        if (await f.exists()) {
-          final bytes = await f.readAsBytes();
-          if (bytes.isNotEmpty) {
-            cachedAvatarBytes = bytes;
-            cachedAvatarFilePath = filePath;
-            return bytes;
-          }
-        }
-      }
-    } catch (_) {}
-    return null;
-  }
-
-  /// Instant 0ms avatar image builder using in-memory bytes, local disk cache, or network with fallback
-  static Widget buildAvatarImage({
-    double? width,
-    double? height,
-    String? photoUrl,
-    Uint8List? photoBytes,
-    String? photoFilePath,
-    Widget? fallback,
-    BoxFit fit = BoxFit.cover,
-  }) {
-    final bytes = photoBytes ?? cachedAvatarBytes;
-    if (bytes != null && bytes.isNotEmpty) {
-      return Image.memory(
-        bytes,
-        width: width,
-        height: height,
-        fit: fit,
-        gaplessPlayback: true,
-      );
-    }
-    final filePath = photoFilePath ?? cachedAvatarFilePath;
-    if (filePath != null && filePath.isNotEmpty) {
-      try {
-        final file = File(filePath);
-        if (file.existsSync()) {
-          return Image.file(
-            file,
-            width: width,
-            height: height,
-            fit: fit,
-            gaplessPlayback: true,
-          );
-        }
-      } catch (_) {}
-    }
-    final url = photoUrl ?? cachedPhotoUrl;
-    if (url != null && url.isNotEmpty) {
-      return Image.network(
-        url,
-        width: width,
-        height: height,
-        fit: fit,
-        gaplessPlayback: true,
-        headers: const {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        },
-        errorBuilder: (context, error, stackTrace) => fallback ?? const SizedBox.shrink(),
-        loadingBuilder: (context, child, progress) {
-          if (progress == null) return child;
-          return fallback ?? const SizedBox.shrink();
-        },
-      );
-    }
-    return fallback ?? const SizedBox.shrink();
-  }
 
   static const String attendancePageUrl =
       'https://www.webprosindia.com/hitam/Academics/StudentAttendance.aspx?showtype=SA';
@@ -1079,48 +946,158 @@ class HitamScraperService {
     }
   }
 
-  /// 5. Fetches student comprehensive profile details
+  /// 5. Fetches student comprehensive profile details with multi-stage photo extraction
   Future<StudentProfileDetails?> fetchStudentProfile(String rollNo) async {
     try {
-      final endpoint =
-          'https://www.webprosindia.com/hitam/ajax/StudentProfile,App_Web_studentprofile.aspx.a2a1b31c.ashx?_method=ShowStudentProfileNew&_session=rw';
+      final safeRoll = rollNo.trim();
+      String ashxUrl =
+          '/hitam/ajax/StudentProfile,App_Web_studentprofile.aspx.a2a1b31c.ashx';
+      String? probedPhotoUrl;
+
+      // Stage 1: Probe StudentProfile.aspx to dynamically discover the current AjaxPro handler
+      try {
+        final probeResponse = await http.get(
+          Uri.parse(profilePageUrl),
+          headers: {
+            'Cookie': authService.cookieHeader,
+            'User-Agent':
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Referer': 'https://www.webprosindia.com/hitam/StudentMaster.aspx',
+          },
+        ).timeout(const Duration(seconds: 4));
+
+        if (probeResponse.statusCode == 200 && probeResponse.body.isNotEmpty) {
+          final probeDoc = html_parser.parse(probeResponse.body);
+          for (var script in probeDoc.querySelectorAll('script')) {
+            final src = script.attributes['src'] ?? '';
+            if (src.toLowerCase().contains('studentprofile') &&
+                src.toLowerCase().contains('.ashx')) {
+              ashxUrl = src;
+              break;
+            }
+          }
+          probedPhotoUrl = _extractPhotoUrlFromDoc(probeDoc, safeRoll);
+        }
+      } catch (_) {}
+
+      // Stage 2: Post to ShowStudentProfileNew AJAX endpoint
+      final String fullEndpoint = ashxUrl.startsWith('http')
+          ? '$ashxUrl?_method=ShowStudentProfileNew&_session=rw'
+          : ashxUrl.startsWith('/')
+              ? 'https://www.webprosindia.com$ashxUrl?_method=ShowStudentProfileNew&_session=rw'
+              : 'https://www.webprosindia.com/hitam/Academics/$ashxUrl?_method=ShowStudentProfileNew&_session=rw';
 
       final response = await http.post(
-        Uri.parse(endpoint),
+        Uri.parse(fullEndpoint),
         headers: {
           'Cookie': authService.cookieHeader,
           'Content-Type': 'text/plain; charset=utf-8',
           'Referer': profilePageUrl,
         },
-        body: 'RollNo=$rollNo\r\nisImageDisplay=true',
-      );
+        body: 'RollNo=$safeRoll\r\nisImageDisplay=true',
+      ).timeout(const Duration(seconds: 6));
 
-      if (response.statusCode != 200 || response.body.trim().isEmpty) return null;
+      String? photoUrl = probedPhotoUrl;
+      html_dom.Document? doc;
 
-      final rawHtml = _cleanAjaxProHtml(response.body);
-      final doc = html_parser.parse(rawHtml);
-
-      String? photoUrl;
-      final imgElements = doc.querySelectorAll('img');
-      for (final img in imgElements) {
-        var src = img.attributes['src'] ?? '';
-        src = src.replaceAll("'", "").replaceAll('"', '').trim();
-        if (src.isNotEmpty &&
-            !src.toLowerCase().contains('spacer') &&
-            !src.toLowerCase().contains('icon')) {
-          if (src.startsWith('//')) {
-            photoUrl = 'https:$src';
-          } else if (src.startsWith('/')) {
-            photoUrl = 'https://www.webprosindia.com$src';
-          } else if (src.startsWith('http://')) {
-            photoUrl = src.replaceFirst('http://', 'https://');
-          } else if (src.startsWith('https://')) {
-            photoUrl = src;
-          } else {
-            photoUrl = 'https://www.webprosindia.com/hitam/$src';
-          }
-          break;
+      if (response.statusCode == 200 && response.body.trim().isNotEmpty) {
+        final rawHtml = _cleanAjaxProHtml(response.body);
+        doc = html_parser.parse(rawHtml);
+        final ajaxPhoto = _extractPhotoUrlFromDoc(doc, safeRoll);
+        if (ajaxPhoto != null && ajaxPhoto.isNotEmpty) {
+          photoUrl = ajaxPhoto;
         }
+      }
+
+      // Stage 3: If photo is still missing, probe StudentMaster.aspx master page
+      if (photoUrl == null || photoUrl.isEmpty) {
+        try {
+          final masterRes = await http.get(
+            Uri.parse('https://www.webprosindia.com/hitam/StudentMaster.aspx'),
+            headers: {
+              'Cookie': authService.cookieHeader,
+              'User-Agent':
+                  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              'Referer': 'https://www.webprosindia.com/hitam/StudentMaster.aspx',
+            },
+          ).timeout(const Duration(seconds: 4));
+
+          if (masterRes.statusCode == 200 && masterRes.body.isNotEmpty) {
+            final masterDoc = html_parser.parse(masterRes.body);
+            final masterPhoto = _extractPhotoUrlFromDoc(masterDoc, safeRoll);
+            if (masterPhoto != null && masterPhoto.isNotEmpty) {
+              photoUrl = masterPhoto;
+            }
+          }
+        } catch (_) {}
+      }
+
+      // Stage 4: Probe standard WebPros student photo URLs if not yet resolved
+      if ((photoUrl == null || photoUrl.isEmpty) && safeRoll.isNotEmpty) {
+        final upperRoll = safeRoll.toUpperCase();
+        final lowerRoll = safeRoll.toLowerCase();
+        final candidateUrls = [
+          'https://www.webprosindia.com/hitam/photos/$upperRoll.jpg',
+          'https://www.webprosindia.com/hitam/photos/$lowerRoll.jpg',
+          'https://www.webprosindia.com/hitam/Academics/photos/$upperRoll.jpg',
+          'https://www.webprosindia.com/hitam/StudentPhotos/$upperRoll.jpg',
+          'https://www.webprosindia.com/hitam/photos/$upperRoll.jpeg',
+          'https://www.webprosindia.com/hitam/photos/$upperRoll.png',
+        ];
+
+        for (final cand in candidateUrls) {
+          try {
+            final headRes = await http.head(
+              Uri.parse(cand),
+              headers: {
+                'Cookie': authService.cookieHeader,
+                'User-Agent':
+                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Referer': 'https://www.webprosindia.com/hitam/StudentMaster.aspx',
+              },
+            ).timeout(const Duration(seconds: 2));
+
+            if (headRes.statusCode == 200) {
+              final ct = (headRes.headers['content-type'] ?? '').toLowerCase();
+              if (ct.isEmpty || ct.contains('image')) {
+                photoUrl = cand;
+                break;
+              }
+            }
+          } catch (_) {}
+        }
+      }
+
+      // Stage 5: Fallback to cached photo from SharedPreferences if current fetch didn't yield one
+      if (photoUrl == null || photoUrl.isEmpty) {
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          final cached = prefs.getString('hitam_student_photo_url');
+          if (cached != null && cached.isNotEmpty) {
+            photoUrl = cached;
+          }
+        } catch (_) {}
+      }
+
+      // Stage 6: Pre-cache image bytes as persistent data URI so it renders instantly and offline
+      if (photoUrl != null && photoUrl.startsWith('http')) {
+        try {
+          final imgRes = await http.get(
+            Uri.parse(photoUrl),
+            headers: {
+              'Cookie': authService.cookieHeader,
+              'User-Agent':
+                  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              'Referer': 'https://www.webprosindia.com/hitam/StudentMaster.aspx',
+            },
+          ).timeout(const Duration(seconds: 4));
+
+          if (imgRes.statusCode == 200 && imgRes.bodyBytes.isNotEmpty) {
+            final mime = imgRes.headers['content-type'] ?? 'image/jpeg';
+            final b64 = base64Encode(imgRes.bodyBytes);
+            photoUrl = 'data:$mime;base64,$b64';
+          }
+        } catch (_) {}
       }
 
       final Map<String, String> kv = {};
@@ -1130,56 +1107,58 @@ class HitamScraperService {
       String fatherName = '';
       String motherName = '';
 
-      final rows = doc.querySelectorAll('tr');
-      for (var r in rows) {
-        final rowText = r.text.toLowerCase();
-        if (rowText.contains('guardian details')) {
-          currentSection = 'guardian';
-        } else if (rowText.contains("parent's details") || rowText.contains("parents details")) {
-          currentSection = 'parent';
-        } else if (rowText.contains('personal details')) {
-          currentSection = 'personal';
-        }
+      if (doc != null) {
+        final rows = doc.querySelectorAll('tr');
+        for (var r in rows) {
+          final rowText = r.text.toLowerCase();
+          if (rowText.contains('guardian details')) {
+            currentSection = 'guardian';
+          } else if (rowText.contains("parent's details") || rowText.contains("parents details")) {
+            currentSection = 'parent';
+          } else if (rowText.contains('personal details')) {
+            currentSection = 'personal';
+          }
 
-        final cells = r.querySelectorAll('td, th').map((c) => c.text.trim()).toList();
-        int i = 0;
-        while (i < cells.length) {
-          if (i + 2 < cells.length && (cells[i + 1] == ':' || cells[i + 1].isEmpty)) {
-            final key = cells[i].replaceAll(':', '').replaceAll(r"\'", "'").trim();
-            final val = cells[i + 2].replaceAll(r"\'", "'").trim();
-            if (key.isNotEmpty) {
-              final lowerKey = key.toLowerCase();
-              kv[lowerKey] = val;
-              if (lowerKey == 'name') {
-                if (currentSection == 'personal' && studentName.isEmpty) {
-                  studentName = val;
-                } else if (currentSection == 'guardian') {
-                  guardianName = val;
-                }
-              } else if (lowerKey.contains('father name')) {
-                fatherName = val;
-              } else if (lowerKey.contains('mother name')) {
-                motherName = val;
-              }
-            }
-            i += 3;
-          } else if (i + 1 < cells.length && cells[i].endsWith(':')) {
-            final key = cells[i].replaceAll(':', '').replaceAll(r"\'", "'").trim();
-            final val = cells[i + 1].replaceAll(r"\'", "'").trim();
-            if (key.isNotEmpty) {
-              final lowerKey = key.toLowerCase();
-              kv[lowerKey] = val;
-              if (lowerKey == 'name') {
-                if (currentSection == 'personal' && studentName.isEmpty) {
-                  studentName = val;
-                } else if (currentSection == 'guardian') {
-                  guardianName = val;
+          final cells = r.querySelectorAll('td, th').map((c) => c.text.trim()).toList();
+          int i = 0;
+          while (i < cells.length) {
+            if (i + 2 < cells.length && (cells[i + 1] == ':' || cells[i + 1].isEmpty)) {
+              final key = cells[i].replaceAll(':', '').replaceAll(r"\'", "'").trim();
+              final val = cells[i + 2].replaceAll(r"\'", "'").trim();
+              if (key.isNotEmpty) {
+                final lowerKey = key.toLowerCase();
+                kv[lowerKey] = val;
+                if (lowerKey == 'name') {
+                  if (currentSection == 'personal' && studentName.isEmpty) {
+                    studentName = val;
+                  } else if (currentSection == 'guardian') {
+                    guardianName = val;
+                  }
+                } else if (lowerKey.contains('father name')) {
+                  fatherName = val;
+                } else if (lowerKey.contains('mother name')) {
+                  motherName = val;
                 }
               }
+              i += 3;
+            } else if (i + 1 < cells.length && cells[i].endsWith(':')) {
+              final key = cells[i].replaceAll(':', '').replaceAll(r"\'", "'").trim();
+              final val = cells[i + 1].replaceAll(r"\'", "'").trim();
+              if (key.isNotEmpty) {
+                final lowerKey = key.toLowerCase();
+                kv[lowerKey] = val;
+                if (lowerKey == 'name') {
+                  if (currentSection == 'personal' && studentName.isEmpty) {
+                    studentName = val;
+                  } else if (currentSection == 'guardian') {
+                    guardianName = val;
+                  }
+                }
+              }
+              i += 2;
+            } else {
+              i++;
             }
-            i += 2;
-          } else {
-            i++;
           }
         }
       }
@@ -1187,7 +1166,7 @@ class HitamScraperService {
       String cgpa = '';
       String credits = '';
       String percentage = '';
-      final fullText = doc.body?.text ?? '';
+      final fullText = doc?.body?.text ?? '';
       final cgpaMatch = RegExp(r'CGPA\s*:\s*([\d\.]+)').firstMatch(fullText);
       if (cgpaMatch != null) cgpa = cgpaMatch.group(1) ?? '';
       final credMatch = RegExp(r'Credits\s*:\s*([\d\/]+)').firstMatch(fullText);
@@ -1197,43 +1176,45 @@ class HitamScraperService {
 
       // Parse SPF Band Performance table
       final List<SpfBandEntry> parsedSpfBands = [];
-      for (final table in doc.querySelectorAll('table')) {
-        final tText = table.text.toLowerCase();
-        if (tText.contains('semester') && tText.contains('cycle') && tText.contains('band')) {
-          final rows = table.querySelectorAll('tr');
-          String currentSem = '';
-          for (final row in rows) {
-            final cells =
-                row.querySelectorAll('td, th').map((c) => c.text.trim()).toList();
-            if (cells.isEmpty) continue;
-            if (cells.any((c) =>
-                c.toLowerCase() == 'semester' || c.toLowerCase() == 'cycle')) {
-              continue;
-            }
-            if (cells.length >= 3) {
-              currentSem = cells[0];
-              final cycle = cells[1];
-              final band = cells[2];
-              if (currentSem.isNotEmpty && cycle.isNotEmpty && band.isNotEmpty) {
-                parsedSpfBands.add(SpfBandEntry(
-                    semester: currentSem, cycle: cycle, band: band));
+      if (doc != null) {
+        for (final table in doc.querySelectorAll('table')) {
+          final tText = table.text.toLowerCase();
+          if (tText.contains('semester') && tText.contains('cycle') && tText.contains('band')) {
+            final rows = table.querySelectorAll('tr');
+            String currentSem = '';
+            for (final row in rows) {
+              final cells =
+                  row.querySelectorAll('td, th').map((c) => c.text.trim()).toList();
+              if (cells.isEmpty) continue;
+              if (cells.any((c) =>
+                  c.toLowerCase() == 'semester' || c.toLowerCase() == 'cycle')) {
+                continue;
               }
-            } else if (cells.length == 2 && currentSem.isNotEmpty) {
-              final cycle = cells[0];
-              final band = cells[1];
-              if (cycle.isNotEmpty && band.isNotEmpty) {
-                parsedSpfBands.add(SpfBandEntry(
-                    semester: currentSem, cycle: cycle, band: band));
+              if (cells.length >= 3) {
+                currentSem = cells[0];
+                final cycle = cells[1];
+                final band = cells[2];
+                if (currentSem.isNotEmpty && cycle.isNotEmpty && band.isNotEmpty) {
+                  parsedSpfBands.add(SpfBandEntry(
+                      semester: currentSem, cycle: cycle, band: band));
+                }
+              } else if (cells.length == 2 && currentSem.isNotEmpty) {
+                final cycle = cells[0];
+                final band = cells[1];
+                if (cycle.isNotEmpty && band.isNotEmpty) {
+                  parsedSpfBands.add(SpfBandEntry(
+                      semester: currentSem, cycle: cycle, band: band));
+                }
               }
             }
+            if (parsedSpfBands.isNotEmpty) break;
           }
-          if (parsedSpfBands.isNotEmpty) break;
         }
       }
       latestSpfBands = parsedSpfBands;
 
       final profile = StudentProfileDetails(
-        rollNo: kv['rollno'] ?? kv['roll no'] ?? rollNo,
+        rollNo: kv['rollno'] ?? kv['roll no'] ?? safeRoll,
         name: studentName.isNotEmpty ? studentName : (kv['name'] ?? ''),
         admissionNo: kv['admission.no'] ?? kv['admission no'] ?? '',
         course: kv['course'] ?? '',
@@ -1271,13 +1252,90 @@ class HitamScraperService {
       latestProfile = profile;
       final pUrl = photoUrl;
       if (pUrl != null && pUrl.isNotEmpty) {
-        unawaited(cacheStudentPhoto(rollNo, pUrl));
+        SharedPreferences.getInstance().then((prefs) {
+          prefs.setString('hitam_student_photo_url', pUrl);
+        }).catchError((_) {});
       }
       return profile;
     } catch (_) {
       return null;
     }
   }
+
+  /// Extracts student photo URL or base64 data URI from parsed HTML Document
+  String? _extractPhotoUrlFromDoc(html_dom.Document doc, String rollNo) {
+    final imgElements = doc.querySelectorAll('img');
+    final upperRoll = rollNo.toUpperCase();
+    final lowerRoll = rollNo.toLowerCase();
+
+    // Priority 1: Match student-specific identifiers
+    for (final img in imgElements) {
+      final src = (img.attributes['src'] ?? '').replaceAll("'", '').replaceAll('"', '').trim();
+      if (src.isEmpty) continue;
+      final srcLower = src.toLowerCase();
+      final id = (img.attributes['id'] ?? '').toLowerCase();
+      final alt = (img.attributes['alt'] ?? '').toLowerCase();
+      final className = (img.attributes['class'] ?? '').toLowerCase();
+
+      if (srcLower.contains('spacer') ||
+          srcLower.contains('icon') ||
+          srcLower.contains('logo') ||
+          srcLower.contains('banner') ||
+          srcLower.contains('button') ||
+          srcLower.contains('dot.gif')) {
+        continue;
+      }
+
+      if ((rollNo.isNotEmpty && (srcLower.contains(lowerRoll) || src.contains(upperRoll))) ||
+          id.contains('student') ||
+          id.contains('photo') ||
+          className.contains('photo') ||
+          alt.contains('student') ||
+          alt.contains('photo') ||
+          srcLower.contains('studentphoto') ||
+          srcLower.contains('showimage') ||
+          srcLower.contains('/photos/')) {
+        return _formatPhotoUrl(src);
+      }
+    }
+
+    // Priority 2: Non-icon, non-spacer image
+    for (final img in imgElements) {
+      final src = (img.attributes['src'] ?? '').replaceAll("'", '').replaceAll('"', '').trim();
+      if (src.isEmpty) continue;
+      final srcLower = src.toLowerCase();
+      if (srcLower.contains('spacer') ||
+          srcLower.contains('icon') ||
+          srcLower.contains('logo') ||
+          srcLower.contains('banner') ||
+          srcLower.contains('button') ||
+          srcLower.contains('dot.gif') ||
+          srcLower.contains('header') ||
+          srcLower.contains('footer')) {
+        continue;
+      }
+      return _formatPhotoUrl(src);
+    }
+    return null;
+  }
+
+  String _formatPhotoUrl(String src) {
+    if (src.startsWith('data:')) {
+      return src;
+    } else if (src.startsWith('//')) {
+      return 'https:$src';
+    } else if (src.startsWith('http://')) {
+      return src.replaceFirst('http://', 'https://');
+    } else if (src.startsWith('https://')) {
+      return src;
+    } else if (src.startsWith('/')) {
+      return 'https://www.webprosindia.com$src';
+    } else {
+      final clean = src.replaceFirst(RegExp(r'^\.\.\/'), '');
+      return 'https://www.webprosindia.com/hitam/$clean';
+    }
+  }
+
 
   /// Fetches SPF Band performance entries
   Future<List<SpfBandEntry>> fetchStudentSpfBands([String? rollNo]) async {
