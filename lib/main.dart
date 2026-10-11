@@ -1603,11 +1603,6 @@ class _StudentDashboardState extends State<StudentDashboard> {
                               blurRadius: 16,
                               offset: const Offset(0, 6),
                             ),
-                            BoxShadow(
-                              color: const Color(0xFF38BDF8).withValues(alpha: 0.08),
-                              blurRadius: 4,
-                              spreadRadius: 1,
-                            ),
                           ],
                         ),
                         child: ClipRRect(
@@ -1655,21 +1650,22 @@ class _StudentDashboardState extends State<StudentDashboard> {
                                                   Row(
                                                     children: [
                                                       Container(
-                                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                                         decoration: BoxDecoration(
-                                                          color: const Color(0xFF0284C7).withValues(alpha: 0.2),
+                                                          color: Colors.white.withValues(alpha: 0.12),
                                                           borderRadius: BorderRadius.circular(6),
                                                           border: Border.all(
-                                                            color: const Color(0xFF38BDF8).withValues(alpha: 0.4),
+                                                            color: Colors.white.withValues(alpha: 0.2),
+                                                            width: 1,
                                                           ),
                                                         ),
                                                         child: Text(
                                                           (widget.studentId ?? HitamAuthService().activeUserId ?? '').toUpperCase(),
                                                           style: const TextStyle(
-                                                            color: Color(0xFF93C5FD),
-                                                            fontSize: 11.5,
-                                                            fontWeight: FontWeight.w700,
-                                                            letterSpacing: 0.5,
+                                                            color: Colors.white,
+                                                            fontSize: 12,
+                                                            fontWeight: FontWeight.w600,
+                                                            letterSpacing: 0.6,
                                                           ),
                                                         ),
                                                       ),
@@ -1677,23 +1673,27 @@ class _StudentDashboardState extends State<StudentDashboard> {
                                                         const SizedBox(width: 8),
                                                         Flexible(
                                                           child: Container(
-                                                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                                             decoration: BoxDecoration(
                                                               color: Colors.white.withValues(alpha: 0.08),
                                                               borderRadius: BorderRadius.circular(6),
+                                                              border: Border.all(
+                                                                color: Colors.white.withValues(alpha: 0.15),
+                                                                width: 1,
+                                                              ),
                                                             ),
                                                             child: Row(
                                                               mainAxisSize: MainAxisSize.min,
                                                               children: [
-                                                                const Icon(Icons.school_rounded, size: 12, color: Color(0xFF38BDF8)),
+                                                                Icon(Icons.school_rounded, size: 12, color: Colors.white.withValues(alpha: 0.8)),
                                                                 const SizedBox(width: 4),
                                                                 Flexible(
                                                                   child: Text(
                                                                     department,
                                                                     style: const TextStyle(
-                                                                      color: Color(0xFFE2E8F0),
-                                                                      fontSize: 11,
-                                                                      fontWeight: FontWeight.w600,
+                                                                      color: Colors.white,
+                                                                      fontSize: 11.5,
+                                                                      fontWeight: FontWeight.w500,
                                                                     ),
                                                                     overflow: TextOverflow.ellipsis,
                                                                   ),
@@ -1712,34 +1712,35 @@ class _StudentDashboardState extends State<StudentDashboard> {
                                             Container(
                                               padding: const EdgeInsets.all(6),
                                               decoration: BoxDecoration(
-                                                color: Colors.white.withValues(alpha: 0.06),
+                                                color: Colors.white.withValues(alpha: 0.08),
                                                 shape: BoxShape.circle,
                                               ),
-                                              child: const Icon(
+                                              child: Icon(
                                                 Icons.chevron_right_rounded,
-                                                color: Color(0xFF38BDF8),
+                                                color: Colors.white.withValues(alpha: 0.8),
                                                 size: 20,
                                               ),
                                             ),
                                           ],
                                         ),
                                         if (year.isNotEmpty) ...[
-                                          const SizedBox(height: 10),
+                                          const SizedBox(height: 8),
                                           Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                                             decoration: BoxDecoration(
-                                              color: const Color(0xFF1E293B).withValues(alpha: 0.6),
+                                              color: Colors.white.withValues(alpha: 0.08),
                                               borderRadius: BorderRadius.circular(6),
                                               border: Border.all(
-                                                color: const Color(0xFF334155).withValues(alpha: 0.5),
+                                                color: Colors.white.withValues(alpha: 0.15),
+                                                width: 1,
                                               ),
                                             ),
                                             child: Text(
                                               year,
                                               style: const TextStyle(
-                                                color: Color(0xFF94A3B8),
+                                                color: Colors.white,
                                                 fontSize: 11,
-                                                fontWeight: FontWeight.w600,
+                                                fontWeight: FontWeight.w500,
                                               ),
                                             ),
                                           ),
