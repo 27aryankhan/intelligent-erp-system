@@ -3420,51 +3420,29 @@ class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
                                     color: const Color(0xFFE2E8F0),
                                   ),
                                 ),
-                                child: Row(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Container(
-                                      width: 42,
-                                      height: 42,
-                                      decoration: BoxDecoration(
-                                        color: Colors.blue.shade50,
-                                        borderRadius:
-                                            BorderRadius.circular(10),
-                                      ),
-                                      child: Icon(
-                                        Icons.military_tech_rounded,
-                                        color: Colors.blue.shade700,
-                                        size: 22,
+                                    Text(
+                                      studentName.isNotEmpty
+                                          ? studentName
+                                          : 'Academic Record',
+                                      style: const TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFF0F172A),
                                       ),
                                     ),
-                                    const SizedBox(width: 14),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            studentName.isNotEmpty
-                                                ? studentName
-                                                : 'Academic Record',
-                                            style: const TextStyle(
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.w700,
-                                              color: Color(0xFF0F172A),
-                                            ),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          if (activeRoll.isNotEmpty)
-                                            Text(
-                                              'HT No: $activeRoll',
-                                              style: const TextStyle(
-                                                fontSize: 12.5,
-                                                color: Color(0xFF64748B),
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
-                                        ],
+                                    const SizedBox(height: 2),
+                                    if (activeRoll.isNotEmpty)
+                                      Text(
+                                        'HT No: $activeRoll',
+                                        style: const TextStyle(
+                                          fontSize: 12.5,
+                                          color: Color(0xFF64748B),
+                                          fontWeight: FontWeight.w500,
+                                        ),
                                       ),
-                                    ),
                                   ],
                                 ),
                               ),
