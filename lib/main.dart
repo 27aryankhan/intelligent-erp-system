@@ -1423,23 +1423,9 @@ class _StudentDashboardState extends State<StudentDashboard> {
   }
 
   Widget _buildStudentAvatar() {
-    return Container(
+    return SizedBox(
       width: 50,
       height: 50,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: const Color(0xFF38BDF8),
-          width: 2.2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF38BDF8).withValues(alpha: 0.35),
-            blurRadius: 10,
-            spreadRadius: 1,
-          ),
-        ],
-      ),
       child: ClipOval(
         child: (photoUrl != null && photoUrl!.isNotEmpty)
             ? Image.network(

@@ -2339,17 +2339,6 @@ class _StudentAcademicRegisterScreenState
                                     decoration: BoxDecoration(
                                       color: Colors.white.withOpacity(0.1),
                                       shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: const Color(0xFF38BDF8),
-                                        width: 2,
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.2),
-                                          blurRadius: 6,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
                                     ),
                                     child: ClipOval(
                                       child: (photoUrl != null && photoUrl.isNotEmpty)
