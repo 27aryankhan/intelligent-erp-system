@@ -1689,17 +1689,6 @@ class _StudentTimeTableScreenState extends State<StudentTimeTableScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Schedule Timeline
-                  Text(
-                    'SCHEDULE FOR $_selectedDay.toUpperCase()',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.5,
-                      color: Color(0xFF64748B),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
 
                   if (subjectsForDay.isEmpty)
                     Container(
