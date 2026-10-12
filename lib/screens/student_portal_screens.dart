@@ -1610,6 +1610,63 @@ class _StudentTimeTableScreenState extends State<StudentTimeTableScreen> {
     return match?.facultyName ?? '';
   }
 
+  String _formatPeriodTiming(String rawTiming, int periodIndex) {
+    if (rawTiming.isEmpty) return 'Period ${periodIndex + 1}';
+
+    final clean = rawTiming
+        .replaceAll(RegExp(r'<[^>]+>'), ' ')
+        .replaceAll('&nbsp;', ' ')
+        .replaceAll('\r', ' ')
+        .replaceAll('\n', ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+
+    final timeMatches = RegExp(r'(\d{1,2}:\d{2}\s*(?:AM|PM)?)', caseSensitive: false)
+        .allMatches(clean)
+        .map((m) => m.group(1)!.trim())
+        .toList();
+
+    String periodNum = '${periodIndex + 1}';
+    final pMatch = RegExp(r'^Period\s*(\d+)', caseSensitive: false).firstMatch(clean);
+    if (pMatch != null) {
+      final digits = pMatch.group(1)!;
+      if (digits.length >= 2 && timeMatches.isNotEmpty) {
+        periodNum = digits.substring(0, 1);
+      } else {
+        periodNum = digits;
+      }
+    }
+
+    if (timeMatches.length >= 2) {
+      return 'Period $periodNum  •  ${timeMatches[0]} - ${timeMatches[1]}';
+    } else if (timeMatches.length == 1) {
+      return 'Period $periodNum  •  ${timeMatches[0]}';
+    }
+    return 'Period $periodNum';
+  }
+
+  String _formatBreakTiming(String rawTiming) {
+    final clean = rawTiming
+        .replaceAll(RegExp(r'<[^>]+>'), ' ')
+        .replaceAll('&nbsp;', ' ')
+        .replaceAll('\r', ' ')
+        .replaceAll('\n', ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+
+    final timeMatches = RegExp(r'(\d{1,2}:\d{2}\s*(?:AM|PM)?)', caseSensitive: false)
+        .allMatches(clean)
+        .map((m) => m.group(1)!.trim())
+        .toList();
+
+    if (timeMatches.length >= 2) {
+      return '${timeMatches[0]} - ${timeMatches[1]}';
+    } else if (timeMatches.length == 1) {
+      return timeMatches[0];
+    }
+    return clean;
+  }
+
   @override
   Widget build(BuildContext context) {
     final report = _ttReport;
@@ -1725,7 +1782,7 @@ class _StudentTimeTableScreenState extends State<StudentTimeTableScreen> {
                                   size: 18, color: Colors.amber.shade800),
                               const SizedBox(width: 10),
                               Text(
-                                'Lunch Break ($periodTiming)',
+                                'Lunch Break (${_formatBreakTiming(periodTiming)})',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w700,
                                   fontSize: 13,
@@ -1800,9 +1857,7 @@ class _StudentTimeTableScreenState extends State<StudentTimeTableScreen> {
                                         ),
                                         const Spacer(),
                                         Text(
-                                          periodTiming
-                                              .replaceAll('\n', ' • ')
-                                              .replaceAll('\r', ' '),
+                                          _formatPeriodTiming(periodTiming, i),
                                           style: const TextStyle(
                                             fontSize: 11,
                                             color: Color(0xFF64748B),

@@ -1452,7 +1452,17 @@ class HitamScraperService {
         final headerRow = tbl.querySelector('tr.reportHeading2WithBackground');
         if (headerRow != null && headerRow.text.contains('Day of week')) {
           final thCols = headerRow.querySelectorAll('td');
-          periodHeaders = thCols.map((c) => c.text.replaceAll('\r', ' ').trim()).toList();
+          periodHeaders = thCols.map((c) {
+            final htmlClean = c.innerHtml
+                .replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), ' ')
+                .replaceAll(RegExp(r'<[^>]+>'), ' ');
+            return htmlClean
+                .replaceAll('&nbsp;', ' ')
+                .replaceAll('\r', ' ')
+                .replaceAll('\n', ' ')
+                .replaceAll(RegExp(r'\s+'), ' ')
+                .trim();
+          }).toList();
 
           final rows = tbl.querySelectorAll('tr');
           for (var r in rows) {
