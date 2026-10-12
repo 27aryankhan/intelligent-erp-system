@@ -19,12 +19,14 @@ function getVersionData() {
 
     // Default fallback if files are not on disk
     return {
-        latest_version: "1.2.0",
-        version_code: 13,
+        latest_version: "1.2.1",
+        version_code: 14,
         min_supported_version_code: 11,
         download_url: "https://github.com/27aryankhan/intelligent-erp-system/releases/latest/download/Intelligent.ERP.apk",
         file_size: "40 MB",
         release_notes: [
+            "Clean Student Profile Avatars: Genuine student profile pictures loaded cleanly without placeholder or college branding",
+            "Professional Student Portal: Removed test artifacts and streamlined student sign-in experience",
             "Autonomous Background & Killed-App Notifications: Receive updates even when the app is closed or minimized",
             "Faculty-Specific Real-Time Attendance Alerts: Details Subject, Faculty Name, and Present/Absent status with live percentage",
             "Daily Evening Attendance Summary: End-of-day report with classes conducted, attended, missed, and aggregate percentage",

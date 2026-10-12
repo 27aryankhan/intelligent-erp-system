@@ -63,9 +63,9 @@ class UpdateService {
   factory UpdateService() => _instance;
   UpdateService._internal();
 
-  /// Current running version of the app (matches pubspec.yaml version 1.2.0+13)
-  static const String currentVersion = '1.2.0';
-  static const int currentVersionCode = 13;
+  /// Current running version of the app (matches pubspec.yaml version 1.2.1+14)
+  static const String currentVersion = '1.2.1';
+  static const int currentVersionCode = 14;
 
   static int get effectiveVersionCode => currentVersionCode;
 
@@ -192,7 +192,7 @@ class UpdateService {
   /// Displays the update dialog in preview mode for UI & UX testing
   void showTestPreviewDialog(BuildContext context) {
     final previewInfo = AppUpdateInfo(
-      latestVersion: '1.2.0',
+      latestVersion: '1.2.1',
       latestVersionCode: 14,
       minSupportedVersionCode: 11,
       downloadUrl:

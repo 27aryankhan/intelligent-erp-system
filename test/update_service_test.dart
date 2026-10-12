@@ -27,10 +27,10 @@ void main() {
       expect(info.downloadUrl, contains('Intelligent_ERP.apk'));
     });
 
-    test('UpdateService has correct current version 1.2.0 and code 13', () {
-      expect(UpdateService.currentVersion, equals('1.2.0'));
-      expect(UpdateService.currentVersionCode, equals(13));
-      expect(UpdateService.effectiveVersionCode, greaterThanOrEqualTo(13));
+    test('UpdateService has correct current version 1.2.1 and code 14', () {
+      expect(UpdateService.currentVersion, equals('1.2.1'));
+      expect(UpdateService.currentVersionCode, equals(14));
+      expect(UpdateService.effectiveVersionCode, greaterThanOrEqualTo(14));
     });
 
     test('AppUpdateInfo detects same version as NOT needing update', () {
