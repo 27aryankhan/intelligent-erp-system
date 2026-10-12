@@ -48,6 +48,15 @@ android {
             signingConfig = signingConfigs.getByName("release")
         }
     }
+
+    packaging {
+        resources {
+            excludes += listOf("/META-INF/{AL2.0,LGPL2.1}")
+        }
+        jniLibs {
+            excludes += listOf("lib/x86/**", "lib/x86_64/**")
+        }
+    }
 }
 
 kotlin {

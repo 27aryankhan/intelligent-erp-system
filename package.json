@@ -8,6 +8,6 @@
     "test:backend": "node --check backend/server.js",
     "test:flutter": "flutter test",
     "analyze": "flutter analyze --no-fatal-infos",
-    "build:apk": "flutter build apk --release --target-platform android-arm,android-arm64 && cp build/app/outputs/flutter-apk/app-release.apk ~/Desktop/Intelligent.ERP.apk"
+    "build:apk": "flutter build apk --release --target-platform android-arm,android-arm64 --split-debug-info=build/symbols && cp build/app/outputs/flutter-apk/app-release.apk ~/Desktop/Intelligent.ERP.apk"
   }
 }

@@ -9,7 +9,7 @@
 - **Target APK Size**: Approximately **~40 MB** (as specified in `version.json` and GitHub release `v.1.1.0`). Never build a fat 62+ MB APK that bundles PC emulator binaries.
 - **Standard Build Command**:
   ```bash
-  flutter build apk --release --target-platform android-arm,android-arm64
+  flutter build apk --release --target-platform android-arm,android-arm64 --split-debug-info=build/symbols
   ```
   Or via the npm script:
   ```bash

@@ -85,7 +85,7 @@ jobs:
       - name: Build Android Release APK (Physical Phones Only)
         run: |
           # Per AGENTS.md: target armeabi-v7a and arm64-v8a physical devices, exclude x86 emulators
-          flutter build apk --release --target-platform android-arm,android-arm64
+          flutter build apk --release --target-platform android-arm,android-arm64 --split-debug-info=build/symbols
           cp build/app/outputs/flutter-apk/app-release.apk Intelligent.ERP.apk
 
       - name: Upload APK as Workflow Artifact
