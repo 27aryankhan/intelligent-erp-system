@@ -883,31 +883,6 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // Squircle App/Update Icon
-        Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: const Color(0xFF1E293B).withValues(alpha: 0.70),
-            borderRadius: BorderRadius.circular(13),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.12),
-              width: 1,
-            ),
-          ),
-          child: Icon(
-            _isComplete
-                ? Icons.check_circle_rounded
-                : (_isDownloading
-                    ? Icons.downloading_rounded
-                    : Icons.install_mobile_rounded),
-            color: _isComplete
-                ? const Color(0xFF34D399)
-                : const Color(0xFF60A5FA),
-            size: 22,
-          ),
-        ),
-        const SizedBox(width: 12),
         // Title & clean version subtitle
         Expanded(
           child: Column(
