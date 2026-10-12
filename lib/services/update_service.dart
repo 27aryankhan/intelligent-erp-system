@@ -998,48 +998,13 @@ class _InAppUpdateDialogState extends State<_InAppUpdateDialog> {
             ),
           ),
           const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '${(_progress * 100).toInt()}% • $_downloadedSize / $_totalSize',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12.5,
-                ),
-              ),
-              if (_speedText.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF60A5FA).withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: const Color(0xFF60A5FA).withValues(alpha: 0.35),
-                      width: 0.8,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.bolt_rounded,
-                          size: 12, color: Color(0xFF5EEAD4)),
-                      const SizedBox(width: 3),
-                      Text(
-                        _etaText.isNotEmpty
-                            ? '$_speedText • $_etaText'
-                            : _speedText,
-                        style: const TextStyle(
-                          color: Color(0xFF5EEAD4),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
+          Text(
+            '${(_progress * 100).toInt()}% • $_downloadedSize / $_totalSize',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+              fontSize: 12.5,
+            ),
           ),
           const SizedBox(height: 10),
           const Text(
