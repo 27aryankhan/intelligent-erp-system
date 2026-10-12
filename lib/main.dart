@@ -1559,516 +1559,1066 @@ class _StudentDashboardState extends State<StudentDashboard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFF070B14),
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('Student Dashboard'),
+        backgroundColor: const Color(0xFF070B14).withValues(alpha: 0.65),
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        flexibleSpace: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: Container(color: Colors.transparent),
+          ),
+        ),
+        title: const Text(
+          'Student Dashboard',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.4,
+          ),
+        ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded),
+          _buildFrostedAppBarAction(
+            icon: Icons.refresh_rounded,
             tooltip: 'Refresh Portal Data',
             onPressed: fetchStudentData,
           ),
-          const NotificationBellIcon(role: 'student'),
-          IconButton(
-            icon: const Icon(Icons.logout_rounded),
+          const SizedBox(width: 8),
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.08),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.15),
+                width: 1,
+              ),
+            ),
+            child: const Center(
+              child: NotificationBellIcon(
+                role: 'student',
+                iconColor: Colors.white,
+                padding: EdgeInsets.zero,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          _buildFrostedAppBarAction(
+            icon: Icons.logout_rounded,
             tooltip: 'Log Out',
             onPressed: () => _confirmLogout(context),
+            isDestructive: true,
           ),
+          const SizedBox(width: 14),
         ],
       ),
-      body: isLoading
-          ? const Center(
-              child: CircularProgressIndicator(),
-            )
-          : errorMessage.isNotEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.error_outline,
-                        size: 60,
-                        color: Colors.red,
-                      ),
-
-                      const SizedBox(height: 15),
-
-                      Text(
-                        errorMessage,
-                        style: const TextStyle(fontSize: 18),
-                      ),
-
-                      const SizedBox(height: 15),
-
-                      ElevatedButton(
-                        onPressed: fetchStudentData,
-                        child: const Text('Retry'),
-                      ),
+      body: Stack(
+        children: [
+          // Ambient glowing mesh orbs beneath frosted glass
+          Positioned(
+            top: -40,
+            right: -30,
+            child: IgnorePointer(
+              child: Container(
+                width: 280,
+                height: 280,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      const Color(0xFF1E3A8A).withValues(alpha: 0.40),
+                      const Color(0xFF1E3A8A).withValues(alpha: 0.0),
                     ],
                   ),
-                )
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // ==========================================
-                      // STUDENT PIXEL RUN GAME HERO CARD
-                      // ==========================================
-                      Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF00164C),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: const Color(0xFF1E3A8A).withValues(alpha: 0.8),
-                            width: 1.5,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF00164C).withValues(alpha: 0.5),
-                              blurRadius: 16,
-                              offset: const Offset(0, 6),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 260,
+            left: -50,
+            child: IgnorePointer(
+              child: Container(
+                width: 300,
+                height: 300,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      const Color(0xFF6B21A8).withValues(alpha: 0.28),
+                      const Color(0xFF6B21A8).withValues(alpha: 0.0),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 120,
+            right: -60,
+            child: IgnorePointer(
+              child: Container(
+                width: 260,
+                height: 260,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      const Color(0xFF0EA5E9).withValues(alpha: 0.22),
+                      const Color(0xFF0EA5E9).withValues(alpha: 0.0),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // Main Scrollable Bento Grid Dashboard
+          SafeArea(
+            child: isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(
+                      color: Color(0xFF38BDF8),
+                    ),
+                  )
+                : errorMessage.isNotEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.error_outline,
+                              size: 60,
+                              color: Colors.red,
+                            ),
+                            const SizedBox(height: 15),
+                            Text(
+                              errorMessage,
+                              style: const TextStyle(fontSize: 18, color: Colors.white),
+                            ),
+                            const SizedBox(height: 15),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF2563EB),
+                                foregroundColor: Colors.white,
+                              ),
+                              onPressed: fetchStudentData,
+                              child: const Text('Retry'),
                             ),
                           ],
                         ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(19),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              // TOP HEADER: Student Profile Info (Clickable -> StudentProfileScreen)
-                              Material(
-                                color: Colors.transparent,
-                                child: InkWell(
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => const StudentProfileScreen(),
-                                      ),
-                                    );
-                                  },
-                                  child: Padding(
-                                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            _buildStudentAvatar(),
-                                            const SizedBox(width: 14),
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(
-                                                    studentName.isNotEmpty ? studentName : 'Student',
-                                                    style: const TextStyle(
-                                                      color: Colors.white,
-                                                      fontSize: 17,
-                                                      fontWeight: FontWeight.bold,
-                                                      letterSpacing: -0.2,
-                                                    ),
-                                                    maxLines: 1,
-                                                    overflow: TextOverflow.ellipsis,
-                                                  ),
-                                                  const SizedBox(height: 5),
-                                                  Row(
-                                                    children: [
-                                                      Container(
-                                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                                        decoration: BoxDecoration(
-                                                          color: Colors.white.withValues(alpha: 0.12),
-                                                          borderRadius: BorderRadius.circular(6),
-                                                          border: Border.all(
-                                                            color: Colors.white.withValues(alpha: 0.2),
-                                                            width: 1,
-                                                          ),
-                                                        ),
-                                                        child: Text(
-                                                          (widget.studentId ?? HitamAuthService().activeUserId ?? '').toUpperCase(),
-                                                          style: const TextStyle(
-                                                            color: Colors.white,
-                                                            fontSize: 12,
-                                                            fontWeight: FontWeight.w600,
-                                                            letterSpacing: 0.6,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                      if (department.isNotEmpty) ...[
-                                                        const SizedBox(width: 8),
-                                                        Flexible(
-                                                          child: Container(
-                                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                                            decoration: BoxDecoration(
-                                                              color: Colors.white.withValues(alpha: 0.08),
-                                                              borderRadius: BorderRadius.circular(6),
-                                                              border: Border.all(
-                                                                color: Colors.white.withValues(alpha: 0.15),
-                                                                width: 1,
-                                                              ),
-                                                            ),
-                                                            child: Text(
-                                                              department,
-                                                              style: const TextStyle(
-                                                                color: Colors.white,
-                                                                fontSize: 11.5,
-                                                                fontWeight: FontWeight.w500,
-                                                              ),
-                                                              overflow: TextOverflow.ellipsis,
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ],
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Container(
-                                              padding: const EdgeInsets.all(6),
-                                              decoration: BoxDecoration(
-                                                color: Colors.white.withValues(alpha: 0.08),
-                                                shape: BoxShape.circle,
-                                              ),
-                                              child: Icon(
-                                                Icons.chevron_right_rounded,
-                                                color: Colors.white.withValues(alpha: 0.8),
-                                                size: 20,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        if (year.isNotEmpty) ...[
-                                          const SizedBox(height: 8),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
-                                            decoration: BoxDecoration(
-                                              color: Colors.white.withValues(alpha: 0.08),
-                                              borderRadius: BorderRadius.circular(6),
-                                              border: Border.all(
-                                                color: Colors.white.withValues(alpha: 0.15),
-                                                width: 1,
-                                              ),
-                                            ),
-                                            child: Text(
-                                              year,
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ],
+                      )
+                    : SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // 1. STUDENT PIXEL RUN GAME HERO CARD (Frosted Glass Container)
+                            _buildFrostedHeroCard(context),
+
+                            const SizedBox(height: 22),
+
+                            // 2. SECTION HEADER
+                            Row(
+                              children: [
+                                Container(
+                                  width: 4,
+                                  height: 16,
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [Color(0xFF38BDF8), Color(0xFF818CF8)],
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
                                     ),
+                                    borderRadius: BorderRadius.circular(2),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xFF38BDF8).withValues(alpha: 0.6),
+                                        blurRadius: 6,
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  'ACADEMIC PORTAL SERVICES',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 1.0,
+                                    color: Color(0xFF94A3B8),
+                                  ),
+                                ),
+                              ],
+                            ),
 
-                              // NEON HORIZON DIVIDER
-                              Container(
-                                height: 1,
-                                color: const Color(0xFF1E3A8A).withValues(alpha: 0.6),
-                              ),
+                            const SizedBox(height: 14),
 
-                              // BOTTOM STAGE: Autonomous Pixel Run Game (Originkit)
-                              const PixelRunGameWidget(
-                                height: 112,
-                                background: Color(0xFF00164C),
-                                ink: Colors.white,
-                                runnerColor: Color(0xFF38BDF8),
-                                startSpeed: 420,
-                                maxSpeed: 980,
-                                gravity: 4780,
-                                jump: 1480,
-                                showHud: true,
-                                attract: true,
+                            // 3. FEATURED BENTO HERO: ATTENDANCE (WIDE CARD)
+                            _buildAttendanceBentoCard(context),
+
+                            const SizedBox(height: 12),
+
+                            // 4. SECONDARY BENTO ROW: BACKLOGS & FEE DETAILS (2 COLUMNS)
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(child: _buildBacklogsBentoCard(context)),
+                                const SizedBox(width: 12),
+                                Expanded(child: _buildFeeBentoCard(context)),
+                              ],
+                            ),
+
+                            const SizedBox(height: 12),
+
+                            // 5. BENTO ROW: TIME TABLE & MARKS (2 COLUMNS)
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(child: _buildTimeTableBentoCard(context)),
+                                const SizedBox(width: 12),
+                                Expanded(child: _buildMarksBentoCard(context)),
+                              ],
+                            ),
+
+                            const SizedBox(height: 12),
+
+                            // 6. BENTO ROW: PROFILE & ACADEMIC REGISTER (2 COLUMNS)
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(child: _buildProfileBentoCard(context)),
+                                const SizedBox(width: 12),
+                                Expanded(child: _buildRegisterBentoCard(context)),
+                              ],
+                            ),
+
+                            const SizedBox(height: 12),
+
+                            // 7. FEATURED BENTO FOOTER: SPF PERFORMANCE (WIDE CARD)
+                            _buildSpfBentoCard(context),
+                          ],
+                        ),
+                      ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================================
+  // FROSTED GLASS & BENTO HELPERS
+  // ============================================================
+
+  Widget _buildFrostedAppBarAction({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onPressed,
+    bool isDestructive = false,
+  }) {
+    return Container(
+      width: 38,
+      height: 38,
+      decoration: BoxDecoration(
+        color: isDestructive
+            ? const Color(0xFFEF4444).withValues(alpha: 0.12)
+            : Colors.white.withValues(alpha: 0.08),
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: isDestructive
+              ? const Color(0xFFEF4444).withValues(alpha: 0.35)
+              : Colors.white.withValues(alpha: 0.15),
+          width: 1,
+        ),
+      ),
+      child: IconButton(
+        icon: Icon(
+          icon,
+          size: 19,
+          color: isDestructive
+              ? const Color(0xFFFCA5A5)
+              : Colors.white.withValues(alpha: 0.9),
+        ),
+        padding: EdgeInsets.zero,
+        tooltip: tooltip,
+        onPressed: onPressed,
+      ),
+    );
+  }
+
+  Widget _buildGlassContainer({
+    required Widget child,
+    double borderRadius = 22,
+    EdgeInsetsGeometry? padding,
+    VoidCallback? onTap,
+    Border? border,
+    List<Color>? gradientColors,
+  }) {
+    final content = Container(
+      padding: padding ?? const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: gradientColors ?? [
+            const Color(0xFF0F172A).withValues(alpha: 0.70),
+            const Color(0xFF0F172A).withValues(alpha: 0.40),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(borderRadius),
+        border: border ??
+            Border.all(
+              color: Colors.white.withValues(alpha: 0.13),
+              width: 1.1,
+            ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.28),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: child,
+    );
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(borderRadius),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        child: onTap != null
+            ? Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: onTap,
+                  borderRadius: BorderRadius.circular(borderRadius),
+                  splashColor: Colors.white.withValues(alpha: 0.1),
+                  highlightColor: Colors.white.withValues(alpha: 0.05),
+                  child: content,
+                ),
+              )
+            : content,
+      ),
+    );
+  }
+
+  Widget _buildFrostedIconBadge({
+    required IconData icon,
+    required Color accentColor,
+    double size = 40,
+    double iconSize = 21,
+  }) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: accentColor.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: accentColor.withValues(alpha: 0.35),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: accentColor.withValues(alpha: 0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Icon(
+        icon,
+        color: accentColor,
+        size: iconSize,
+      ),
+    );
+  }
+
+  Widget _buildFrostedHeroCard(BuildContext context) {
+    return _buildGlassContainer(
+      borderRadius: 22,
+      padding: EdgeInsets.zero,
+      gradientColors: [
+        const Color(0xFF0F172A).withValues(alpha: 0.80),
+        const Color(0xFF0A1020).withValues(alpha: 0.55),
+      ],
+      border: Border.all(
+        color: const Color(0xFF38BDF8).withValues(alpha: 0.25),
+        width: 1.2,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // TOP HEADER: Student Profile Info (Clickable -> StudentProfileScreen)
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const StudentProfileScreen(),
+                  ),
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: const Color(0xFF38BDF8).withValues(alpha: 0.45),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: _buildStudentAvatar(),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                studentName.isNotEmpty ? studentName : 'Student',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: -0.3,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 5),
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF38BDF8).withValues(alpha: 0.14),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(
+                                        color: const Color(0xFF38BDF8).withValues(alpha: 0.35),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      (widget.studentId ?? HitamAuthService().activeUserId ?? '').toUpperCase(),
+                                      style: const TextStyle(
+                                        color: Color(0xFF7DD3FC),
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 0.6,
+                                      ),
+                                    ),
+                                  ),
+                                  if (department.isNotEmpty) ...[
+                                    const SizedBox(width: 8),
+                                    Flexible(
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withValues(alpha: 0.08),
+                                          borderRadius: BorderRadius.circular(6),
+                                          border: Border.all(
+                                            color: Colors.white.withValues(alpha: 0.14),
+                                            width: 1,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          department,
+                                          style: const TextStyle(
+                                            color: Color(0xFFE2E8F0),
+                                            fontSize: 11.5,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
                             ],
                           ),
                         ),
-                      ),
-
-                      const SizedBox(height: 24),
-                      Row(
-                        children: [
-                          Container(
-                            width: 4,
-                            height: 18,
-                            decoration: BoxDecoration(
-                              color: Colors.blue.shade700,
-                              borderRadius: BorderRadius.circular(2),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.08),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.12),
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'ACADEMIC PORTAL SERVICES',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.8,
-                              color: Color(0xFF475569),
-                            ),
+                          child: Icon(
+                            Icons.chevron_right_rounded,
+                            color: Colors.white.withValues(alpha: 0.8),
+                            size: 18,
                           ),
-                        ],
+                        ),
+                      ],
+                    ),
+                    if (year.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.14),
+                            width: 1,
+                          ),
+                        ),
+                        child: Text(
+                          year,
+                          style: const TextStyle(
+                            color: Color(0xFFCBD5E1),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ),
-                      const SizedBox(height: 14),
-
-                      // 1. ATTENDANCE
-                      _buildPortalServiceCard(
-                        context: context,
-                        title: 'Attendance',
-                        subtitle: 'Live subject-wise & overall attendance percentage',
-                        trailingBadge: '${attendance.toStringAsFixed(2)}%',
-                        badgeColor: attendance >= 75
-                            ? const Color(0xFF10B981)
-                            : (attendance >= 65
-                                ? const Color(0xFFF59E0B)
-                                : const Color(0xFFEF4444)),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => AttendanceDetailsScreen(
-                                report: HitamScraperService().latestAttendanceReport ??
-                                    widget.initialReport,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 10),
-
-                      // 2. BACKLOGS
-                      _buildPortalServiceCard(
-                        context: context,
-                        title: 'Backlogs',
-                        subtitle: 'Active arrears, subject history & exam schedule',
-                        trailingBadge: HitamScraperService().latestBacklogs != null
-                            ? (HitamScraperService().latestBacklogs!.totalCount == 0
-                                ? 'Clear'
-                                : '${HitamScraperService().latestBacklogs!.totalCount}')
-                            : null,
-                        badgeColor: const Color(0xFFEF4444),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const StudentBacklogsScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 10),
-
-                      // 3. FEE DETAILS
-                      _buildPortalServiceCard(
-                        context: context,
-                        title: 'Fee Details',
-                        subtitle: 'Academic fee ledger, dues & payment receipts',
-                        trailingBadge: HitamScraperService().latestFeeReport != null
-                            ? '₹${HitamScraperService().latestFeeReport!.totalDue.toStringAsFixed(0)}'
-                            : null,
-                        badgeColor: const Color(0xFF059669),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const StudentFeeDetailsScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 10),
-
-                      // 4. MARKS
-                      _buildPortalServiceCard(
-                        context: context,
-                        title: 'Marks',
-                        subtitle: 'CIE internal exams & semester SGPA / CGPA',
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const StudentMarksScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 10),
-
-                      // 5. PROFILE
-                      _buildPortalServiceCard(
-                        context: context,
-                        title: 'Profile',
-                        subtitle: 'Personal bio-data, academic records & contact info',
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const StudentProfileScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 10),
-
-                      // 6. TIME TABLE
-                      _buildPortalServiceCard(
-                        context: context,
-                        title: 'Time table',
-                        subtitle: 'Weekly day-wise period timings & faculty allocation',
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const StudentTimeTableScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 10),
-
-                      // 7. ACADEMIC REGISTER
-                      _buildPortalServiceCard(
-                        context: context,
-                        title: 'Academic Register',
-                        subtitle: 'Comprehensive day-by-day attendance & CIE register',
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  const StudentAcademicRegisterScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 10),
-
-                      // 8. SPF PERFORMANCE
-                      _buildPortalServiceCard(
-                        context: context,
-                        title: 'SPF',
-                        subtitle: 'Student Performance Framework cycle & tier rating',
-                        trailingBadge: HitamScraperService().latestSpfBands != null &&
-                                HitamScraperService().latestSpfBands!.isNotEmpty
-                            ? HitamScraperService()
-                                .latestSpfBands!
-                                .last
-                                .band
-                                .replaceAll(RegExp(r'band\s*', caseSensitive: false), '')
-                                .trim()
-                            : null,
-                        badgeColor: const Color(0xFF6366F1),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const StudentSpfBandScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 24),
                     ],
-                  ),
+                  ],
                 ),
+              ),
+            ),
+          ),
+
+          // NEON HORIZON DIVIDER
+          Container(
+            height: 1,
+            color: Colors.white.withValues(alpha: 0.08),
+          ),
+
+          // BOTTOM STAGE: Autonomous Pixel Run Game (Originkit)
+          const PixelRunGameWidget(
+            height: 112,
+            background: Color(0xFF080D18),
+            ink: Colors.white,
+            runnerColor: Color(0xFF38BDF8),
+            startSpeed: 420,
+            maxSpeed: 980,
+            gravity: 4780,
+            jump: 1480,
+            showHud: true,
+            attract: true,
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildPortalServiceCard({
-    required BuildContext context,
-    required String title,
-    required String subtitle,
-    String? trailingBadge,
-    Color? badgeColor,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.02),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
+  Widget _buildAttendanceBentoCard(BuildContext context) {
+    final rep = HitamScraperService().latestAttendanceReport ?? widget.initialReport;
+    final badgeColor = attendance >= 75
+        ? const Color(0xFF10B981)
+        : (attendance >= 65 ? const Color(0xFFF59E0B) : const Color(0xFFEF4444));
+
+    final statusText = attendance >= 75
+        ? 'Safe Zone (≥75%)'
+        : (attendance >= 65 ? 'Shortage Warning' : 'Critical Shortage');
+
+    return _buildGlassContainer(
+      borderRadius: 22,
+      padding: const EdgeInsets.all(18),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => AttendanceDetailsScreen(
+              report: HitamScraperService().latestAttendanceReport ?? widget.initialReport,
+            ),
           ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+        );
+      },
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Left Column: Details & Metric Info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
                   children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF0F172A),
-                      ),
+                    _buildFrostedIconBadge(
+                      icon: Icons.pie_chart_rounded,
+                      accentColor: badgeColor,
+                      size: 38,
+                      iconSize: 20,
                     ),
-                    const SizedBox(height: 3),
-                    Text(
-                      subtitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF64748B),
+                    const SizedBox(width: 10),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Attendance',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: badgeColor,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: badgeColor.withValues(alpha: 0.8),
+                                    blurRadius: 4,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              statusText,
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                                color: badgeColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  rep != null
+                      ? '${rep.totalAttended} attended of ${rep.totalHeld} classes'
+                      : 'Live subject-wise & aggregate portal record',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF94A3B8),
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.12),
+                        ),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'View Details',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFFCBD5E1),
+                            ),
+                          ),
+                          SizedBox(width: 4),
+                          Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            size: 9,
+                            color: Color(0xFF94A3B8),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-              ),
-              if (trailingBadge != null) ...[
-                const SizedBox(width: 8),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: (badgeColor ?? Colors.blue).withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(8),
+              ],
+            ),
+          ),
+          const SizedBox(width: 14),
+
+          // Right Column: Apple-style Activity Progress Ring
+          SizedBox(
+            width: 72,
+            height: 72,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                SizedBox(
+                  width: 72,
+                  height: 72,
+                  child: CircularProgressIndicator(
+                    value: (attendance / 100).clamp(0.0, 1.0),
+                    strokeWidth: 6.5,
+                    strokeCap: StrokeCap.round,
+                    backgroundColor: Colors.white.withValues(alpha: 0.08),
+                    color: badgeColor,
                   ),
-                  child: Text(
-                    trailingBadge,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: badgeColor ?? Colors.blue,
-                    ),
+                ),
+                Text(
+                  '${attendance.toStringAsFixed(1)}%',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    letterSpacing: -0.5,
                   ),
                 ),
               ],
-              const SizedBox(width: 8),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBentoCard({
+    required BuildContext context,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color accentColor,
+    String? statusBadge,
+    Color? badgeColor,
+    required VoidCallback onTap,
+  }) {
+    return _buildGlassContainer(
+      borderRadius: 20,
+      padding: const EdgeInsets.all(14),
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildFrostedIconBadge(
+                icon: icon,
+                accentColor: accentColor,
+                size: 38,
+                iconSize: 20,
+              ),
               Container(
-                width: 28,
-                height: 28,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFF1F5F9),
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.06),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.1),
+                  ),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.arrow_forward_ios_rounded,
-                  size: 13,
-                  color: Color(0xFF64748B),
+                  size: 10,
+                  color: Colors.white.withValues(alpha: 0.6),
                 ),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 14.5,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+              letterSpacing: -0.2,
+            ),
+          ),
+          const SizedBox(height: 5),
+          if (statusBadge != null) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+              decoration: BoxDecoration(
+                color: (badgeColor ?? accentColor).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: (badgeColor ?? accentColor).withValues(alpha: 0.3),
+                  width: 1,
+                ),
+              ),
+              child: Text(
+                statusBadge,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: badgeColor ?? accentColor,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(height: 5),
+          ],
+          Text(
+            subtitle,
+            style: const TextStyle(
+              fontSize: 11,
+              color: Color(0xFF94A3B8),
+              height: 1.25,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBacklogsBentoCard(BuildContext context) {
+    final backlogs = HitamScraperService().latestBacklogs;
+    final count = backlogs?.totalCount ?? 0;
+    final isClear = backlogs != null && count == 0;
+    final accent = isClear ? const Color(0xFF10B981) : const Color(0xFFF43F5E);
+    final badge = backlogs != null
+        ? (isClear ? '0 • Clear' : '$count Active')
+        : 'Exam History';
+
+    return _buildBentoCard(
+      context: context,
+      title: 'Backlogs',
+      subtitle: 'Arrears & history schedule',
+      icon: isClear ? Icons.task_alt_rounded : Icons.history_edu_rounded,
+      accentColor: accent,
+      statusBadge: badge,
+      badgeColor: accent,
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const StudentBacklogsScreen(),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildFeeBentoCard(BuildContext context) {
+    final fee = HitamScraperService().latestFeeReport;
+    final totalDue = fee?.totalDue ?? 0.0;
+    final isClear = fee != null && totalDue <= 0;
+    final accent = isClear ? const Color(0xFF059669) : const Color(0xFFF59E0B);
+    final badge = fee != null
+        ? (isClear ? '₹0 • Cleared' : '₹${totalDue.toStringAsFixed(0)} Due')
+        : 'Ledger Dues';
+
+    return _buildBentoCard(
+      context: context,
+      title: 'Fee Details',
+      subtitle: 'Academic ledger & dues receipts',
+      icon: Icons.account_balance_wallet_rounded,
+      accentColor: const Color(0xFF06B6D4),
+      statusBadge: badge,
+      badgeColor: accent,
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const StudentFeeDetailsScreen(),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildTimeTableBentoCard(BuildContext context) {
+    return _buildBentoCard(
+      context: context,
+      title: 'Time table',
+      subtitle: 'Day-wise period timings & faculty',
+      icon: Icons.schedule_rounded,
+      accentColor: const Color(0xFF38BDF8),
+      statusBadge: 'Schedule',
+      badgeColor: const Color(0xFF38BDF8),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const StudentTimeTableScreen(),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMarksBentoCard(BuildContext context) {
+    return _buildBentoCard(
+      context: context,
+      title: 'Marks',
+      subtitle: 'CIE internals & semester SGPA/CGPA',
+      icon: Icons.bar_chart_rounded,
+      accentColor: const Color(0xFFA855F7),
+      statusBadge: 'CIE & SGPA',
+      badgeColor: const Color(0xFFA855F7),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const StudentMarksScreen(),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildProfileBentoCard(BuildContext context) {
+    return _buildBentoCard(
+      context: context,
+      title: 'Profile',
+      subtitle: 'Personal bio-data & academic info',
+      icon: Icons.badge_rounded,
+      accentColor: const Color(0xFF3B82F6),
+      statusBadge: 'Student Bio',
+      badgeColor: const Color(0xFF3B82F6),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const StudentProfileScreen(),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildRegisterBentoCard(BuildContext context) {
+    return _buildBentoCard(
+      context: context,
+      title: 'Register',
+      subtitle: 'Day-by-day attendance & session log',
+      icon: Icons.menu_book_rounded,
+      accentColor: const Color(0xFFF59E0B),
+      statusBadge: 'Daily Register',
+      badgeColor: const Color(0xFFF59E0B),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const StudentAcademicRegisterScreen(),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSpfBentoCard(BuildContext context) {
+    final spfBands = HitamScraperService().latestSpfBands;
+    final bandText = (spfBands != null && spfBands.isNotEmpty)
+        ? spfBands.last.band.replaceAll(RegExp(r'band\s*', caseSensitive: false), '').trim()
+        : null;
+
+    return _buildGlassContainer(
+      borderRadius: 22,
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const StudentSpfBandScreen(),
+          ),
+        );
+      },
+      child: Row(
+        children: [
+          _buildFrostedIconBadge(
+            icon: Icons.military_tech_rounded,
+            accentColor: const Color(0xFF818CF8),
+            size: 42,
+            iconSize: 22,
+          ),
+          const SizedBox(width: 14),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'SPF Performance',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+                SizedBox(height: 3),
+                Text(
+                  'Student Performance Framework cycle & tier',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: Color(0xFF94A3B8),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          if (bandText != null) ...[
+            const SizedBox(width: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFF6366F1).withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: const Color(0xFF818CF8).withValues(alpha: 0.35),
+                  width: 1,
+                ),
+              ),
+              child: Text(
+                'Band $bandText',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFFA5B4FC),
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(width: 10),
+          Container(
+            width: 26,
+            height: 26,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withValues(alpha: 0.06),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.1),
+              ),
+            ),
+            child: const Icon(
+              Icons.arrow_forward_ios_rounded,
+              size: 11,
+              color: Colors.white,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -3534,7 +4084,15 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
 class NotificationBellIcon extends StatefulWidget {
   final String? role;
   final String? userId;
-  const NotificationBellIcon({super.key, this.role, this.userId});
+  final Color? iconColor;
+  final EdgeInsetsGeometry? padding;
+  const NotificationBellIcon({
+    super.key,
+    this.role,
+    this.userId,
+    this.iconColor,
+    this.padding,
+  });
 
   @override
   State<NotificationBellIcon> createState() => _NotificationBellIconState();
@@ -3586,7 +4144,7 @@ class _NotificationBellIconState extends State<NotificationBellIcon> {
     final effectiveRole = widget.role ?? NotificationService().currentRole;
 
     return Padding(
-      padding: const EdgeInsets.only(right: 6),
+      padding: widget.padding ?? const EdgeInsets.only(right: 6),
       child: Stack(
         clipBehavior: Clip.none,
         alignment: Alignment.center,
@@ -3598,8 +4156,8 @@ class _NotificationBellIconState extends State<NotificationBellIcon> {
                   ? Icons.notifications_active_rounded
                   : Icons.notifications_outlined,
               color: unreadCount > 0
-                  ? const Color(0xFF2563EB)
-                  : const Color(0xFF475569),
+                  ? (widget.iconColor != null ? const Color(0xFF60A5FA) : const Color(0xFF2563EB))
+                  : (widget.iconColor ?? const Color(0xFF475569)),
             ),
             onPressed: () async {
               await Navigator.push(
