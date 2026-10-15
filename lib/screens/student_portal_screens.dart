@@ -4,6 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/hitam_auth_service.dart';
 import '../services/hitam_scraper_service.dart';
 import '../widgets/student_photo_widget.dart';
+import '../widgets/glass_components.dart';
+import '../widgets/animated_rays.dart';
 
 // ============================================================================
 // 1. STUDENT BACKLOGS SCREEN
@@ -57,49 +59,50 @@ class _StudentBacklogsScreenState extends State<StudentBacklogsScreen> {
     final count = _report?.totalCount ?? 0;
     final backlogs = _report?.backlogs ?? [];
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: const Text(
-          'Backlogs',
-          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
-        ),
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF0F172A),
+    return GlassScaffold(
+      appBar: FrostedGlassAppBar(
+        title: 'Backlogs',
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded),
+          FrostedAppBarAction(
+            icon: Icons.refresh_rounded,
             onPressed: _loadBacklogs,
             tooltip: 'Refresh',
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: RefreshIndicator(
         onRefresh: _loadBacklogs,
-        color: Colors.blue.shade700,
+        color: const Color(0xFF10B981),
         child: _isLoading
             ? const Center(
-                child: CircularProgressIndicator(),
+                child: CircularProgressIndicator(color: Color(0xFF10B981)),
               )
             : _errorMessage != null && backlogs.isEmpty
                 ? Center(
-                    child: Padding(
+                    child: GlassContainer(
                       padding: const EdgeInsets.all(24.0),
+                      margin: const EdgeInsets.symmetric(horizontal: 24),
                       child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.error_outline_rounded,
-                              size: 48, color: Colors.red.shade400),
+                          const Icon(Icons.error_outline_rounded,
+                              size: 48, color: Color(0xFFF87171)),
                           const SizedBox(height: 12),
                           Text(
                             _errorMessage!,
                             textAlign: TextAlign.center,
-                            style: const TextStyle(color: Color(0xFF64748B)),
+                            style: const TextStyle(color: Colors.white70),
                           ),
                           const SizedBox(height: 16),
                           ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF10B981),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
                             onPressed: _loadBacklogs,
                             icon: const Icon(Icons.refresh),
                             label: const Text('Try Again'),
@@ -109,31 +112,32 @@ class _StudentBacklogsScreenState extends State<StudentBacklogsScreen> {
                     ),
                   )
                 : ListView(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
                     physics: const AlwaysScrollableScrollPhysics(),
                     children: [
                       if (count == 0)
-                        Container(
+                        GlassContainer(
                           padding: const EdgeInsets.symmetric(
-                              vertical: 40, horizontal: 20),
+                              vertical: 48, horizontal: 24),
                           alignment: Alignment.center,
                           child: Column(
-                            children: [
+                            children: const [
                               Icon(Icons.school_rounded,
-                                  size: 64, color: Colors.green.shade300),
-                              const SizedBox(height: 12),
-                              const Text(
+                                  size: 64, color: Color(0xFF34D399)),
+                              SizedBox(height: 16),
+                              Text(
                                 'Great Academic Record',
                                 style: TextStyle(
-                                  fontSize: 16,
+                                  fontSize: 18,
                                   fontWeight: FontWeight.w700,
-                                  color: Color(0xFF1E293B),
+                                  color: Colors.white,
                                 ),
                               ),
-                              const SizedBox(height: 4),
-                              const Text(
+                              SizedBox(height: 6),
+                              Text(
                                 'No backlog subjects found on WebPros portal.',
-                                style: TextStyle(color: Color(0xFF64748B)),
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: Colors.white70, fontSize: 13),
                               ),
                             ],
                           ),
@@ -146,117 +150,63 @@ class _StudentBacklogsScreenState extends State<StudentBacklogsScreen> {
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
-                              letterSpacing: 0.5,
-                              color: Color(0xFF64748B),
+                              letterSpacing: 0.6,
+                              color: Colors.white60,
                             ),
                           ),
                         ),
                         ...backlogs.map((item) {
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: const Color(0xFFE2E8F0)),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.02),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
+                          return GlassContainer(
+                            margin: const EdgeInsets.only(bottom: 14),
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    GlassCapsulePill(
+                                      label: item.semester,
+                                      color: const Color(0xFF38BDF8),
+                                    ),
+                                    const Spacer(),
+                                    GlassStatusPill(
+                                      label: '${item.subjects.length} Pending',
+                                      isWarning: true,
+                                    ),
+                                  ],
                                 ),
+                                Divider(
+                                  height: 24,
+                                  color: Colors.white.withOpacity(0.08),
+                                ),
+                                ...item.subjects.map((subj) {
+                                  return GlassSubCard(
+                                    margin: const EdgeInsets.symmetric(vertical: 4),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 14, vertical: 12),
+                                    child: Row(
+                                      crossAxisAlignment: CrossAxisAlignment.center,
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            subj,
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        GlassStatusPill(
+                                          label: 'Arrear',
+                                          isWarning: true,
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }),
                               ],
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 10, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: Colors.blue.shade50,
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                        ),
-                                        child: Text(
-                                          item.semester,
-                                          style: TextStyle(
-                                            color: Colors.blue.shade700,
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                      ),
-                                      const Spacer(),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 8, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: Colors.red.shade50,
-                                          borderRadius:
-                                              BorderRadius.circular(6),
-                                        ),
-                                        child: Text(
-                                          '${item.subjects.length} Pending',
-                                          style: TextStyle(
-                                            color: Colors.red.shade700,
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 11,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const Divider(
-                                      height: 24, color: Color(0xFFF1F5F9)),
-                                  ...item.subjects.map((subj) {
-                                    return Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 6),
-                                      child: Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.center,
-                                        children: [
-                                          Icon(Icons.cancel_outlined,
-                                              size: 18,
-                                              color: Colors.red.shade600),
-                                          const SizedBox(width: 10),
-                                          Expanded(
-                                            child: Text(
-                                              subj,
-                                              style: const TextStyle(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w600,
-                                                color: Color(0xFF1E293B),
-                                              ),
-                                            ),
-                                          ),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 8, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFFF1F5F9),
-                                              borderRadius:
-                                                  BorderRadius.circular(4),
-                                            ),
-                                            child: const Text(
-                                              'Arrear',
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                color: Color(0xFF64748B),
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  }),
-                                ],
-                              ),
                             ),
                           );
                         }),
@@ -323,44 +273,45 @@ class _StudentFeeDetailsScreenState extends State<StudentFeeDetailsScreen> {
     final totalDue = report?.totalDue ?? 0.0;
     final items = report?.items ?? [];
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: const Text(
-          'Fee Details',
-          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
-        ),
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF0F172A),
+    return GlassScaffold(
+      appBar: FrostedGlassAppBar(
+        title: 'Fee Details',
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded),
+          FrostedAppBarAction(
+            icon: Icons.refresh_rounded,
             onPressed: _loadFees,
             tooltip: 'Refresh',
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: RefreshIndicator(
         onRefresh: _loadFees,
-        color: Colors.blue.shade700,
+        color: const Color(0xFF10B981),
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? const Center(child: CircularProgressIndicator(color: Color(0xFF10B981)))
             : _errorMessage != null && items.isEmpty
                 ? Center(
-                    child: Padding(
+                    child: GlassContainer(
                       padding: const EdgeInsets.all(24.0),
+                      margin: const EdgeInsets.symmetric(horizontal: 24),
                       child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.error_outline_rounded,
-                              size: 48, color: Colors.red.shade400),
+                          const Icon(Icons.error_outline_rounded,
+                              size: 48, color: Color(0xFFF87171)),
                           const SizedBox(height: 12),
                           Text(_errorMessage!,
-                              style: const TextStyle(color: Color(0xFF64748B))),
+                              style: const TextStyle(color: Colors.white70)),
                           const SizedBox(height: 16),
                           ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF10B981),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
                             onPressed: _loadFees,
                             icon: const Icon(Icons.refresh),
                             label: const Text('Try Again'),
@@ -370,27 +321,16 @@ class _StudentFeeDetailsScreenState extends State<StudentFeeDetailsScreen> {
                     ),
                   )
                 : ListView(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
                     physics: const AlwaysScrollableScrollPhysics(),
                     children: [
                       // Total Balance Hero Card
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF1E3A8A).withOpacity(0.3),
-                              blurRadius: 12,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
-                        ),
+                      GlassContainer(
+                        padding: const EdgeInsets.all(22),
+                        color: const Color(0xFF0F172A).withOpacity(0.40),
+                        borderColor: totalDue > 0
+                            ? const Color(0xFFF59E0B).withOpacity(0.35)
+                            : const Color(0xFF10B981).withOpacity(0.35),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -403,34 +343,13 @@ class _StudentFeeDetailsScreenState extends State<StudentFeeDetailsScreen> {
                                     color: Colors.white70,
                                     fontSize: 12,
                                     fontWeight: FontWeight.w700,
-                                    letterSpacing: 0.5,
+                                    letterSpacing: 0.6,
                                   ),
                                 ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 10, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: totalDue > 0
-                                        ? Colors.amber.withOpacity(0.2)
-                                        : Colors.green.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: totalDue > 0
-                                          ? Colors.amberAccent
-                                          : Colors.greenAccent,
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: Text(
-                                    totalDue > 0 ? 'DUE' : 'CLEARED',
-                                    style: TextStyle(
-                                      color: totalDue > 0
-                                          ? Colors.amberAccent
-                                          : Colors.greenAccent,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
+                                GlassStatusPill(
+                                  label: totalDue > 0 ? 'DUE' : 'CLEARED',
+                                  isSuccess: totalDue <= 0,
+                                  isWarning: totalDue > 0,
                                 ),
                               ],
                             ),
@@ -439,7 +358,7 @@ class _StudentFeeDetailsScreenState extends State<StudentFeeDetailsScreen> {
                               '₹${totalDue.toStringAsFixed(0)}',
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 32,
+                                fontSize: 34,
                                 fontWeight: FontWeight.w900,
                               ),
                             ),
@@ -448,19 +367,16 @@ class _StudentFeeDetailsScreenState extends State<StudentFeeDetailsScreen> {
                               const SizedBox(height: 4),
                               Text(
                                 report.balanceText,
-                                style: TextStyle(
-                                  color: Colors.white.withOpacity(0.8),
+                                style: const TextStyle(
+                                  color: Colors.white70,
                                   fontSize: 12,
                                 ),
                               ),
                             ],
                             const SizedBox(height: 20),
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.12),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
+                            GlassSubCard(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 14),
                               child: Row(
                                 children: [
                                   Expanded(
@@ -471,17 +387,18 @@ class _StudentFeeDetailsScreenState extends State<StudentFeeDetailsScreen> {
                                         const Text(
                                           'Total Payable',
                                           style: TextStyle(
-                                            color: Colors.white70,
+                                            color: Colors.white60,
                                             fontSize: 11,
+                                            fontWeight: FontWeight.w500,
                                           ),
                                         ),
-                                        const SizedBox(height: 2),
+                                        const SizedBox(height: 3),
                                         Text(
                                           '₹${totalPayable.toStringAsFixed(0)}',
                                           style: const TextStyle(
                                             color: Colors.white,
                                             fontWeight: FontWeight.w700,
-                                            fontSize: 15,
+                                            fontSize: 16,
                                           ),
                                         ),
                                       ],
@@ -489,8 +406,8 @@ class _StudentFeeDetailsScreenState extends State<StudentFeeDetailsScreen> {
                                   ),
                                   Container(
                                     width: 1,
-                                    height: 30,
-                                    color: Colors.white24,
+                                    height: 32,
+                                    color: Colors.white.withOpacity(0.12),
                                   ),
                                   const SizedBox(width: 16),
                                   Expanded(
@@ -501,17 +418,18 @@ class _StudentFeeDetailsScreenState extends State<StudentFeeDetailsScreen> {
                                         const Text(
                                           'Total Paid',
                                           style: TextStyle(
-                                            color: Colors.white70,
+                                            color: Colors.white60,
                                             fontSize: 11,
+                                            fontWeight: FontWeight.w500,
                                           ),
                                         ),
-                                        const SizedBox(height: 2),
+                                        const SizedBox(height: 3),
                                         Text(
                                           '₹${totalPaid.toStringAsFixed(0)}',
                                           style: const TextStyle(
-                                            color: Colors.greenAccent,
+                                            color: Color(0xFF34D399),
                                             fontWeight: FontWeight.w700,
-                                            fontSize: 15,
+                                            fontSize: 16,
                                           ),
                                         ),
                                       ],
@@ -532,168 +450,129 @@ class _StudentFeeDetailsScreenState extends State<StudentFeeDetailsScreen> {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
-                            letterSpacing: 0.5,
-                            color: Color(0xFF64748B),
+                            letterSpacing: 0.6,
+                            color: Colors.white60,
                           ),
                         ),
                       ),
 
                       if (items.isEmpty)
-                        Container(
+                        GlassContainer(
                           padding: const EdgeInsets.all(32),
                           alignment: Alignment.center,
                           child: const Text(
                             'No fee records available.',
-                            style: TextStyle(color: Color(0xFF94A3B8)),
+                            style: TextStyle(color: Colors.white60),
                           ),
                         )
                       else
                         ...items.map((item) {
-                          return Container(
+                          return GlassContainer(
                             margin: const EdgeInsets.only(bottom: 12),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border:
-                                  Border.all(color: const Color(0xFFE2E8F0)),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.02),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    GlassCapsulePill(
+                                      label: '#${item.slNo}',
+                                      color: Colors.white60,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        item.feeName,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 15,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                    GlassStatusPill(
+                                      label: item.due > 0
+                                          ? 'Due: ₹${item.due.toStringAsFixed(0)}'
+                                          : 'Fully Paid',
+                                      isSuccess: item.due <= 0,
+                                      isWarning: item.due > 0,
+                                    ),
+                                  ],
+                                ),
+                                Divider(
+                                    height: 20,
+                                    color: Colors.white.withOpacity(0.08)),
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'Payable',
+                                          style: TextStyle(
+                                              fontSize: 11,
+                                              color: Colors.white60),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          '₹${item.payable.toStringAsFixed(0)}',
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 14,
+                                              color: Colors.white),
+                                        ),
+                                      ],
+                                    ),
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'Paid',
+                                          style: TextStyle(
+                                              fontSize: 11,
+                                              color: Colors.white60),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          '₹${item.paid.toStringAsFixed(0)}',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 14,
+                                            color: Color(0xFF34D399),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'Due',
+                                          style: TextStyle(
+                                              fontSize: 11,
+                                              color: Colors.white60),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          '₹${item.due.toStringAsFixed(0)}',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 14,
+                                            color: item.due > 0
+                                                ? const Color(0xFFF87171)
+                                                : Colors.white38,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                 ),
                               ],
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFF1F5F9),
-                                          borderRadius:
-                                              BorderRadius.circular(6),
-                                        ),
-                                        child: Text(
-                                          '#${item.slNo}',
-                                          style: const TextStyle(
-                                            color: Color(0xFF64748B),
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          item.feeName,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 15,
-                                            color: Color(0xFF0F172A),
-                                          ),
-                                        ),
-                                      ),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 8, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: item.due > 0
-                                              ? Colors.amber.shade50
-                                              : Colors.green.shade50,
-                                          borderRadius:
-                                              BorderRadius.circular(6),
-                                        ),
-                                        child: Text(
-                                          item.due > 0
-                                              ? 'Due: ₹${item.due.toStringAsFixed(0)}'
-                                              : 'Fully Paid',
-                                          style: TextStyle(
-                                            color: item.due > 0
-                                                ? Colors.amber.shade800
-                                                : Colors.green.shade700,
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 11,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const Divider(
-                                      height: 20, color: Color(0xFFF1F5F9)),
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          const Text(
-                                            'Payable',
-                                            style: TextStyle(
-                                                fontSize: 11,
-                                                color: Color(0xFF94A3B8)),
-                                          ),
-                                          Text(
-                                            '₹${item.payable.toStringAsFixed(0)}',
-                                            style: const TextStyle(
-                                                fontWeight: FontWeight.w600,
-                                                fontSize: 14),
-                                          ),
-                                        ],
-                                      ),
-                                      Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          const Text(
-                                            'Paid',
-                                            style: TextStyle(
-                                                fontSize: 11,
-                                                color: Color(0xFF94A3B8)),
-                                          ),
-                                          Text(
-                                            '₹${item.paid.toStringAsFixed(0)}',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w700,
-                                              fontSize: 14,
-                                              color: Colors.green.shade700,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          const Text(
-                                            'Due',
-                                            style: TextStyle(
-                                                fontSize: 11,
-                                                color: Color(0xFF94A3B8)),
-                                          ),
-                                          Text(
-                                            '₹${item.due.toStringAsFixed(0)}',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w700,
-                                              fontSize: 14,
-                                              color: item.due > 0
-                                                  ? Colors.red.shade700
-                                                  : Colors.grey.shade500,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
                             ),
                           );
                         }),
@@ -766,29 +645,22 @@ class _StudentMarksScreenState extends State<StudentMarksScreen>
     final cieList = report?.cieMarks ?? [];
     final sgpaList = report?.sgpaHistory ?? [];
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: const Text(
-          'Marks',
-          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
-        ),
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF0F172A),
+    return GlassScaffold(
+      appBar: FrostedGlassAppBar(
+        title: 'Marks',
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded),
+          FrostedAppBarAction(
+            icon: Icons.refresh_rounded,
             onPressed: _loadMarks,
             tooltip: 'Refresh',
           ),
+          const SizedBox(width: 8),
         ],
         bottom: TabBar(
           controller: _tabController,
-          labelColor: Colors.blue.shade700,
-          unselectedLabelColor: const Color(0xFF64748B),
-          indicatorColor: Colors.blue.shade700,
+          labelColor: const Color(0xFF34D399),
+          unselectedLabelColor: Colors.white60,
+          indicatorColor: const Color(0xFF10B981),
           indicatorWeight: 3,
           tabs: const [
             Tab(text: 'CIE Internal Marks'),
@@ -798,9 +670,9 @@ class _StudentMarksScreenState extends State<StudentMarksScreen>
       ),
       body: RefreshIndicator(
         onRefresh: _loadMarks,
-        color: Colors.blue.shade700,
+        color: const Color(0xFF10B981),
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? const Center(child: CircularProgressIndicator(color: Color(0xFF10B981)))
             : TabBarView(
                 controller: _tabController,
                 children: [
@@ -809,84 +681,67 @@ class _StudentMarksScreenState extends State<StudentMarksScreen>
                       ? const Center(
                           child: Text(
                             'No CIE marks recorded yet.',
-                            style: TextStyle(color: Color(0xFF94A3B8)),
+                            style: TextStyle(color: Colors.white60),
                           ),
                         )
                       : ListView.builder(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 20),
                           itemCount: cieList.length,
                           itemBuilder: (context, index) {
                             final item = cieList[index];
-                            return Container(
+                            return GlassContainer(
                               margin: const EdgeInsets.only(bottom: 12),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                border:
-                                    Border.all(color: const Color(0xFFE2E8F0)),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.02),
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 2),
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item.subject,
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  Divider(
+                                      height: 20,
+                                      color: Colors.white.withOpacity(0.08)),
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children:
+                                        item.examScores.entries.map((e) {
+                                      return GlassSubCard(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 12, vertical: 7),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              '${e.key}: ',
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.white70,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                            Text(
+                                              e.value,
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w800,
+                                                color: e.value == '-'
+                                                    ? Colors.white38
+                                                    : const Color(0xFF34D399),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    }).toList(),
                                   ),
                                 ],
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      item.subject,
-                                      style: const TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w700,
-                                        color: Color(0xFF0F172A),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Wrap(
-                                      spacing: 8,
-                                      runSpacing: 8,
-                                      children:
-                                          item.examScores.entries.map((e) {
-                                        return Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 10, vertical: 6),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFFF1F5F9),
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Text(
-                                                '${e.key}: ',
-                                                style: const TextStyle(
-                                                  fontSize: 12,
-                                                  color: Color(0xFF64748B),
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                              Text(
-                                                e.value,
-                                                style: TextStyle(
-                                                  fontSize: 13,
-                                                  fontWeight: FontWeight.w800,
-                                                  color: e.value == '-'
-                                                      ? const Color(0xFF94A3B8)
-                                                      : Colors.blue.shade700,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        );
-                                      }).toList(),
-                                    ),
-                                  ],
-                                ),
                               ),
                             );
                           },
@@ -897,99 +752,79 @@ class _StudentMarksScreenState extends State<StudentMarksScreen>
                       ? const Center(
                           child: Text(
                             'No SGPA history available.',
-                            style: TextStyle(color: Color(0xFF94A3B8)),
+                            style: TextStyle(color: Colors.white60),
                           ),
                         )
                       : ListView.builder(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 20),
                           itemCount: sgpaList.length,
                           itemBuilder: (context, index) {
                             final sem = sgpaList[index];
-                            return Container(
+                            return GlassContainer(
                               margin: const EdgeInsets.only(bottom: 12),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                border:
-                                    Border.all(color: const Color(0xFFE2E8F0)),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.02),
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(12),
-                                      decoration: BoxDecoration(
-                                        color: Colors.indigo.shade50,
-                                        borderRadius:
-                                            BorderRadius.circular(12),
-                                      ),
-                                      child: Icon(Icons.grade_rounded,
-                                          color: Colors.indigo.shade600),
-                                    ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            sem.semester,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w700,
-                                              fontSize: 15,
-                                              color: Color(0xFF0F172A),
-                                            ),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 14),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          sem.semester,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 15,
+                                            color: Colors.white,
                                           ),
-                                          const SizedBox(height: 2),
+                                        ),
+                                        if (sem.creditsInfo.isNotEmpty) ...[
+                                          const SizedBox(height: 3),
                                           Text(
                                             sem.creditsInfo,
                                             style: const TextStyle(
-                                              color: Color(0xFF64748B),
+                                              color: Colors.white60,
                                               fontSize: 12,
                                             ),
                                           ),
                                         ],
+                                      ],
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 14, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.08),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: Colors.white.withValues(alpha: 0.22),
                                       ),
                                     ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 12, vertical: 6),
-                                      decoration: BoxDecoration(
-                                        color: Colors.blue.shade50,
-                                        borderRadius:
-                                            BorderRadius.circular(10),
-                                      ),
-                                      child: Column(
-                                        children: [
-                                          const Text(
-                                            'SGPA',
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.w600,
-                                              color: Color(0xFF64748B),
-                                            ),
+                                    child: Column(
+                                      children: [
+                                        const Text(
+                                          'SGPA',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.white70,
                                           ),
-                                          Text(
-                                            sem.sgpa.toStringAsFixed(2),
-                                            style: TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w900,
-                                              color: Colors.blue.shade700,
-                                            ),
+                                        ),
+                                        Text(
+                                          sem.sgpa.toStringAsFixed(2),
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w900,
+                                            color: Colors.white,
                                           ),
-                                        ],
-                                      ),
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
                             );
                           },
@@ -1112,7 +947,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: const Color(0xFF64748B)),
+          Icon(icon, size: 18, color: Colors.white60),
           const SizedBox(width: 12),
           SizedBox(
             width: 120,
@@ -1120,7 +955,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
               label,
               style: const TextStyle(
                 fontSize: 13,
-                color: Color(0xFF64748B),
+                color: Colors.white70,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -1131,7 +966,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF0F172A),
+                color: Colors.white,
               ),
             ),
           ),
@@ -1145,38 +980,24 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
         children.where((w) => w is! SizedBox || (w.height != 0)).toList();
     if (validChildren.isEmpty) return const SizedBox.shrink();
 
-    return Container(
+    return GlassContainer(
       margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.3,
-                color: Color(0xFF0F172A),
-              ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.6,
+              color: Color(0xFF34D399),
             ),
-            const Divider(height: 18, color: Color(0xFFF1F5F9)),
-            ...children,
-          ],
-        ),
+          ),
+          Divider(height: 18, color: Colors.white.withOpacity(0.08)),
+          ...children,
+        ],
       ),
     );
   }
@@ -1185,147 +1006,175 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
   Widget build(BuildContext context) {
     final p = _profile;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: const Text(
-          'Profile',
-          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
-        ),
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF0F172A),
+    return GlassScaffold(
+      appBar: FrostedGlassAppBar(
+        title: 'Profile',
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded),
+          FrostedAppBarAction(
+            icon: Icons.refresh_rounded,
             onPressed: _loadProfile,
             tooltip: 'Refresh',
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: RefreshIndicator(
         onRefresh: _loadProfile,
-        color: Colors.blue.shade700,
+        color: const Color(0xFF10B981),
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? const Center(child: CircularProgressIndicator(color: Color(0xFF10B981)))
             : ListView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
                 physics: const AlwaysScrollableScrollPhysics(),
                 children: [
-                  // Profile Header Hero
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
+                  // Profile Header Hero with Animated Rays (VengeanceUI Component)
+                  AnimatedRays(
+                    borderRadius: 22,
+                    backgroundColor: const Color(0xFF04060A),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.28),
+                      width: 1.15,
                     ),
+                    glowShadow: BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.85),
+                      blurRadius: 36,
+                      offset: const Offset(0, 10),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 26),
                     child: Column(
                       children: [
-                        StudentPhotoWidget(
-                          photoUrl: p?.photoUrl,
-                          name: p?.name ?? '',
-                          rollNo: p?.rollNo,
-                          size: 92,
-                          enableZoom: true,
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.9),
-                            width: 3.5,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.35),
-                              blurRadius: 14,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                          backgroundColor: Colors.blue.shade700,
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          p?.name.isNotEmpty ?? false
-                              ? p!.name
-                              : 'Student Profile',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
+                        // Glass Lens Floating Avatar Ring
                         Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 3),
+                          padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            p?.rollNo ?? '',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 0.5,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.35),
+                              width: 1.5,
                             ),
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Colors.white.withValues(alpha: 0.30),
+                                Colors.white.withValues(alpha: 0.06),
+                              ],
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.65),
+                                blurRadius: 24,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: StudentPhotoWidget(
+                            photoUrl: p?.photoUrl,
+                            name: p?.name ?? '',
+                            rollNo: p?.rollNo,
+                            size: 98,
+                            enableZoom: true,
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.40),
+                              width: 2.0,
+                            ),
+                            backgroundColor: const Color(0xFF0F172A),
                           ),
                         ),
                         const SizedBox(height: 16),
+                        Text(
+                          p?.name.isNotEmpty ?? false
+                              ? p!.name.toUpperCase()
+                              : 'STUDENT PROFILE',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 19,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.8,
+                            shadows: [
+                              Shadow(color: Colors.black87, blurRadius: 16, offset: Offset(0, 2)),
+                            ],
+                          ),
+                        ),
+                        if (p?.rollNo != null && p!.rollNo.isNotEmpty) ...[
+                          const SizedBox(height: 10),
+                          GlassCapsulePill(
+                            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 6.5),
+                            borderRadius: 20,
+                            child: Text(
+                              p.rollNo,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 1.1,
+                              ),
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 18),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             if (p?.cgpa != null && p!.cgpa.isNotEmpty)
-                              Container(
-                                margin:
-                                    const EdgeInsets.symmetric(horizontal: 6),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                      color: Colors.blueAccent.withOpacity(0.5)),
-                                ),
-                                child: Text(
-                                  'CGPA: ${p.cgpa}',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 12,
+                              GlassCapsulePill(
+                                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8.5),
+                                borderRadius: 22,
+                                child: RichText(
+                                  text: TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text: 'CGPA: ',
+                                        style: TextStyle(
+                                          color: Colors.white.withValues(alpha: 0.70),
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w600,
+                                          letterSpacing: 0.4,
+                                        ),
+                                      ),
+                                      TextSpan(
+                                        text: p.cgpa,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 13.5,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: 0.4,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
-                            if (p?.credits != null && p!.credits.isNotEmpty)
-                              Container(
-                                margin:
-                                    const EdgeInsets.symmetric(horizontal: 6),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                      color:
-                                          Colors.greenAccent.withOpacity(0.5)),
-                                ),
-                                child: Text(
-                                  'Credits: ${p.credits}',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 12,
+                            if ((p?.cgpa.isNotEmpty ?? false) &&
+                                (p?.credits.isNotEmpty ?? false))
+                              const SizedBox(width: 12),
+                            if (p?.credits.isNotEmpty ?? false)
+                              GlassCapsulePill(
+                                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8.5),
+                                borderRadius: 22,
+                                child: RichText(
+                                  text: TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text: 'Credits: ',
+                                        style: TextStyle(
+                                          color: Colors.white.withValues(alpha: 0.70),
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w600,
+                                          letterSpacing: 0.4,
+                                        ),
+                                      ),
+                                      TextSpan(
+                                        text: p?.credits,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 13.5,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: 0.4,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
@@ -1377,21 +1226,17 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                   // SPF Performance
                   if (p?.spfBands.isNotEmpty ?? false)
                     _buildCardSection('SPF PERFORMANCE', [
-                      Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
-                        ),
+                      GlassContainer(
+                        padding: EdgeInsets.zero,
                         child: Column(
                           children: [
                             Container(
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 12, vertical: 10),
-                              decoration: const BoxDecoration(
-                                color: Color(0xFF0F172A),
-                                borderRadius: BorderRadius.vertical(
-                                    top: Radius.circular(11)),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.08),
+                                borderRadius: const BorderRadius.vertical(
+                                    top: Radius.circular(15)),
                               ),
                               child: const Row(
                                 children: [
@@ -1438,19 +1283,18 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                             ...p!.spfBands.asMap().entries.map((entry) {
                               final idx = entry.key;
                               final item = entry.value;
-                              final isEven = idx % 2 == 0;
                               return Container(
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 12, vertical: 9),
                                 decoration: BoxDecoration(
-                                  color: isEven
-                                      ? Colors.white
-                                      : const Color(0xFFF8FAFC),
+                                  color: idx % 2 == 0
+                                      ? Colors.transparent
+                                      : Colors.white.withOpacity(0.03),
                                   border: Border(
                                     bottom: BorderSide(
                                       color: idx == p.spfBands.length - 1
                                           ? Colors.transparent
-                                          : const Color(0xFFF1F5F9),
+                                          : Colors.white.withOpacity(0.06),
                                     ),
                                   ),
                                 ),
@@ -1463,7 +1307,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                                         style: const TextStyle(
                                           fontSize: 12,
                                           fontWeight: FontWeight.w600,
-                                          color: Color(0xFF1E293B),
+                                          color: Colors.white,
                                         ),
                                       ),
                                     ),
@@ -1475,7 +1319,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                                           style: const TextStyle(
                                             fontSize: 12,
                                             fontWeight: FontWeight.w500,
-                                            color: Color(0xFF64748B),
+                                            color: Colors.white70,
                                           ),
                                         ),
                                       ),
@@ -1501,37 +1345,35 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
   }
 
   Widget _buildBandBadge(String band) {
-    Color bg;
-    Color fg;
     final clean =
         band.replaceAll(RegExp(r'band\s*', caseSensitive: false), '').trim();
     final b = clean.toUpperCase();
-    if (b == 'A' || b == 'O') {
-      bg = const Color(0xFFDCFCE7);
-      fg = const Color(0xFF16A34A);
-    } else if (b == 'B') {
-      bg = const Color(0xFFDBEAFE);
-      fg = const Color(0xFF2563EB);
-    } else if (b == 'C') {
-      bg = const Color(0xFFFEF3C7);
-      fg = const Color(0xFFD97706);
-    } else {
-      bg = const Color(0xFFFEE2E2);
-      fg = const Color(0xFFDC2626);
+    if (b.isEmpty || b == '-') {
+      return Text(
+        '—',
+        style: TextStyle(
+          color: Colors.white.withOpacity(0.4),
+          fontWeight: FontWeight.w500,
+        ),
+      );
     }
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3.5),
       decoration: BoxDecoration(
-        color: bg,
+        color: Colors.white.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: fg.withOpacity(0.3)),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.22),
+          width: 1.0,
+        ),
       ),
       child: Text(
-        b.isNotEmpty ? b : band,
-        style: TextStyle(
-          color: fg,
+        b,
+        style: const TextStyle(
+          fontSize: 12.5,
           fontWeight: FontWeight.w800,
-          fontSize: 12,
+          color: Colors.white,
+          letterSpacing: 0.2,
         ),
       ),
     );
@@ -1678,67 +1520,82 @@ class _StudentTimeTableScreenState extends State<StudentTimeTableScreen> {
     final subjectsForDay = schedule?.subjects ?? [];
     final allocations = report?.allocations ?? [];
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: const Text(
-          'Time Table',
-          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
-        ),
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF0F172A),
+    return GlassScaffold(
+      appBar: FrostedGlassAppBar(
+        title: 'Time Table',
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded),
+          FrostedAppBarAction(
+            icon: Icons.refresh_rounded,
             onPressed: _loadTimeTable,
             tooltip: 'Refresh',
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: RefreshIndicator(
         onRefresh: _loadTimeTable,
-        color: Colors.blue.shade700,
+        color: const Color(0xFF10B981),
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? const Center(child: CircularProgressIndicator(color: Color(0xFF10B981)))
             : ListView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
                 physics: const AlwaysScrollableScrollPhysics(),
                 children: [
                   // Day Selector Pills
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
                     child: Row(
                       children: _days.map((day) {
                         final isSelected = day == _selectedDay;
                         return Padding(
                           padding: const EdgeInsets.only(right: 8),
-                          child: ChoiceChip(
-                            label: Text(
-                              day,
-                              style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                color: isSelected
-                                    ? Colors.white
-                                    : const Color(0xFF475569),
-                              ),
-                            ),
-                            selected: isSelected,
-                            selectedColor: Colors.blue.shade700,
-                            backgroundColor: Colors.white,
-                            side: BorderSide(
-                              color: isSelected
-                                  ? Colors.blue.shade700
-                                  : const Color(0xFFCBD5E1),
-                            ),
-                            onSelected: (selected) {
-                              if (selected) {
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () {
                                 setState(() {
                                   _selectedDay = day;
                                 });
-                              }
-                            },
+                              },
+                              borderRadius: BorderRadius.circular(20),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 18, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? const Color(0xFF10B981)
+                                      : Colors.white.withOpacity(0.06),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? const Color(0xFF34D399)
+                                        : Colors.white.withOpacity(0.12),
+                                  ),
+                                  boxShadow: isSelected
+                                      ? [
+                                          BoxShadow(
+                                            color: const Color(0xFF10B981)
+                                                .withOpacity(0.4),
+                                            blurRadius: 10,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ]
+                                      : null,
+                                ),
+                                child: Text(
+                                  day,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13,
+                                    color: isSelected
+                                        ? Colors.white
+                                        : Colors.white70,
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
                         );
                       }).toList(),
@@ -1746,14 +1603,13 @@ class _StudentTimeTableScreenState extends State<StudentTimeTableScreen> {
                   ),
                   const SizedBox(height: 20),
 
-
                   if (subjectsForDay.isEmpty)
-                    Container(
-                      padding: const EdgeInsets.all(32),
+                    GlassContainer(
+                      padding: const EdgeInsets.all(36),
                       alignment: Alignment.center,
                       child: const Text(
                         'No periods scheduled for this day.',
-                        style: TextStyle(color: Color(0xFF94A3B8)),
+                        style: TextStyle(color: Colors.white60),
                       ),
                     )
                   else
@@ -1767,26 +1623,23 @@ class _StudentTimeTableScreenState extends State<StudentTimeTableScreen> {
                       final faculty = _resolveFacultyName(code);
 
                       if (isBreak) {
-                        return Container(
+                        return GlassContainer(
                           margin: const EdgeInsets.only(bottom: 12),
                           padding: const EdgeInsets.symmetric(
                               vertical: 12, horizontal: 16),
-                          decoration: BoxDecoration(
-                            color: Colors.amber.shade50,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.amber.shade200),
-                          ),
+                          color: const Color(0xFFF59E0B).withOpacity(0.12),
+                          borderColor: const Color(0xFFF59E0B).withOpacity(0.3),
                           child: Row(
                             children: [
-                              Icon(Icons.restaurant_rounded,
-                                  size: 18, color: Colors.amber.shade800),
+                              const Icon(Icons.restaurant_rounded,
+                                  size: 18, color: Color(0xFFFBBF24)),
                               const SizedBox(width: 10),
                               Text(
                                 'Lunch Break (${_formatBreakTiming(periodTiming)})',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontWeight: FontWeight.w700,
                                   fontSize: 13,
-                                  color: Colors.amber.shade900,
+                                  color: Color(0xFFFDE68A),
                                 ),
                               ),
                             ],
@@ -1794,111 +1647,86 @@ class _StudentTimeTableScreenState extends State<StudentTimeTableScreen> {
                         );
                       }
 
-                      return Container(
+                      return GlassContainer(
                         margin: const EdgeInsets.only(bottom: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.02),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                width: 44,
-                                height: 44,
-                                decoration: BoxDecoration(
-                                  color: Colors.blue.shade50,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                alignment: Alignment.center,
-                                child: Text(
-                                  'P${i + 1}',
-                                  style: TextStyle(
-                                    color: Colors.blue.shade700,
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 14,
-                                  ),
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF10B981).withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: const Color(0xFF10B981).withOpacity(0.3),
                                 ),
                               ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                  children: [
+                              alignment: Alignment.center,
+                              child: Text(
+                                'P${i + 1}',
+                                style: const TextStyle(
+                                  color: Color(0xFF34D399),
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      GlassCapsulePill(
+                                        label: code,
+                                        color: const Color(0xFF38BDF8),
+                                      ),
+                                      const Spacer(),
+                                      Text(
+                                        _formatPeriodTiming(periodTiming, i),
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.white60,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    fullName,
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  if (faculty.isNotEmpty) ...[
+                                    const SizedBox(height: 4),
                                     Row(
                                       children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 8, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFF0F172A),
-                                            borderRadius:
-                                                BorderRadius.circular(6),
-                                          ),
-                                          child: Text(
-                                            code,
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                        ),
-                                        const Spacer(),
+                                        const Icon(Icons.person_outline_rounded,
+                                            size: 14,
+                                            color: Colors.white60),
+                                        const SizedBox(width: 4),
                                         Text(
-                                          _formatPeriodTiming(periodTiming, i),
+                                          faculty,
                                           style: const TextStyle(
-                                            fontSize: 11,
-                                            color: Color(0xFF64748B),
-                                            fontWeight: FontWeight.w600,
+                                            fontSize: 12,
+                                            color: Colors.white70,
+                                            fontWeight: FontWeight.w500,
                                           ),
                                         ),
                                       ],
                                     ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      fullName,
-                                      style: const TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w700,
-                                        color: Color(0xFF0F172A),
-                                      ),
-                                    ),
-                                    if (faculty.isNotEmpty) ...[
-                                      const SizedBox(height: 4),
-                                      Row(
-                                        children: [
-                                          Icon(Icons.person_outline_rounded,
-                                              size: 14,
-                                              color: Colors.grey.shade600),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            faculty,
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.grey.shade700,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
                                   ],
-                                ),
+                                ],
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       );
                     }),
@@ -1913,23 +1741,19 @@ class _StudentTimeTableScreenState extends State<StudentTimeTableScreen> {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          letterSpacing: 0.5,
-                          color: Color(0xFF64748B),
+                          letterSpacing: 0.6,
+                          color: Colors.white60,
                         ),
                       ),
                     ),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
-                      ),
+                    GlassContainer(
+                      padding: EdgeInsets.zero,
                       child: ListView.separated(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: allocations.length,
-                        separatorBuilder: (_, __) =>
-                            const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                        separatorBuilder: (_, __) => Divider(
+                            height: 1, color: Colors.white.withOpacity(0.06)),
                         itemBuilder: (context, idx) {
                           final a = allocations[idx];
                           return ListTile(
@@ -1938,14 +1762,17 @@ class _StudentTimeTableScreenState extends State<StudentTimeTableScreen> {
                               width: 38,
                               height: 38,
                               decoration: BoxDecoration(
-                                color: Colors.indigo.shade50,
+                                color: const Color(0xFF38BDF8).withOpacity(0.15),
                                 borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: const Color(0xFF38BDF8).withOpacity(0.3),
+                                ),
                               ),
                               alignment: Alignment.center,
                               child: Text(
                                 a.code,
-                                style: TextStyle(
-                                  color: Colors.indigo.shade700,
+                                style: const TextStyle(
+                                  color: Color(0xFF38BDF8),
                                   fontWeight: FontWeight.w800,
                                   fontSize: 11,
                                 ),
@@ -1954,12 +1781,17 @@ class _StudentTimeTableScreenState extends State<StudentTimeTableScreen> {
                             title: Text(
                               a.name,
                               style: const TextStyle(
-                                  fontWeight: FontWeight.w700, fontSize: 13),
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                                color: Colors.white,
+                              ),
                             ),
                             subtitle: Text(
                               a.facultyName,
-                              style: TextStyle(
-                                  color: Colors.grey.shade600, fontSize: 12),
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                              ),
                             ),
                           );
                         },
@@ -2217,20 +2049,12 @@ class _StudentAcademicRegisterScreenState
             _cachedPhotoUrl;
     final photoUrl = HitamScraperService.isBlacklistedPhoto(rawPhoto) ? null : rawPhoto;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: const Text(
-          'Academic Register',
-          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
-        ),
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF0F172A),
+    return GlassScaffold(
+      appBar: FrostedGlassAppBar(
+        title: 'Academic Register',
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded),
+          FrostedAppBarAction(
+            icon: Icons.refresh_rounded,
             onPressed: _loadAcademicRegister,
             tooltip: 'Refresh',
           ),
@@ -2238,43 +2062,52 @@ class _StudentAcademicRegisterScreenState
       ),
       body: RefreshIndicator(
         onRefresh: _loadAcademicRegister,
-        color: Colors.blue.shade700,
+        color: const Color(0xFF34D399),
         child: _isLoading
             ? const Center(
                 child: Padding(
                   padding: EdgeInsets.all(32.0),
-                  child: CircularProgressIndicator(),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    color: Color(0xFF34D399),
+                  ),
                 ),
               )
             : _errorMessage != null && report == null
                 ? Center(
                     child: Padding(
                       padding: const EdgeInsets.all(24.0),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.error_outline_rounded,
-                              size: 48, color: Colors.red.shade400),
-                          const SizedBox(height: 12),
-                          Text(
-                            _errorMessage!,
-                            style: const TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.w600),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 16),
-                          ElevatedButton.icon(
-                            onPressed: _loadAcademicRegister,
-                            icon: const Icon(Icons.refresh),
-                            label: const Text('Try Again'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF0F172A),
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10)),
+                      child: GlassContainer(
+                        padding: const EdgeInsets.all(24.0),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.error_outline_rounded,
+                                size: 48, color: Colors.red.shade400),
+                            const SizedBox(height: 12),
+                            Text(
+                              _errorMessage!,
+                              style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white),
+                              textAlign: TextAlign.center,
                             ),
-                          )
-                        ],
+                            const SizedBox(height: 16),
+                            ElevatedButton.icon(
+                              onPressed: _loadAcademicRegister,
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Try Again'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF10B981),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10)),
+                              ),
+                            )
+                          ],
+                        ),
                       ),
                     ),
                   )
@@ -2283,23 +2116,8 @@ class _StudentAcademicRegisterScreenState
                     physics: const AlwaysScrollableScrollPhysics(),
                     children: [
                       // 1. EXECUTIVE OVERVIEW HEADER CARD
-                      Container(
+                      GlassContainer(
                         padding: const EdgeInsets.all(18),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF0F172A).withOpacity(0.12),
-                              blurRadius: 14,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -2342,33 +2160,10 @@ class _StudentAcademicRegisterScreenState
                                     ],
                                   ),
                                 ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 10, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF10B981)
-                                        .withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                        color: const Color(0xFF10B981)
-                                            .withOpacity(0.4)),
-                                  ),
-                                  child: const Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(Icons.verified_rounded,
-                                          size: 13, color: Color(0xFF34D399)),
-                                      SizedBox(width: 4),
-                                      Text(
-                                        'Verified',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w700,
-                                          color: Color(0xFF34D399),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                                GlassStatusPill(
+                                  label: 'Verified',
+                                  color: const Color(0xFF34D399),
+                                  icon: Icons.verified_rounded,
                                 ),
                               ],
                             ),
@@ -2384,54 +2179,15 @@ class _StudentAcademicRegisterScreenState
                               spacing: 8,
                               runSpacing: 6,
                               children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 10, vertical: 5),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.08),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(Icons.bookmark_border_rounded,
-                                          size: 14, color: Color(0xFF94A3B8)),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        sem,
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                                GlassCapsulePill(
+                                  label: sem,
+                                  icon: Icons.bookmark_border_rounded,
                                 ),
                                 if (report?.dates.isNotEmpty ?? false)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 10, vertical: 5),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.08),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const Icon(Icons.date_range_rounded,
-                                            size: 14, color: Color(0xFF94A3B8)),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          '${report!.dates.first} to ${report.dates.last} (${report.dates.length} sessions)',
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                                  GlassCapsulePill(
+                                    label:
+                                        '${report!.dates.first} to ${report.dates.last} (${report.dates.length} sessions)',
+                                    icon: Icons.date_range_rounded,
                                   ),
                               ],
                             ),
@@ -2482,25 +2238,22 @@ class _StudentAcademicRegisterScreenState
                       const SizedBox(height: 16),
 
                       // 2. SEARCH BAR & FILTERS
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
-                        ),
+                      GlassContainer(
+                        padding: EdgeInsets.zero,
                         child: TextField(
                           onChanged: (val) =>
                               setState(() => _searchQuery = val),
+                          style: const TextStyle(color: Colors.white, fontSize: 13),
                           decoration: InputDecoration(
                             hintText:
                                 'Search by course name or code (e.g. CV, NP)...',
-                            hintStyle: const TextStyle(
-                                fontSize: 13, color: Color(0xFF94A3B8)),
-                            prefixIcon: const Icon(Icons.search_rounded,
-                                size: 20, color: Color(0xFF64748B)),
+                            hintStyle: TextStyle(
+                                fontSize: 13, color: Colors.white.withOpacity(0.4)),
+                            prefixIcon: Icon(Icons.search_rounded,
+                                size: 20, color: Colors.white.withOpacity(0.6)),
                             suffixIcon: _searchQuery.isNotEmpty
                                 ? IconButton(
-                                    icon: const Icon(Icons.clear, size: 18),
+                                    icon: Icon(Icons.clear, size: 18, color: Colors.white.withOpacity(0.6)),
                                     onPressed: () =>
                                         setState(() => _searchQuery = ''),
                                   )
@@ -2542,7 +2295,7 @@ class _StudentAcademicRegisterScreenState
                             _buildFilterChip(
                               'ACTIVE',
                               'Active ($activeCount)',
-                              accentColor: const Color(0xFF3B82F6),
+                              accentColor: const Color(0xFF38BDF8),
                             ),
                           ],
                         ),
@@ -2552,23 +2305,18 @@ class _StudentAcademicRegisterScreenState
 
                       // 3. SUBJECT REGISTER CARDS
                       if (filtered.isEmpty)
-                        Container(
+                        GlassContainer(
                           padding: const EdgeInsets.all(36),
                           alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: const Color(0xFFE2E8F0)),
-                          ),
                           child: Column(
                             children: [
                               Icon(Icons.search_off_rounded,
-                                  size: 40, color: Colors.grey.shade400),
+                                  size: 40, color: Colors.white.withOpacity(0.4)),
                               const SizedBox(height: 10),
-                              const Text(
+                              Text(
                                 'No matching subjects in Academic Register.',
                                 style: TextStyle(
-                                  color: Color(0xFF64748B),
+                                  color: Colors.white.withOpacity(0.7),
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -2624,325 +2372,304 @@ class _StudentAcademicRegisterScreenState
                                   ? absentDates
                                   : allDates;
 
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 14),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: const Color(0xFFE2E8F0),
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.02),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 14),
+                            child: GlassContainer(
+                              padding: EdgeInsets.zero,
+                              child: Theme(
+                                data: Theme.of(context).copyWith(
+                                  dividerColor: Colors.transparent,
+                                  colorScheme: Theme.of(context).colorScheme.copyWith(
+                                    primary: const Color(0xFF34D399),
+                                  ),
                                 ),
-                              ],
-                            ),
-                            child: Theme(
-                              data: Theme.of(context).copyWith(
-                                dividerColor: Colors.transparent,
-                              ),
-                              child: ExpansionTile(
-                                tilePadding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 6),
-                                leading: CircleAvatar(
-                                  radius: 22,
-                                  backgroundColor: pctColor.withOpacity(0.12),
-                                  child: Text(
-                                    held > 0
-                                        ? '${item.percentage.toStringAsFixed(0)}%'
-                                        : '0%',
-                                    style: TextStyle(
-                                      color: pctColor,
-                                      fontWeight: FontWeight.w800,
-                                      fontSize: 12,
+                                child: ExpansionTile(
+                                  iconColor: Colors.white70,
+                                  collapsedIconColor: Colors.white54,
+                                  tilePadding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 8),
+                                  leading: CircleAvatar(
+                                    radius: 22,
+                                    backgroundColor: pctColor.withOpacity(0.18),
+                                    child: Text(
+                                      held > 0
+                                          ? '${item.percentage.toStringAsFixed(0)}%'
+                                          : '0%',
+                                      style: TextStyle(
+                                        color: pctColor,
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 12,
+                                      ),
                                     ),
                                   ),
-                                ),
-                                title: Text(
-                                  fullName,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 15,
-                                    color: Color(0xFF0F172A),
+                                  title: Text(
+                                    fullName,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 15,
+                                      color: Colors.white,
+                                    ),
                                   ),
-                                ),
-                                subtitle: Padding(
-                                  padding: const EdgeInsets.only(top: 6),
-                                  child: Wrap(
-                                    spacing: 8,
-                                    runSpacing: 4,
-                                    crossAxisAlignment:
-                                        WrapCrossAlignment.center,
-                                    children: [
-                                      // Subject code tag
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 7, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFF1F5F9),
-                                          borderRadius:
-                                              BorderRadius.circular(6),
-                                        ),
-                                        child: Text(
-                                          item.subject,
-                                          style: const TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w700,
-                                            color: Color(0xFF475569),
-                                          ),
-                                        ),
-                                      ),
-                                      Text(
-                                        'Attended: ${item.attendedHeld}',
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          color: Color(0xFF64748B),
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      // Status badge
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 7, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: statusBadgeColor
-                                              .withOpacity(0.1),
-                                          borderRadius:
-                                              BorderRadius.circular(6),
-                                        ),
-                                        child: Text(
-                                          statusBadgeText,
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w700,
-                                            color: statusBadgeColor,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.fromLTRB(
-                                        16, 0, 16, 16),
-                                    child: Column(
+                                  subtitle: Padding(
+                                    padding: const EdgeInsets.only(top: 6),
+                                    child: Wrap(
+                                      spacing: 8,
+                                      runSpacing: 4,
                                       crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                                          WrapCrossAlignment.center,
                                       children: [
-                                        const Divider(
-                                            color: Color(0xFFF1F5F9)),
-
-                                        // CIE Marks Section
-                                        const Text(
-                                          'CONTINUOUS INTERNAL EVALUATION (CIE)',
+                                        // Subject code tag
+                                        GlassSubCard(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 7, vertical: 2),
+                                          borderRadius: 6,
+                                          child: Text(
+                                            item.subject,
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w700,
+                                              color: Color(0xFF34D399),
+                                            ),
+                                          ),
+                                        ),
+                                        Text(
+                                          'Attended: ${item.attendedHeld}',
                                           style: TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w700,
-                                            color: Color(0xFF94A3B8),
-                                            letterSpacing: 0.5,
+                                            fontSize: 12,
+                                            color: Colors.white.withOpacity(0.7),
+                                            fontWeight: FontWeight.w600,
                                           ),
                                         ),
-                                        const SizedBox(height: 8),
-
-                                        if (item.cieA1.isNotEmpty ||
-                                            item.cieB1.isNotEmpty ||
-                                            item.cieC1.isNotEmpty)
-                                          Wrap(
-                                            spacing: 8,
-                                            runSpacing: 6,
-                                            children: [
-                                              if (item.cieA1.isNotEmpty)
-                                                _buildCieBadge(
-                                                    'CIE-A1',
-                                                    item.cieA1,
-                                                    Colors.blue.shade700,
-                                                    Colors.blue.shade50),
-                                              if (item.cieB1.isNotEmpty)
-                                                _buildCieBadge(
-                                                    'CIE-B1',
-                                                    item.cieB1,
-                                                    Colors.indigo.shade700,
-                                                    Colors.indigo.shade50),
-                                              if (item.cieC1.isNotEmpty)
-                                                _buildCieBadge(
-                                                    'CIE-C1',
-                                                    item.cieC1,
-                                                    Colors.purple.shade700,
-                                                    Colors.purple.shade50),
-                                            ],
-                                          )
-                                        else
-                                          const Text(
-                                            'No CIE evaluations recorded yet for this subject.',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              fontStyle: FontStyle.italic,
-                                              color: Color(0xFF94A3B8),
-                                            ),
-                                          ),
-
-                                        const SizedBox(height: 16),
-
-                                        // Day by Day Attendance Section Header with sub-filter toggles
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            const Text(
-                                              'DAY-BY-DAY ATTENDANCE LOG',
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                fontWeight: FontWeight.w700,
-                                                color: Color(0xFF94A3B8),
-                                                letterSpacing: 0.5,
-                                              ),
-                                            ),
-                                            Row(
-                                              children: [
-                                                _buildLogFilterButton(
-                                                  item.subject,
-                                                  'ALL',
-                                                  'All (${allDates.length})',
-                                                  currentDayFilter,
-                                                ),
-                                                const SizedBox(width: 4),
-                                                _buildLogFilterButton(
-                                                  item.subject,
-                                                  'PRESENT',
-                                                  'P (${presentDates.length})',
-                                                  currentDayFilter,
-                                                  color:
-                                                      const Color(0xFF10B981),
-                                                ),
-                                                const SizedBox(width: 4),
-                                                _buildLogFilterButton(
-                                                  item.subject,
-                                                  'ABSENT',
-                                                  'A (${absentDates.length})',
-                                                  currentDayFilter,
-                                                  color:
-                                                      const Color(0xFFEF4444),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
+                                        // Status badge
+                                        GlassStatusPill(
+                                          label: statusBadgeText,
+                                          color: statusBadgeColor,
                                         ),
-                                        const SizedBox(height: 10),
-
-                                        if (visibleDates.isEmpty)
-                                          Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                                vertical: 8),
-                                            child: Text(
-                                              currentDayFilter == 'PRESENT'
-                                                  ? 'No present sessions recorded.'
-                                                  : currentDayFilter ==
-                                                          'ABSENT'
-                                                      ? 'Zero absent sessions (Perfect attendance)!'
-                                                      : 'No session dates recorded.',
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.grey.shade600,
-                                                fontStyle: FontStyle.italic,
-                                              ),
-                                            ),
-                                          )
-                                        else
-                                          SingleChildScrollView(
-                                            scrollDirection:
-                                                Axis.horizontal,
-                                            child: Row(
-                                              children:
-                                                  visibleDates.map((d) {
-                                                final status = d.value;
-                                                Color bg =
-                                                    const Color(0xFFF1F5F9);
-                                                Color fg =
-                                                    const Color(0xFF64748B);
-                                                IconData? icon;
-
-                                                if (status.contains('P')) {
-                                                  bg = const Color(0xFFDCFCE7);
-                                                  fg = const Color(0xFF15803D);
-                                                  icon =
-                                                      Icons.check_circle_rounded;
-                                                } else if (status
-                                                    .contains('A')) {
-                                                  bg = const Color(0xFFFEE2E2);
-                                                  fg = const Color(0xFFB91C1C);
-                                                  icon = Icons.cancel_rounded;
-                                                }
-
-                                                return Container(
-                                                  margin:
-                                                      const EdgeInsets.only(
-                                                          right: 6),
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                          horizontal: 9,
-                                                          vertical: 7),
-                                                  decoration: BoxDecoration(
-                                                    color: bg,
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            10),
-                                                    border: Border.all(
-                                                      color: fg.withOpacity(0.2),
-                                                    ),
-                                                  ),
-                                                  child: Column(
-                                                    mainAxisSize:
-                                                        MainAxisSize.min,
-                                                    children: [
-                                                      Text(
-                                                        d.key,
-                                                        style: TextStyle(
-                                                          fontSize: 10,
-                                                          fontWeight:
-                                                              FontWeight.w700,
-                                                          color: fg,
-                                                        ),
-                                                      ),
-                                                      const SizedBox(height: 3),
-                                                      Row(
-                                                        mainAxisSize:
-                                                            MainAxisSize.min,
-                                                        children: [
-                                                          if (icon != null) ...[
-                                                            Icon(icon,
-                                                                size: 11,
-                                                                color: fg),
-                                                            const SizedBox(
-                                                                width: 2),
-                                                          ],
-                                                          Text(
-                                                            status.isEmpty
-                                                                ? '-'
-                                                                : status,
-                                                            style: TextStyle(
-                                                              fontSize: 12,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .w800,
-                                                              color: fg,
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ],
-                                                  ),
-                                                );
-                                              }).toList(),
-                                            ),
-                                          ),
                                       ],
                                     ),
                                   ),
-                                ],
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.fromLTRB(
+                                          16, 0, 16, 16),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Divider(
+                                              color: Colors.white.withOpacity(0.1)),
+                                          const SizedBox(height: 4),
+
+                                          // CIE Marks Section
+                                          Text(
+                                            'CONTINUOUS INTERNAL EVALUATION (CIE)',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w700,
+                                              color: Colors.white.withOpacity(0.6),
+                                              letterSpacing: 0.5,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+
+                                          if (item.cieA1.isNotEmpty ||
+                                              item.cieB1.isNotEmpty ||
+                                              item.cieC1.isNotEmpty)
+                                            Wrap(
+                                              spacing: 8,
+                                              runSpacing: 6,
+                                              children: [
+                                                if (item.cieA1.isNotEmpty)
+                                                  _buildCieBadge(
+                                                      'CIE-A1',
+                                                      item.cieA1,
+                                                      const Color(0xFF38BDF8),
+                                                      const Color(0xFF38BDF8).withOpacity(0.12)),
+                                                if (item.cieB1.isNotEmpty)
+                                                  _buildCieBadge(
+                                                      'CIE-B1',
+                                                      item.cieB1,
+                                                      const Color(0xFF818CF8),
+                                                      const Color(0xFF818CF8).withOpacity(0.12)),
+                                                if (item.cieC1.isNotEmpty)
+                                                  _buildCieBadge(
+                                                      'CIE-C1',
+                                                      item.cieC1,
+                                                      const Color(0xFFA78BFA),
+                                                      const Color(0xFFA78BFA).withOpacity(0.12)),
+                                              ],
+                                            )
+                                          else
+                                            Text(
+                                              'No CIE evaluations recorded yet for this subject.',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                fontStyle: FontStyle.italic,
+                                                color: Colors.white.withOpacity(0.4),
+                                              ),
+                                            ),
+
+                                          const SizedBox(height: 16),
+
+                                          // Day by Day Attendance Section Header with sub-filter toggles
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(
+                                                'DAY-BY-DAY ATTENDANCE LOG',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: Colors.white.withOpacity(0.6),
+                                                  letterSpacing: 0.5,
+                                                ),
+                                              ),
+                                              Row(
+                                                children: [
+                                                  _buildLogFilterButton(
+                                                    item.subject,
+                                                    'ALL',
+                                                    'All (${allDates.length})',
+                                                    currentDayFilter,
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  _buildLogFilterButton(
+                                                    item.subject,
+                                                    'PRESENT',
+                                                    'P (${presentDates.length})',
+                                                    currentDayFilter,
+                                                    color:
+                                                        const Color(0xFF10B981),
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  _buildLogFilterButton(
+                                                    item.subject,
+                                                    'ABSENT',
+                                                    'A (${absentDates.length})',
+                                                    currentDayFilter,
+                                                    color:
+                                                        const Color(0xFFEF4444),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 10),
+
+                                          if (visibleDates.isEmpty)
+                                            Padding(
+                                              padding: const EdgeInsets.symmetric(
+                                                  vertical: 8),
+                                              child: Text(
+                                                currentDayFilter == 'PRESENT'
+                                                    ? 'No present sessions recorded.'
+                                                    : currentDayFilter ==
+                                                            'ABSENT'
+                                                        ? 'Zero absent sessions (Perfect attendance)!'
+                                                        : 'No session dates recorded.',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.white.withOpacity(0.5),
+                                                  fontStyle: FontStyle.italic,
+                                                ),
+                                              ),
+                                            )
+                                          else
+                                            SingleChildScrollView(
+                                              scrollDirection:
+                                                  Axis.horizontal,
+                                              child: Row(
+                                                children:
+                                                    visibleDates.map((d) {
+                                                  final status = d.value;
+                                                  Color bg =
+                                                      Colors.white.withOpacity(0.06);
+                                                  Color fg =
+                                                      Colors.white70;
+                                                  IconData? icon;
+
+                                                  if (status.contains('P')) {
+                                                    bg = const Color(0xFF10B981)
+                                                        .withOpacity(0.2);
+                                                    fg = const Color(0xFF34D399);
+                                                    icon =
+                                                        Icons.check_circle_rounded;
+                                                  } else if (status
+                                                      .contains('A')) {
+                                                    bg = const Color(0xFFEF4444)
+                                                        .withOpacity(0.2);
+                                                    fg = const Color(0xFFF87171);
+                                                    icon = Icons.cancel_rounded;
+                                                  }
+
+                                                  return Container(
+                                                    margin:
+                                                        const EdgeInsets.only(
+                                                            right: 6),
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                            horizontal: 9,
+                                                            vertical: 7),
+                                                    decoration: BoxDecoration(
+                                                      color: bg,
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              10),
+                                                      border: Border.all(
+                                                        color: fg.withOpacity(0.3),
+                                                      ),
+                                                    ),
+                                                    child: Column(
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
+                                                      children: [
+                                                        Text(
+                                                          d.key,
+                                                          style: TextStyle(
+                                                            fontSize: 10,
+                                                            fontWeight:
+                                                                FontWeight.w700,
+                                                            color: fg,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(height: 3),
+                                                        Row(
+                                                          mainAxisSize:
+                                                              MainAxisSize.min,
+                                                          children: [
+                                                            if (icon != null) ...[
+                                                              Icon(icon,
+                                                                  size: 11,
+                                                                  color: fg),
+                                                              const SizedBox(
+                                                                  width: 2),
+                                                            ],
+                                                            Text(
+                                                              status.isEmpty
+                                                                  ? '-'
+                                                                  : status,
+                                                              style: TextStyle(
+                                                                fontSize: 12,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w800,
+                                                                color: fg,
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  );
+                                                }).toList(),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           );
@@ -2959,13 +2686,8 @@ class _StudentAcademicRegisterScreenState
     required String subtitle,
     required Color color,
   }) {
-    return Container(
+    return GlassSubCard(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.06),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -3005,26 +2727,26 @@ class _StudentAcademicRegisterScreenState
 
   Widget _buildFilterChip(String key, String label, {Color? accentColor}) {
     final isSelected = _selectedFilter == key;
+    final effectiveColor = accentColor ?? const Color(0xFF34D399);
     return GestureDetector(
       onTap: () => setState(() => _selectedFilter = key),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
           color: isSelected
-              ? (accentColor ?? const Color(0xFF0F172A))
-              : Colors.white,
+              ? effectiveColor.withOpacity(0.2)
+              : Colors.white.withOpacity(0.06),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected
-                ? (accentColor ?? const Color(0xFF0F172A))
-                : const Color(0xFFE2E8F0),
+                ? effectiveColor.withOpacity(0.5)
+                : Colors.white.withOpacity(0.12),
           ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: (accentColor ?? const Color(0xFF0F172A))
-                        .withOpacity(0.2),
-                    blurRadius: 4,
+                    color: effectiveColor.withOpacity(0.25),
+                    blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
                 ]
@@ -3038,7 +2760,7 @@ class _StudentAcademicRegisterScreenState
                 width: 6,
                 height: 6,
                 decoration: BoxDecoration(
-                  color: isSelected ? Colors.white : accentColor,
+                  color: effectiveColor,
                   shape: BoxShape.circle,
                 ),
               ),
@@ -3049,7 +2771,7 @@ class _StudentAcademicRegisterScreenState
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                color: isSelected ? Colors.white : const Color(0xFF475569),
+                color: isSelected ? Colors.white : Colors.white.withOpacity(0.7),
               ),
             ),
           ],
@@ -3066,7 +2788,7 @@ class _StudentAcademicRegisterScreenState
     Color? color,
   }) {
     final isSelected = currentFilter == filterKey;
-    final activeColor = color ?? const Color(0xFF475569);
+    final activeColor = color ?? const Color(0xFF34D399);
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -3076,15 +2798,22 @@ class _StudentAcademicRegisterScreenState
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
         decoration: BoxDecoration(
-          color: isSelected ? activeColor : const Color(0xFFF1F5F9),
+          color: isSelected
+              ? activeColor.withOpacity(0.25)
+              : Colors.white.withOpacity(0.06),
           borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: isSelected
+                ? activeColor.withOpacity(0.5)
+                : Colors.white.withOpacity(0.08),
+          ),
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: 10,
             fontWeight: FontWeight.w700,
-            color: isSelected ? Colors.white : const Color(0xFF64748B),
+            color: isSelected ? Colors.white : Colors.white.withOpacity(0.6),
           ),
         ),
       ),
@@ -3098,7 +2827,7 @@ class _StudentAcademicRegisterScreenState
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: textColor.withOpacity(0.2)),
+        border: Border.all(color: textColor.withOpacity(0.3)),
       ),
       child: Text(
         '$title: $val',
@@ -3163,50 +2892,31 @@ class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
         band.replaceAll(RegExp(r'band\s*', caseSensitive: false), '').trim();
     final b = clean.toUpperCase();
     if (b.isEmpty || b == '-') {
-      return const Text(
+      return Text(
         '—',
         style: TextStyle(
-          color: Color(0xFF94A3B8),
+          color: Colors.white.withOpacity(0.4),
           fontWeight: FontWeight.w500,
         ),
       );
     }
 
-    Color textColor;
-    Color bgColor;
-    Color borderColor;
-
-    if (b == 'A' || b == 'O') {
-      textColor = const Color(0xFF15803D);
-      bgColor = const Color(0xFFF0FDF4);
-      borderColor = const Color(0xFFBBF7D0);
-    } else if (b == 'B') {
-      textColor = const Color(0xFF1D4ED8);
-      bgColor = const Color(0xFFEFF6FF);
-      borderColor = const Color(0xFFBFDBFE);
-    } else if (b == 'C') {
-      textColor = const Color(0xFFB45309);
-      bgColor = const Color(0xFFFFFBEB);
-      borderColor = const Color(0xFFFDE68A);
-    } else {
-      textColor = const Color(0xFFB91C1C);
-      bgColor = const Color(0xFFFEF2F2);
-      borderColor = const Color(0xFFFECACA);
-    }
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3.5),
       decoration: BoxDecoration(
-        color: bgColor,
+        color: Colors.white.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: borderColor),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.22),
+          width: 1.0,
+        ),
       ),
       child: Text(
         b,
-        style: TextStyle(
+        style: const TextStyle(
           fontSize: 12.5,
-          fontWeight: FontWeight.w700,
-          color: textColor,
+          fontWeight: FontWeight.w800,
+          color: Colors.white,
           letterSpacing: 0.2,
         ),
       ),
@@ -3226,72 +2936,62 @@ class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
         HitamScraperService().latestAttendanceReport?.studentName.trim() ??
         '';
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: const Text(
-          'SPF Performance',
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            fontSize: 18,
-            color: Color(0xFF0F172A),
-          ),
-        ),
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF0F172A),
+    return GlassScaffold(
+      appBar: FrostedGlassAppBar(
+        title: 'SPF Performance',
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded),
+          FrostedAppBarAction(
+            icon: Icons.refresh_rounded,
             onPressed: _loadSpfBands,
             tooltip: 'Refresh',
           ),
         ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(color: const Color(0xFFE2E8F0), height: 1),
-        ),
       ),
       body: RefreshIndicator(
         onRefresh: _loadSpfBands,
-        color: const Color(0xFF0F172A),
+        color: const Color(0xFF34D399),
         child: _isLoading
             ? const Center(
-                child: CircularProgressIndicator(strokeWidth: 2.5),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: Color(0xFF34D399),
+                ),
               )
             : _errorMessage != null && _spfBands.isEmpty
                 ? Center(
                     child: Padding(
                       padding: const EdgeInsets.all(24.0),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.error_outline_rounded,
-                              size: 44, color: Colors.red.shade400),
-                          const SizedBox(height: 12),
-                          Text(
-                            _errorMessage!,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Color(0xFF64748B),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          ElevatedButton.icon(
-                            onPressed: _loadSpfBands,
-                            icon: const Icon(Icons.refresh, size: 16),
-                            label: const Text('Try Again'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF0F172A),
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+                      child: GlassContainer(
+                        padding: const EdgeInsets.all(24.0),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.error_outline_rounded,
+                                size: 44, color: Colors.red.shade400),
+                            const SizedBox(height: 12),
+                            Text(
+                              _errorMessage!,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Colors.white70,
                               ),
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 16),
+                            ElevatedButton.icon(
+                              onPressed: _loadSpfBands,
+                              icon: const Icon(Icons.refresh, size: 16),
+                              label: const Text('Try Again'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF10B981),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   )
@@ -3299,30 +2999,33 @@ class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
                     ? Center(
                         child: Padding(
                           padding: const EdgeInsets.all(24.0),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.military_tech_outlined,
-                                  size: 48, color: Colors.grey.shade400),
-                              const SizedBox(height: 14),
-                              const Text(
-                                'No SPF Records Available',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF1E293B),
+                          child: GlassContainer(
+                            padding: const EdgeInsets.all(24.0),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.military_tech_outlined,
+                                    size: 48, color: Colors.white.withOpacity(0.4)),
+                                const SizedBox(height: 14),
+                                const Text(
+                                  'No SPF Records Available',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 6),
-                              const Text(
-                                'Your semester cycle evaluations will appear here once published by the college.',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Color(0xFF64748B),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Your semester cycle evaluations will appear here once published by the college.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.white.withOpacity(0.7),
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       )
@@ -3338,17 +3041,10 @@ class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
                             physics: const AlwaysScrollableScrollPhysics(),
                             children: [
                               // 1. Student Info Header Card
-                              Container(
+                              GlassContainer(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 16,
                                   vertical: 14,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: const Color(0xFFE2E8F0),
-                                  ),
                                 ),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -3360,16 +3056,16 @@ class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
                                       style: const TextStyle(
                                         fontSize: 15,
                                         fontWeight: FontWeight.w700,
-                                        color: Color(0xFF0F172A),
+                                        color: Colors.white,
                                       ),
                                     ),
                                     const SizedBox(height: 2),
                                     if (activeRoll.isNotEmpty)
                                       Text(
                                         'HT No: $activeRoll',
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 12.5,
-                                          color: Color(0xFF64748B),
+                                          color: Colors.white.withOpacity(0.7),
                                           fontWeight: FontWeight.w500,
                                         ),
                                       ),
@@ -3387,23 +3083,16 @@ class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
                                   style: TextStyle(
                                     fontSize: 11.5,
                                     fontWeight: FontWeight.w700,
-                                    letterSpacing: 0.6,
-                                    color: Colors.grey.shade600,
+                                    letterSpacing: 0.8,
+                                    color: Colors.white.withOpacity(0.6),
                                   ),
                                 ),
                               ),
                               const SizedBox(height: 8),
 
                               // 3. Official Academic SPF Table
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: const Color(0xFFE2E8F0),
-                                  ),
-                                ),
-                                clipBehavior: Clip.antiAlias,
+                              GlassContainer(
+                                padding: EdgeInsets.zero,
                                 child: Column(
                                   children: [
                                     // Table Header
@@ -3412,7 +3101,7 @@ class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
                                         horizontal: 16,
                                         vertical: 12,
                                       ),
-                                      color: const Color(0xFFF8FAFC),
+                                      color: Colors.white.withOpacity(0.08),
                                       child: const Row(
                                         children: [
                                           Expanded(
@@ -3423,7 +3112,7 @@ class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
                                                 fontSize: 11.5,
                                                 fontWeight: FontWeight.w700,
                                                 letterSpacing: 0.5,
-                                                color: Color(0xFF475569),
+                                                color: Colors.white70,
                                               ),
                                             ),
                                           ),
@@ -3436,7 +3125,7 @@ class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
                                                   fontSize: 11.5,
                                                   fontWeight: FontWeight.w700,
                                                   letterSpacing: 0.5,
-                                                  color: Color(0xFF475569),
+                                                  color: Colors.white70,
                                                 ),
                                               ),
                                             ),
@@ -3450,7 +3139,7 @@ class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
                                                   fontSize: 11.5,
                                                   fontWeight: FontWeight.w700,
                                                   letterSpacing: 0.5,
-                                                  color: Color(0xFF475569),
+                                                  color: Colors.white70,
                                                 ),
                                               ),
                                             ),
@@ -3458,10 +3147,10 @@ class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
                                         ],
                                       ),
                                     ),
-                                    const Divider(
+                                    Divider(
                                       height: 1,
                                       thickness: 1,
-                                      color: Color(0xFFE2E8F0),
+                                      color: Colors.white.withOpacity(0.1),
                                     ),
 
                                     // Table Rows
@@ -3489,13 +3178,13 @@ class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
                                         ),
                                         decoration: BoxDecoration(
                                           color: isEven
-                                              ? Colors.white
-                                              : const Color(0xFFFBFCFD),
+                                              ? Colors.white.withOpacity(0.02)
+                                              : Colors.transparent,
                                           border: Border(
                                             bottom: BorderSide(
                                               color: idx == grouped.length - 1
                                                   ? Colors.transparent
-                                                  : const Color(0xFFF1F5F9),
+                                                  : Colors.white.withOpacity(0.06),
                                             ),
                                           ),
                                         ),
@@ -3508,7 +3197,7 @@ class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
                                                 style: const TextStyle(
                                                   fontSize: 13.5,
                                                   fontWeight: FontWeight.w600,
-                                                  color: Color(0xFF1E293B),
+                                                  color: Colors.white,
                                                 ),
                                               ),
                                             ),
@@ -3534,26 +3223,19 @@ class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
                               const SizedBox(height: 16),
 
                               // 4. Institutional Note
-                              Container(
+                              GlassSubCard(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 14,
                                   vertical: 12,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF8FAFC),
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                    color: const Color(0xFFE2E8F0),
-                                  ),
                                 ),
                                 child: Row(
                                   crossAxisAlignment:
                                       CrossAxisAlignment.start,
                                   children: [
-                                    Icon(
+                                    const Icon(
                                       Icons.info_outline_rounded,
                                       size: 16,
-                                      color: Colors.blueGrey.shade400,
+                                      color: Color(0xFF34D399),
                                     ),
                                     const SizedBox(width: 10),
                                     Expanded(
@@ -3561,7 +3243,7 @@ class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
                                         'SPF (Student Performance Framework) bands are evaluated and published on WebPros at the end of each mid-term cycle.',
                                         style: TextStyle(
                                           fontSize: 12,
-                                          color: Colors.blueGrey.shade700,
+                                          color: Colors.white.withOpacity(0.75),
                                           height: 1.4,
                                         ),
                                       ),

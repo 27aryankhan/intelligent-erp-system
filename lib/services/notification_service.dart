@@ -467,6 +467,41 @@ class NotificationService {
           type: 'attendance',
         );
         debugPrint('Shortage warning notification pushed for ${report.rollNo}: ${report.overallPercentage}%');
+
+        // Persist to backend notifications feed for student and parent
+        try {
+          await http.post(
+            Uri.parse('${ApiConfig.baseUrl}/api/notifications'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'title': '🚨 Attendance Shortage: ${report.overallPercentage.toStringAsFixed(1)}% (Below 75%)',
+              'body': 'Your aggregate attendance is ${report.overallPercentage.toStringAsFixed(1)}%, which is below the mandatory 75% cutoff (${report.totalAttended}/${report.totalHeld} classes).\n$classesNeeded',
+              'targetRole': 'student',
+              'senderRole': 'admin',
+              'senderName': 'HITAM Academic Cell',
+              'type': 'attendance',
+              'priority': 'urgent',
+              'targetScreen': 'attendance',
+              'userId': report.rollNo,
+            }),
+          ).timeout(const Duration(seconds: 4));
+
+          await http.post(
+            Uri.parse('${ApiConfig.baseUrl}/api/notifications'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'title': '🚨 Ward Attendance Shortage Alert: ${report.overallPercentage.toStringAsFixed(1)}% (Below 75%)',
+              'body': 'Your ward (${report.studentName.isNotEmpty ? report.studentName : report.rollNo}) is at ${report.overallPercentage.toStringAsFixed(1)}% attendance (${report.totalAttended}/${report.totalHeld} classes), below the mandatory 75% cutoff.',
+              'targetRole': 'parent',
+              'senderRole': 'admin',
+              'senderName': 'HITAM Administration',
+              'type': 'attendance',
+              'priority': 'urgent',
+              'targetScreen': 'attendance',
+              'userId': report.rollNo,
+            }),
+          ).timeout(const Duration(seconds: 4));
+        } catch (_) {}
       }
     } catch (e) {
       debugPrint('Error in checkShortageWarning: $e');
@@ -1099,6 +1134,13 @@ class NotificationService {
         if (newAlerts.isNotEmpty) {
           for (var alert in newAlerts) {
             final String id = alert['id']?.toString() ?? '';
+            final targetRole = (alert['targetRole'] ?? 'all').toString().toLowerCase();
+            final bool matchesCurrent = targetRole == 'all' ||
+                targetRole == _currentRole ||
+                ((targetRole == 'students_parents' || targetRole == 'students_and_parents') &&
+                    (_currentRole == 'student' || _currentRole == 'parent'));
+            if (!matchesCurrent) continue;
+
             if (!_presentedNotifIds.contains(id)) {
               _presentedNotifIds.add(id);
 
@@ -1365,7 +1407,8 @@ class NotificationService {
             normTarget == _currentRole ||
             (normTarget.contains('student') && _currentRole == 'student') ||
             (normTarget.contains('parent') && _currentRole == 'parent') ||
-            (normTarget.contains('faculty') && _currentRole == 'faculty');
+            (normTarget.contains('faculty') && _currentRole == 'faculty') ||
+            (normTarget.contains('admin') && _currentRole == 'admin');
 
         if (shouldNotifyCurrent) {
           await showNotification(

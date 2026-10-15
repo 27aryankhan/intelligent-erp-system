@@ -14,9 +14,9 @@ import 'services/database_service.dart';
 import 'screens/student_portal_screens.dart';
 import 'services/update_service.dart';
 import 'widgets/github_attendance_heatmap.dart';
-import 'widgets/pixel_run_game.dart';
 import 'widgets/student_photo_widget.dart';
 import 'services/background_service.dart';
+import 'widgets/glass_components.dart';
 
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -73,7 +73,11 @@ class _IntelligentERPState extends State<IntelligentERP>
       } else {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+          MaterialPageRoute(
+            builder: (_) => NotificationsScreen(
+              initialRole: NotificationService().currentRole,
+            ),
+          ),
         );
       }
     });
@@ -1559,10 +1563,10 @@ class _StudentDashboardState extends State<StudentDashboard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF070B14),
+      backgroundColor: Colors.black,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF070B14).withValues(alpha: 0.65),
+        backgroundColor: Colors.black.withValues(alpha: 0.70),
         elevation: 0,
         scrolledUnderElevation: 0,
         flexibleSpace: ClipRect(
@@ -1594,8 +1598,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
               color: Colors.white.withValues(alpha: 0.08),
               shape: BoxShape.circle,
               border: Border.all(
-                color: Colors.white.withValues(alpha: 0.15),
-                width: 1,
+                color: Colors.white.withValues(alpha: 0.18),
+                width: 1.0,
               ),
             ),
             child: const Center(
@@ -1618,62 +1622,10 @@ class _StudentDashboardState extends State<StudentDashboard> {
       ),
       body: Stack(
         children: [
-          // Ambient glowing mesh orbs beneath frosted glass
-          Positioned(
-            top: -40,
-            right: -30,
-            child: IgnorePointer(
-              child: Container(
-                width: 280,
-                height: 280,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      const Color(0xFF1E3A8A).withValues(alpha: 0.40),
-                      const Color(0xFF1E3A8A).withValues(alpha: 0.0),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            top: 260,
-            left: -50,
-            child: IgnorePointer(
-              child: Container(
-                width: 300,
-                height: 300,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      const Color(0xFF6B21A8).withValues(alpha: 0.28),
-                      const Color(0xFF6B21A8).withValues(alpha: 0.0),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: 120,
-            right: -60,
-            child: IgnorePointer(
-              child: Container(
-                width: 260,
-                height: 260,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      const Color(0xFF0EA5E9).withValues(alpha: 0.22),
-                      const Color(0xFF0EA5E9).withValues(alpha: 0.0),
-                    ],
-                  ),
-                ),
-              ),
+          // Luminous cobalt & midnight obsidian silk aurora canvas
+          const Positioned.fill(
+            child: CustomPaint(
+              painter: LuminousSilkAuroraPainter(),
             ),
           ),
 
@@ -1682,7 +1634,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
             child: isLoading
                 ? const Center(
                     child: CircularProgressIndicator(
-                      color: Color(0xFF38BDF8),
+                      color: Colors.white,
                     ),
                   )
                 : errorMessage.isNotEmpty
@@ -1703,7 +1655,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
                             const SizedBox(height: 15),
                             ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF2563EB),
+                                backgroundColor: Colors.white.withValues(alpha: 0.15),
                                 foregroundColor: Colors.white,
                               ),
                               onPressed: fetchStudentData,
@@ -1720,45 +1672,9 @@ class _StudentDashboardState extends State<StudentDashboard> {
                             // 1. STUDENT PIXEL RUN GAME HERO CARD (Frosted Glass Container)
                             _buildFrostedHeroCard(context),
 
-                            const SizedBox(height: 22),
-
-                            // 2. SECTION HEADER
-                            Row(
-                              children: [
-                                Container(
-                                  width: 4,
-                                  height: 16,
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      colors: [Color(0xFF38BDF8), Color(0xFF818CF8)],
-                                      begin: Alignment.topCenter,
-                                      end: Alignment.bottomCenter,
-                                    ),
-                                    borderRadius: BorderRadius.circular(2),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: const Color(0xFF38BDF8).withValues(alpha: 0.6),
-                                        blurRadius: 6,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                const Text(
-                                  'ACADEMIC PORTAL SERVICES',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 1.0,
-                                    color: Color(0xFF94A3B8),
-                                  ),
-                                ),
-                              ],
-                            ),
-
                             const SizedBox(height: 14),
 
-                            // 3. FEATURED BENTO HERO: ATTENDANCE (WIDE CARD)
+                            // 2. FEATURED BENTO HERO: ATTENDANCE (WIDE CARD)
                             _buildAttendanceBentoCard(context),
 
                             const SizedBox(height: 12),
@@ -1811,7 +1727,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
   }
 
   // ============================================================
-  // FROSTED GLASS & BENTO HELPERS
+  // PURE FROSTED GLASS & BENTO HELPERS (NO NEON COLORS)
   // ============================================================
 
   Widget _buildFrostedAppBarAction({
@@ -1831,8 +1747,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
         border: Border.all(
           color: isDestructive
               ? const Color(0xFFEF4444).withValues(alpha: 0.35)
-              : Colors.white.withValues(alpha: 0.15),
-          width: 1,
+              : Colors.white.withValues(alpha: 0.18),
+          width: 1.0,
         ),
       ),
       child: IconButton(
@@ -1841,7 +1757,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
           size: 19,
           color: isDestructive
               ? const Color(0xFFFCA5A5)
-              : Colors.white.withValues(alpha: 0.9),
+              : Colors.white.withValues(alpha: 0.95),
         ),
         padding: EdgeInsets.zero,
         tooltip: tooltip,
@@ -1865,21 +1781,21 @@ class _StudentDashboardState extends State<StudentDashboard> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: gradientColors ?? [
-            const Color(0xFF0F172A).withValues(alpha: 0.70),
-            const Color(0xFF0F172A).withValues(alpha: 0.40),
+            Colors.white.withValues(alpha: 0.09),
+            Colors.white.withValues(alpha: 0.02),
           ],
         ),
         borderRadius: BorderRadius.circular(borderRadius),
         border: border ??
             Border.all(
-              color: Colors.white.withValues(alpha: 0.13),
-              width: 1.1,
+              color: Colors.white.withValues(alpha: 0.18),
+              width: 1.0,
             ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.28),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
+            color: Colors.black.withValues(alpha: 0.32),
+            blurRadius: 22,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -1889,15 +1805,15 @@ class _StudentDashboardState extends State<StudentDashboard> {
     return ClipRRect(
       borderRadius: BorderRadius.circular(borderRadius),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
         child: onTap != null
             ? Material(
                 color: Colors.transparent,
                 child: InkWell(
                   onTap: onTap,
                   borderRadius: BorderRadius.circular(borderRadius),
-                  splashColor: Colors.white.withValues(alpha: 0.1),
-                  highlightColor: Colors.white.withValues(alpha: 0.05),
+                  splashColor: Colors.white.withValues(alpha: 0.08),
+                  highlightColor: Colors.white.withValues(alpha: 0.04),
                   child: content,
                 ),
               )
@@ -1906,34 +1822,27 @@ class _StudentDashboardState extends State<StudentDashboard> {
     );
   }
 
-  Widget _buildFrostedIconBadge({
-    required IconData icon,
-    required Color accentColor,
-    double size = 40,
-    double iconSize = 21,
-  }) {
+  Widget _buildCapsulePill(String label) {
     return Container(
-      width: size,
-      height: size,
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
       decoration: BoxDecoration(
-        color: accentColor.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: accentColor.withValues(alpha: 0.35),
-          width: 1,
+          color: Colors.white.withValues(alpha: 0.22),
+          width: 1.0,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: accentColor.withValues(alpha: 0.2),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
-      child: Icon(
-        icon,
-        color: accentColor,
-        size: iconSize,
+      child: Text(
+        label,
+        style: TextStyle(
+          color: Colors.white.withValues(alpha: 0.90),
+          fontSize: 10.5,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.6,
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }
@@ -1943,195 +1852,108 @@ class _StudentDashboardState extends State<StudentDashboard> {
       borderRadius: 22,
       padding: EdgeInsets.zero,
       gradientColors: [
-        const Color(0xFF0F172A).withValues(alpha: 0.80),
-        const Color(0xFF0A1020).withValues(alpha: 0.55),
+        Colors.white.withValues(alpha: 0.10),
+        Colors.white.withValues(alpha: 0.03),
       ],
       border: Border.all(
-        color: const Color(0xFF38BDF8).withValues(alpha: 0.25),
-        width: 1.2,
+        color: Colors.white.withValues(alpha: 0.20),
+        width: 1.0,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // TOP HEADER: Student Profile Info (Clickable -> StudentProfileScreen)
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const StudentProfileScreen(),
-                  ),
-                );
-              },
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(22),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const StudentProfileScreen(),
+              ),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: const Color(0xFF38BDF8).withValues(alpha: 0.45),
-                              width: 1.5,
-                            ),
-                          ),
-                          child: _buildStudentAvatar(),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                studentName.isNotEmpty ? studentName : 'Student',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: -0.3,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 5),
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF38BDF8).withValues(alpha: 0.14),
-                                      borderRadius: BorderRadius.circular(6),
-                                      border: Border.all(
-                                        color: const Color(0xFF38BDF8).withValues(alpha: 0.35),
-                                        width: 1,
-                                      ),
-                                    ),
-                                    child: Text(
-                                      (widget.studentId ?? HitamAuthService().activeUserId ?? '').toUpperCase(),
-                                      style: const TextStyle(
-                                        color: Color(0xFF7DD3FC),
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w700,
-                                        letterSpacing: 0.6,
-                                      ),
-                                    ),
-                                  ),
-                                  if (department.isNotEmpty) ...[
-                                    const SizedBox(width: 8),
-                                    Flexible(
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white.withValues(alpha: 0.08),
-                                          borderRadius: BorderRadius.circular(6),
-                                          border: Border.all(
-                                            color: Colors.white.withValues(alpha: 0.14),
-                                            width: 1,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          department,
-                                          style: const TextStyle(
-                                            color: Color(0xFFE2E8F0),
-                                            fontSize: 11.5,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.08),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.12),
-                            ),
-                          ),
-                          child: Icon(
-                            Icons.chevron_right_rounded,
-                            color: Colors.white.withValues(alpha: 0.8),
-                            size: 18,
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (year.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.14),
-                            width: 1,
-                          ),
-                        ),
-                        child: Text(
-                          year,
-                          style: const TextStyle(
-                            color: Color(0xFFCBD5E1),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                          ),
+                    Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.35),
+                          width: 1.2,
                         ),
                       ),
-                    ],
+                      child: _buildStudentAvatar(),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            studentName.isNotEmpty ? studentName : 'Student',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: -0.3,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 5),
+                          Row(
+                            children: [
+                              _buildCapsulePill(
+                                (widget.studentId ?? HitamAuthService().activeUserId ?? '').toUpperCase(),
+                              ),
+                              if (department.isNotEmpty) ...[
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: _buildCapsulePill(department),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.08),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.16),
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        color: Colors.white.withValues(alpha: 0.85),
+                        size: 11,
+                      ),
+                    ),
                   ],
                 ),
-              ),
+                if (year.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  _buildCapsulePill(year),
+                ],
+              ],
             ),
           ),
-
-          // NEON HORIZON DIVIDER
-          Container(
-            height: 1,
-            color: Colors.white.withValues(alpha: 0.08),
-          ),
-
-          // BOTTOM STAGE: Autonomous Pixel Run Game (Originkit)
-          const PixelRunGameWidget(
-            height: 112,
-            background: Color(0xFF080D18),
-            ink: Colors.white,
-            runnerColor: Color(0xFF38BDF8),
-            startSpeed: 420,
-            maxSpeed: 980,
-            gravity: 4780,
-            jump: 1480,
-            showHud: true,
-            attract: true,
-          ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildAttendanceBentoCard(BuildContext context) {
     final rep = HitamScraperService().latestAttendanceReport ?? widget.initialReport;
-    final badgeColor = attendance >= 75
-        ? const Color(0xFF10B981)
-        : (attendance >= 65 ? const Color(0xFFF59E0B) : const Color(0xFFEF4444));
-
-    final statusText = attendance >= 75
-        ? 'Safe Zone (≥75%)'
-        : (attendance >= 65 ? 'Shortage Warning' : 'Critical Shortage');
 
     return _buildGlassContainer(
       borderRadius: 22,
@@ -2155,60 +1977,16 @@ class _StudentDashboardState extends State<StudentDashboard> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Row(
-                  children: [
-                    _buildFrostedIconBadge(
-                      icon: Icons.pie_chart_rounded,
-                      accentColor: badgeColor,
-                      size: 38,
-                      iconSize: 20,
-                    ),
-                    const SizedBox(width: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Attendance',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                            letterSpacing: -0.2,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Row(
-                          children: [
-                            Container(
-                              width: 6,
-                              height: 6,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: badgeColor,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: badgeColor.withValues(alpha: 0.8),
-                                    blurRadius: 4,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 5),
-                            Text(
-                              statusText,
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w600,
-                                color: badgeColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ],
+                const Text(
+                  'Attendance',
+                  style: TextStyle(
+                    fontSize: 16.5,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    letterSpacing: -0.2,
+                  ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 Text(
                   rep != null
                       ? '${rep.totalAttended} attended of ${rep.totalHeld} classes'
@@ -2225,15 +2003,15 @@ class _StudentDashboardState extends State<StudentDashboard> {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(6),
+                        color: Colors.white.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.12),
+                          color: Colors.white.withValues(alpha: 0.20),
                         ),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
@@ -2241,14 +2019,14 @@ class _StudentDashboardState extends State<StudentDashboard> {
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFFCBD5E1),
+                              color: Colors.white.withValues(alpha: 0.9),
                             ),
                           ),
-                          SizedBox(width: 4),
+                          const SizedBox(width: 4),
                           Icon(
                             Icons.arrow_forward_ios_rounded,
                             size: 9,
-                            color: Color(0xFF94A3B8),
+                            color: Colors.white.withValues(alpha: 0.7),
                           ),
                         ],
                       ),
@@ -2272,10 +2050,10 @@ class _StudentDashboardState extends State<StudentDashboard> {
                   height: 72,
                   child: CircularProgressIndicator(
                     value: (attendance / 100).clamp(0.0, 1.0),
-                    strokeWidth: 6.5,
+                    strokeWidth: 6.0,
                     strokeCap: StrokeCap.round,
                     backgroundColor: Colors.white.withValues(alpha: 0.08),
-                    color: badgeColor,
+                    color: Colors.white,
                   ),
                 ),
                 Text(
@@ -2299,15 +2077,11 @@ class _StudentDashboardState extends State<StudentDashboard> {
     required BuildContext context,
     required String title,
     required String subtitle,
-    required IconData icon,
-    required Color accentColor,
-    String? statusBadge,
-    Color? badgeColor,
     required VoidCallback onTap,
   }) {
     return _buildGlassContainer(
       borderRadius: 20,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       onTap: onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2316,11 +2090,14 @@ class _StudentDashboardState extends State<StudentDashboard> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildFrostedIconBadge(
-                icon: icon,
-                accentColor: accentColor,
-                size: 38,
-                iconSize: 20,
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                  letterSpacing: -0.2,
+                ),
               ),
               Container(
                 width: 24,
@@ -2329,52 +2106,18 @@ class _StudentDashboardState extends State<StudentDashboard> {
                   shape: BoxShape.circle,
                   color: Colors.white.withValues(alpha: 0.06),
                   border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.1),
+                    color: Colors.white.withValues(alpha: 0.15),
                   ),
                 ),
                 child: Icon(
                   Icons.arrow_forward_ios_rounded,
                   size: 10,
-                  color: Colors.white.withValues(alpha: 0.6),
+                  color: Colors.white.withValues(alpha: 0.7),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 14.5,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-              letterSpacing: -0.2,
-            ),
-          ),
-          const SizedBox(height: 5),
-          if (statusBadge != null) ...[
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-              decoration: BoxDecoration(
-                color: (badgeColor ?? accentColor).withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(
-                  color: (badgeColor ?? accentColor).withValues(alpha: 0.3),
-                  width: 1,
-                ),
-              ),
-              child: Text(
-                statusBadge,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: badgeColor ?? accentColor,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(height: 5),
-          ],
+          const SizedBox(height: 8),
           Text(
             subtitle,
             style: const TextStyle(
@@ -2391,22 +2134,10 @@ class _StudentDashboardState extends State<StudentDashboard> {
   }
 
   Widget _buildBacklogsBentoCard(BuildContext context) {
-    final backlogs = HitamScraperService().latestBacklogs;
-    final count = backlogs?.totalCount ?? 0;
-    final isClear = backlogs != null && count == 0;
-    final accent = isClear ? const Color(0xFF10B981) : const Color(0xFFF43F5E);
-    final badge = backlogs != null
-        ? (isClear ? '0 • Clear' : '$count Active')
-        : 'Exam History';
-
     return _buildBentoCard(
       context: context,
       title: 'Backlogs',
       subtitle: 'Arrears & history schedule',
-      icon: isClear ? Icons.task_alt_rounded : Icons.history_edu_rounded,
-      accentColor: accent,
-      statusBadge: badge,
-      badgeColor: accent,
       onTap: () {
         Navigator.push(
           context,
@@ -2419,22 +2150,10 @@ class _StudentDashboardState extends State<StudentDashboard> {
   }
 
   Widget _buildFeeBentoCard(BuildContext context) {
-    final fee = HitamScraperService().latestFeeReport;
-    final totalDue = fee?.totalDue ?? 0.0;
-    final isClear = fee != null && totalDue <= 0;
-    final accent = isClear ? const Color(0xFF059669) : const Color(0xFFF59E0B);
-    final badge = fee != null
-        ? (isClear ? '₹0 • Cleared' : '₹${totalDue.toStringAsFixed(0)} Due')
-        : 'Ledger Dues';
-
     return _buildBentoCard(
       context: context,
       title: 'Fee Details',
       subtitle: 'Academic ledger & dues receipts',
-      icon: Icons.account_balance_wallet_rounded,
-      accentColor: const Color(0xFF06B6D4),
-      statusBadge: badge,
-      badgeColor: accent,
       onTap: () {
         Navigator.push(
           context,
@@ -2451,10 +2170,6 @@ class _StudentDashboardState extends State<StudentDashboard> {
       context: context,
       title: 'Time table',
       subtitle: 'Day-wise period timings & faculty',
-      icon: Icons.schedule_rounded,
-      accentColor: const Color(0xFF38BDF8),
-      statusBadge: 'Schedule',
-      badgeColor: const Color(0xFF38BDF8),
       onTap: () {
         Navigator.push(
           context,
@@ -2471,10 +2186,6 @@ class _StudentDashboardState extends State<StudentDashboard> {
       context: context,
       title: 'Marks',
       subtitle: 'CIE internals & semester SGPA/CGPA',
-      icon: Icons.bar_chart_rounded,
-      accentColor: const Color(0xFFA855F7),
-      statusBadge: 'CIE & SGPA',
-      badgeColor: const Color(0xFFA855F7),
       onTap: () {
         Navigator.push(
           context,
@@ -2491,10 +2202,6 @@ class _StudentDashboardState extends State<StudentDashboard> {
       context: context,
       title: 'Profile',
       subtitle: 'Personal bio-data & academic info',
-      icon: Icons.badge_rounded,
-      accentColor: const Color(0xFF3B82F6),
-      statusBadge: 'Student Bio',
-      badgeColor: const Color(0xFF3B82F6),
       onTap: () {
         Navigator.push(
           context,
@@ -2511,10 +2218,6 @@ class _StudentDashboardState extends State<StudentDashboard> {
       context: context,
       title: 'Register',
       subtitle: 'Day-by-day attendance & session log',
-      icon: Icons.menu_book_rounded,
-      accentColor: const Color(0xFFF59E0B),
-      statusBadge: 'Daily Register',
-      badgeColor: const Color(0xFFF59E0B),
       onTap: () {
         Navigator.push(
           context,
@@ -2527,11 +2230,6 @@ class _StudentDashboardState extends State<StudentDashboard> {
   }
 
   Widget _buildSpfBentoCard(BuildContext context) {
-    final spfBands = HitamScraperService().latestSpfBands;
-    final bandText = (spfBands != null && spfBands.isNotEmpty)
-        ? spfBands.last.band.replaceAll(RegExp(r'band\s*', caseSensitive: false), '').trim()
-        : null;
-
     return _buildGlassContainer(
       borderRadius: 22,
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
@@ -2545,13 +2243,6 @@ class _StudentDashboardState extends State<StudentDashboard> {
       },
       child: Row(
         children: [
-          _buildFrostedIconBadge(
-            icon: Icons.military_tech_rounded,
-            accentColor: const Color(0xFF818CF8),
-            size: 42,
-            iconSize: 22,
-          ),
-          const SizedBox(width: 14),
           const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -2579,28 +2270,6 @@ class _StudentDashboardState extends State<StudentDashboard> {
               ],
             ),
           ),
-          if (bandText != null) ...[
-            const SizedBox(width: 10),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: const Color(0xFF6366F1).withValues(alpha: 0.18),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: const Color(0xFF818CF8).withValues(alpha: 0.35),
-                  width: 1,
-                ),
-              ),
-              child: Text(
-                'Band $bandText',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFFA5B4FC),
-                ),
-              ),
-            ),
-          ],
           const SizedBox(width: 10),
           Container(
             width: 26,
@@ -2609,7 +2278,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
               shape: BoxShape.circle,
               color: Colors.white.withValues(alpha: 0.06),
               border: Border.all(
-                color: Colors.white.withValues(alpha: 0.1),
+                color: Colors.white.withValues(alpha: 0.15),
               ),
             ),
             child: const Icon(
@@ -2623,6 +2292,12 @@ class _StudentDashboardState extends State<StudentDashboard> {
     );
   }
 }
+
+// ============================================================
+// LUMINOUS GRADIENT & GEOMETRIC PAINTERS (FROSTED GLASS AESTHETIC)
+// ============================================================
+
+// LuminousSilkAuroraPainter is exported via widgets/glass_components.dart
 
 // ============================================================
 // ATTENDANCE DETAILS SCREEN
@@ -3359,205 +3034,140 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
 
   Widget _buildStudentHeroCard() {
     final bool isEligible = overallAttendance >= 75;
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final bool isNarrow = constraints.maxWidth < 600;
+    return AnimatedRays(
+      borderRadius: 20,
+      backgroundColor: const Color(0xFF070B14),
+      border: Border.all(
+        color: Colors.white.withValues(alpha: 0.18),
+        width: 1.0,
+      ),
+      padding: const EdgeInsets.all(18.0),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final bool isNarrow = constraints.maxWidth < 600;
 
-            final studentInfo = Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+          final studentInfo = Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Builder(
+                builder: (context) {
+                  final activeRoll = studentId.toUpperCase().trim();
+                  final resolvedPhoto =
+                      HitamScraperService().getProfileFor(activeRoll)?.photoUrl;
+                  final double r = isNarrow ? 26 : 30;
+                  return StudentPhotoWidget(
+                    photoUrl: resolvedPhoto,
+                    name: studentName,
+                    size: r * 2,
+                    border: Border.all(
+                      color: const Color(0xFF34D399).withValues(alpha: 0.6),
+                      width: 2,
+                    ),
+                    backgroundColor: Colors.white.withValues(alpha: 0.08),
+                    enableZoom: true,
+                  );
+                },
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      studentName,
+                      style: TextStyle(
+                        fontSize: isNarrow ? 18 : 21,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: [
+                        GlassCapsulePill(label: 'Roll: $studentId', textColor: Colors.white),
+                        GlassCapsulePill(label: department, textColor: Colors.white),
+                        if (semester.isNotEmpty) GlassCapsulePill(label: semester, textColor: Colors.white),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+
+          final statusBadge = GlassStatusPill(
+            text: isEligible
+                ? 'Exam Eligible (${overallAttendance.toStringAsFixed(2)}%)'
+                : 'Shortage (${overallAttendance.toStringAsFixed(2)}%)',
+            status: isEligible ? GlassPillStatus.safe : GlassPillStatus.critical,
+            icon: isEligible ? Icons.verified_rounded : Icons.warning_amber_rounded,
+            textColor: Colors.white,
+          );
+
+          if (isNarrow) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Builder(
-                  builder: (context) {
-                    final activeRoll = studentId.toUpperCase().trim();
-                    final resolvedPhoto =
-                        HitamScraperService().getProfileFor(activeRoll)?.photoUrl;
-                    final double r = isNarrow ? 26 : 30;
-                    return StudentPhotoWidget(
-                      photoUrl: resolvedPhoto,
-                      name: studentName,
-                      size: r * 2,
-                      border: Border.all(color: Colors.blue.shade200, width: 2),
-                      backgroundColor: Colors.blue.shade50,
-                      enableZoom: true,
-                    );
-                  },
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        studentName,
-                        style: TextStyle(
-                          fontSize: isNarrow ? 19 : 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 6,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: Colors.grey.shade300),
-                            ),
-                            child: Text(
-                              'Roll: $studentId',
-                              style: TextStyle(fontSize: 12, color: Colors.grey.shade800, fontWeight: FontWeight.w500),
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.blue.shade50,
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: Colors.blue.shade200),
-                            ),
-                            child: Text(
-                              department,
-                              style: TextStyle(fontSize: 12, color: Colors.blue.shade800, fontWeight: FontWeight.w500),
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.purple.shade50,
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: Colors.purple.shade200),
-                            ),
-                            child: Text(
-                              semester,
-                              style: TextStyle(fontSize: 12, color: Colors.purple.shade800, fontWeight: FontWeight.w500),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
+                studentInfo,
+                const SizedBox(height: 14),
+                statusBadge,
               ],
             );
-
-            final statusBadge = Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: isEligible ? Colors.green.shade50 : Colors.red.shade50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: isEligible ? Colors.green.shade300 : Colors.red.shade300),
-              ),
-              child: Row(
-                mainAxisSize: isNarrow ? MainAxisSize.max : MainAxisSize.min,
-                mainAxisAlignment: isNarrow ? MainAxisAlignment.center : MainAxisAlignment.start,
-                children: [
-                  Icon(
-                    isEligible ? Icons.verified : Icons.warning_amber_rounded,
-                    size: 18,
-                    color: isEligible ? Colors.green.shade800 : Colors.red.shade800,
-                  ),
-                  const SizedBox(width: 6),
-                  Flexible(
-                    child: Text(
-                      isEligible
-                          ? 'Exam Eligible (${overallAttendance.toStringAsFixed(2)}% Aggregate)'
-                          : 'Shortage (${overallAttendance.toStringAsFixed(2)}%)',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: isEligible ? Colors.green.shade900 : Colors.red.shade900,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
+          } else {
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(child: studentInfo),
+                const SizedBox(width: 16),
+                statusBadge,
+              ],
             );
-
-            if (isNarrow) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  studentInfo,
-                  const SizedBox(height: 14),
-                  statusBadge,
-                ],
-              );
-            } else {
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(child: studentInfo),
-                  const SizedBox(width: 16),
-                  statusBadge,
-                ],
-              );
-            }
-          },
-        ),
+          }
+        },
       ),
     );
   }
 
   Widget _buildKpiCard({
-    required IconData icon,
-    required Color color,
     required String title,
     required String value,
     required String subtitle,
   }) {
     return Expanded(
-      child: Card(
-        elevation: 1,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, color: color, size: 24),
+      child: GlassContainer(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 12.5,
+                color: Colors.white.withValues(alpha: 0.65),
+                fontWeight: FontWeight.w500,
               ),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.grey.shade600,
-                  fontWeight: FontWeight.w500,
-                ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
               ),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: const TextStyle(
+                fontSize: 11,
+                color: Color(0xFF6EE7B7),
+                fontWeight: FontWeight.w500,
               ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.grey.shade500,
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -3571,32 +3181,24 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
           return Row(
             children: [
               _buildKpiCard(
-                icon: Icons.donut_large,
-                color: Colors.blue.shade700,
                 title: 'Overall Attendance',
                 value: '${overallAttendance.toStringAsFixed(2)}%',
                 subtitle: '+10% above university cutoff',
               ),
               const SizedBox(width: 12),
               _buildKpiCard(
-                icon: Icons.class_outlined,
-                color: Colors.indigo.shade700,
                 title: 'Total Lectures Held',
                 value: '$totalClasses Classes',
-                subtitle: 'Across 4 Major Subjects',
+                subtitle: 'Across Major Subjects',
               ),
               const SizedBox(width: 12),
               _buildKpiCard(
-                icon: Icons.check_circle_outline,
-                color: Colors.green.shade700,
                 title: 'Lectures Attended',
                 value: '$attendedClasses Attended',
                 subtitle: '${totalClasses - attendedClasses} missed lectures',
               ),
               const SizedBox(width: 12),
               _buildKpiCard(
-                icon: Icons.shield_outlined,
-                color: Colors.orange.shade800,
                 title: 'Attendance Buffer',
                 value: '$marginClasses Classes',
                 subtitle: 'Can miss up to $marginClasses & stay ≥75%',
@@ -3609,16 +3211,12 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
               Row(
                 children: [
                   _buildKpiCard(
-                    icon: Icons.donut_large,
-                    color: Colors.blue.shade700,
                     title: 'Overall Attendance',
                     value: '${overallAttendance.toStringAsFixed(2)}%',
                     subtitle: 'Safe Zone',
                   ),
                   const SizedBox(width: 12),
                   _buildKpiCard(
-                    icon: Icons.class_outlined,
-                    color: Colors.indigo.shade700,
                     title: 'Total Classes',
                     value: '$totalClasses',
                     subtitle: 'Held',
@@ -3629,16 +3227,12 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
               Row(
                 children: [
                   _buildKpiCard(
-                    icon: Icons.check_circle_outline,
-                    color: Colors.green.shade700,
                     title: 'Attended',
                     value: '$attendedClasses',
                     subtitle: 'Recorded',
                   ),
                   const SizedBox(width: 12),
                   _buildKpiCard(
-                    icon: Icons.shield_outlined,
-                    color: Colors.orange.shade800,
                     title: 'Buffer Margin',
                     value: '$marginClasses Classes',
                     subtitle: 'Above 75%',
@@ -3654,79 +3248,79 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
 
   Widget _buildOverallProgressCard() {
     final double ratio = (overallAttendance / 100).clamp(0.0, 1.0);
-    return Card(
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      child: Padding(
-        padding: const EdgeInsets.all(18.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.assessment_outlined, size: 20, color: Colors.blue.shade700),
-                const SizedBox(width: 8),
-                const Expanded(
-                  child: Text(
-                    'Aggregate Attendance vs. University Criteria',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  '${overallAttendance.toStringAsFixed(2)}% (Target: 75%)',
+    return GlassContainer(
+      padding: const EdgeInsets.all(18.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Aggregate Attendance vs. University Criteria',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: overallAttendance >= 75 ? Colors.green.shade800 : Colors.red.shade800,
-                    fontSize: 14,
+                    fontSize: 14.5,
+                    color: Colors.white.withValues(alpha: 0.95),
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: LinearProgressIndicator(
-                value: ratio,
-                minHeight: 12,
-                backgroundColor: Colors.grey.shade200,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  overallAttendance >= 75 ? Colors.green.shade600 : Colors.orange.shade600,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '${overallAttendance.toStringAsFixed(2)}% (Target: 75%)',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: overallAttendance >= 75
+                      ? const Color(0xFF6EE7B7)
+                      : const Color(0xFFFCA5A5),
+                  fontSize: 13.5,
                 ),
               ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              value: ratio,
+              minHeight: 10,
+              backgroundColor: Colors.white.withValues(alpha: 0.10),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                overallAttendance >= 75
+                    ? const Color(0xFF10B981)
+                    : const Color(0xFFF59E0B),
+              ),
             ),
-            const SizedBox(height: 10),
-            Wrap(
-              alignment: WrapAlignment.spaceBetween,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: 8,
-              runSpacing: 4,
-              children: [
-                Text(
-                  'Minimum 75% required for regular semester exam eligibility',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            runSpacing: 4,
+            children: [
+              Text(
+                'Minimum 75% required for regular semester exam eligibility',
+                style: TextStyle(
+                  fontSize: 11.5,
+                  color: Colors.white.withValues(alpha: 0.60),
                 ),
-                Text(
-                  '+10% Safe Margin',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.green.shade800),
+              ),
+              const Text(
+                '+10% Safe Margin',
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF6EE7B7),
                 ),
-              ],
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
-  }
-
-  IconData _getSubjectIcon(String subject) {
-    final lower = subject.toLowerCase();
-    if (lower.contains('network')) return Icons.devices;
-    if (lower.contains('neural') || lower.contains('learn') || lower.contains('ai')) return Icons.psychology;
-    if (lower.contains('data')) return Icons.storage;
-    if (lower.contains('compiler') || lower.contains('software')) return Icons.code;
-    return Icons.menu_book;
   }
 
   Widget _buildSubjectCard(Map<String, dynamic> item) {
@@ -3744,98 +3338,76 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
         ? ((attended - (0.75 * total)) / 0.75).floor().clamp(0, 99)
         : (((0.75 * total) - attended) / 0.25).ceil().clamp(1, 99);
 
-    return Card(
-      elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      child: Padding(
-        padding: const EdgeInsets.all(18.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: isSafe ? Colors.blue.shade50 : Colors.orange.shade50,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(
-                    _getSubjectIcon(subject),
-                    color: isSafe ? Colors.blue.shade700 : Colors.orange.shade800,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        subject,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+    return GlassContainer(
+      padding: const EdgeInsets.all(18.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      subject,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                        color: Colors.white,
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '$code • $faculty',
-                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: isSafe ? Colors.green.shade100 : Colors.orange.shade100,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '${percentage.toStringAsFixed(2)}%',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: isSafe ? Colors.green.shade900 : Colors.orange.shade900,
                     ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: LinearProgressIndicator(
-                value: (percentage / 100).clamp(0.0, 1.0),
-                minHeight: 8,
-                backgroundColor: Colors.grey.shade200,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  isSafe ? Colors.green.shade600 : Colors.orange.shade600,
+                    const SizedBox(height: 2),
+                    Text(
+                      '$code • $faculty',
+                      style: const TextStyle(fontSize: 12, color: Colors.white70),
+                    ),
+                  ],
                 ),
               ),
+              const SizedBox(width: 12),
+              GlassStatusPill(
+                label: '${percentage.toStringAsFixed(2)}%',
+                isSuccess: isSafe,
+                isWarning: !isSafe,
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              value: (percentage / 100).clamp(0.0, 1.0),
+              minHeight: 7,
+              backgroundColor: Colors.white.withOpacity(0.08),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                isSafe ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
+              ),
             ),
-            const SizedBox(height: 12),
-            Wrap(
-              alignment: WrapAlignment.spaceBetween,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: 8,
-              runSpacing: 4,
-              children: [
-                Text(
-                  '$attended / $total classes attended  (${total - attended} missed)',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            runSpacing: 4,
+            children: [
+              Text(
+                '$attended / $total classes attended  (${total - attended} missed)',
+                style: const TextStyle(fontSize: 12, color: Colors.white60),
+              ),
+              Text(
+                isSafe ? 'Can miss $bufferOrNeeded more' : 'Must attend next $bufferOrNeeded',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: isSafe ? const Color(0xFF34D399) : const Color(0xFFFBBF24),
                 ),
-                Text(
-                  isSafe ? 'Can miss $bufferOrNeeded more' : 'Must attend next $bufferOrNeeded',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: isSafe ? Colors.green.shade800 : Colors.orange.shade900,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -3847,31 +3419,13 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.menu_book_outlined, color: Colors.blue.shade700),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Subject-wise Attendance Breakdown',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '${subjects.length} Registered Courses',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blue.shade700),
-                  ),
-                ),
-              ],
+            const Text(
+              'Subject-wise Attendance Breakdown',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
             ),
             const SizedBox(height: 14),
             if (isDesktop) ...[
@@ -3904,75 +3458,102 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
   }
 
   Widget _buildActionBar() {
-    final marginBtn = SizedBox(
-      height: 48,
-      child: OutlinedButton.icon(
-        onPressed: () => _showMarginCalculator(context),
-        icon: const Icon(Icons.calculate_outlined),
-        label: const FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text('Margin Calc'),
+    Widget buildBtn({
+      required VoidCallback onPressed,
+      required IconData icon,
+      required String label,
+      required Color accentColor,
+    }) {
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            height: 48,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.06),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withOpacity(0.14)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 18, color: accentColor),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    label,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
-        style: OutlinedButton.styleFrom(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      ),
-    );
-
-    final transcriptBtn = SizedBox(
-      height: 48,
-      child: OutlinedButton.icon(
-        onPressed: () => _showTranscriptDialog(context),
-        icon: const Icon(Icons.receipt_long),
-        label: const FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text('Transcript'),
-        ),
-        style: OutlinedButton.styleFrom(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      ),
-    );
+      );
+    }
 
     return Row(
       children: [
-        Expanded(child: marginBtn),
+        Expanded(
+          child: buildBtn(
+            onPressed: () => _showMarginCalculator(context),
+            icon: Icons.calculate_outlined,
+            label: 'Margin Calc',
+            accentColor: const Color(0xFF38BDF8),
+          ),
+        ),
         const SizedBox(width: 12),
-        Expanded(child: transcriptBtn),
+        Expanded(
+          child: buildBtn(
+            onPressed: () => _showTranscriptDialog(context),
+            icon: Icons.receipt_long,
+            label: 'Transcript',
+            accentColor: const Color(0xFF34D399),
+          ),
+        ),
       ],
     );
   }
 
   Widget _buildRegulationsCard() {
-    return Container(
+    return GlassContainer(
+      color: const Color(0xFF0284C7).withOpacity(0.08),
+      borderColor: const Color(0xFF38BDF8).withOpacity(0.25),
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.blue.shade50.withOpacity(0.4),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.blue.shade100),
-      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.info_outline, size: 26, color: Colors.blue.shade700),
-          const SizedBox(width: 14),
+        children: const [
+          Icon(Icons.info_outline, size: 24, color: Color(0xFF38BDF8)),
+          SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'HITAM Academic Regulations & Attendance Policy',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: Colors.white,
+                  ),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: 4),
                 Text(
                   '• Regular Eligibility: ≥ 75% aggregate attendance is mandatory to appear for Semester End Examinations (SEE).\n'
                   '• Condonation Zone: 65% – 74% permitted on genuine medical grounds subject to Principal approval.\n'
                   '• Detention Zone: < 65% attendance leads to semester detention as per autonomous academic bylaws.',
                   style: TextStyle(
-                      fontSize: 12, height: 1.4, color: Colors.grey.shade700),
+                    fontSize: 12,
+                    height: 1.45,
+                    color: Colors.white70,
+                  ),
                 ),
               ],
             ),
@@ -3988,21 +3569,17 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
     final double horizontalPadding =
         screenWidth < 400 ? 14.0 : (screenWidth < 600 ? 18.0 : 24.0);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
-          child: Text('Attendance Details'),
-        ),
+    return GlassScaffold(
+      appBar: FrostedGlassAppBar(
+        title: 'Attendance Details',
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
+          FrostedAppBarAction(
+            icon: Icons.refresh,
             tooltip: 'Refresh',
             onPressed: fetchAttendanceData,
           ),
-          IconButton(
-            icon: const Icon(Icons.receipt_long),
+          FrostedAppBarAction(
+            icon: Icons.receipt_long,
             tooltip: 'Official Transcript',
             onPressed: () => _showTranscriptDialog(context),
           ),
@@ -4011,38 +3588,53 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
       ),
       body: isLoading
           ? const Center(
-              child: CircularProgressIndicator(),
+              child: CircularProgressIndicator(color: Color(0xFF10B981)),
             )
           : errorMessage.isNotEmpty
               ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.error_outline,
-                        size: 60,
-                        color: Colors.red,
-                      ),
-                      const SizedBox(height: 15),
-                      Text(
-                        errorMessage,
-                        style: const TextStyle(fontSize: 18),
-                      ),
-                      const SizedBox(height: 15),
-                      ElevatedButton.icon(
-                        onPressed: fetchAttendanceData,
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Retry'),
-                      ),
-                    ],
+                  child: GlassContainer(
+                    padding: const EdgeInsets.all(24),
+                    margin: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.error_outline,
+                          size: 54,
+                          color: Color(0xFFF87171),
+                        ),
+                        const SizedBox(height: 14),
+                        Text(
+                          errorMessage,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 16, color: Colors.white),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF10B981),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          onPressed: fetchAttendanceData,
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Retry'),
+                        ),
+                      ],
+                    ),
                   ),
                 )
               : Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 1080),
                     child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
                       padding: EdgeInsets.symmetric(
-                          horizontal: horizontalPadding, vertical: 20),
+                        horizontal: horizontalPadding,
+                        vertical: 20,
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -4066,7 +3658,7 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
                           _buildSubjectGrid(),
                           const SizedBox(height: 28),
                           _buildRegulationsCard(),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 24),
                         ],
                       ),
                     ),
@@ -4124,9 +3716,29 @@ class _NotificationBellIconState extends State<NotificationBellIcon> {
           .timeout(const Duration(seconds: 4));
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
+        final list = (data['notifications'] as List?) ?? [];
+        final realList = list.where((n) {
+          if (n is! Map) return false;
+          final id = (n['id'] ?? '').toString();
+          if (RegExp(r'^NOTIF_[A-Z_]+_\d{3}$').hasMatch(id)) return false;
+          final title = (n['title'] ?? '').toString();
+          if (title == 'Project Milestone Review & Code Submission' ||
+              title == 'Campus Placement Registration Open') {
+            return false;
+          }
+          return true;
+        }).toList();
+        int count = realList.where((n) => n['isRead'] != true && n['is_read'] != true).length;
+        if (count == 0 && (effectiveRole == 'student' || effectiveRole == 'parent')) {
+          final prefs = await SharedPreferences.getInstance();
+          final pct = prefs.getDouble('hitam_student_percentage');
+          if (pct != null && pct < 75.0) {
+            count = 1;
+          }
+        }
         if (mounted) {
           setState(() {
-            unreadCount = data['unreadCount'] ?? 0;
+            unreadCount = count;
           });
         }
       }
@@ -4150,11 +3762,16 @@ class _NotificationBellIconState extends State<NotificationBellIcon> {
         alignment: Alignment.center,
         children: [
           IconButton(
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            alignment: Alignment.center,
+            iconSize: 19,
             tooltip: '$effectiveRole Notifications',
             icon: Icon(
               unreadCount > 0
                   ? Icons.notifications_active_rounded
                   : Icons.notifications_outlined,
+              size: 19,
               color: unreadCount > 0
                   ? (widget.iconColor != null ? const Color(0xFF60A5FA) : const Color(0xFF2563EB))
                   : (widget.iconColor ?? const Color(0xFF475569)),
@@ -4173,23 +3790,23 @@ class _NotificationBellIconState extends State<NotificationBellIcon> {
           ),
           if (unreadCount > 0)
             Positioned(
-              top: 6,
-              right: 6,
+              top: -3,
+              right: -3,
               child: Container(
-                padding: const EdgeInsets.all(4),
+                padding: const EdgeInsets.all(3),
                 decoration: BoxDecoration(
                   color: const Color(0xFFEF4444),
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white, width: 1.5),
                 ),
                 constraints:
-                    const BoxConstraints(minWidth: 18, minHeight: 18),
+                    const BoxConstraints(minWidth: 16, minHeight: 16),
                 child: Center(
                   child: Text(
                     unreadCount > 9 ? '9+' : '$unreadCount',
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 9,
+                      fontSize: 8.5,
                       fontWeight: FontWeight.bold,
                       height: 1,
                     ),
@@ -4221,113 +3838,37 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   late String activeRole;
   List<Map<String, dynamic>> notifications = [];
 
-  final List<Map<String, dynamic>> _fallbackNotifications = [
-    {
-      'id': 'NOTIF_STU_001',
-      'userId': '',
-      'targetRole': 'student',
-      'title': 'Daily Attendance Recorded: Present',
-      'body':
-          'Your attendance for Computer Networks was recorded as Present. Current semester aggregate: 85%.',
-      'type': 'attendance',
-      'targetScreen': 'attendance',
-      'priority': 'normal',
-      'isRead': false,
-      'createdAt':
-          DateTime.now().subtract(const Duration(minutes: 10)).toIso8601String(),
-      'timeAgo': '10 mins ago'
-    },
-    {
-      'id': 'NOTIF_STU_002',
-      'userId': '',
-      'targetRole': 'student',
-      'title': 'Assignment Due in 24 Hours',
-      'body':
-          'Perceptron Implementation in Neural Networks is due tomorrow at 11:59 PM. Please upload your code proofs.',
-      'type': 'assignment',
-      'targetScreen': 'assignments',
-      'priority': 'urgent',
-      'isRead': false,
-      'createdAt':
-          DateTime.now().subtract(const Duration(minutes: 35)).toIso8601String(),
-      'timeAgo': '35 mins ago'
-    },
-    {
-      'id': 'NOTIF_STU_003',
-      'userId': '',
-      'targetRole': 'student',
-      'title': 'Tuition Fee Due Reminder: ₹25,000',
-      'body':
-          'Second installment of odd semester tuition fee (₹25,000) is due by 30th September without penalty.',
-      'type': 'fee',
-      'targetScreen': 'fees',
-      'priority': 'high',
-      'isRead': false,
-      'createdAt':
-          DateTime.now().subtract(const Duration(hours: 2)).toIso8601String(),
-      'timeAgo': '2 hours ago'
-    },
-    {
-      'id': 'NOTIF_PAR_001',
-      'userId': 'PAR001',
-      'targetRole': 'parent',
-      'title': 'Ward Daily Attendance: Present in All Classes',
-      'body':
-          'Your ward was marked Present for all 4 lectures today. Aggregate attendance: 85%.',
-      'type': 'attendance',
-      'targetScreen': 'attendance',
-      'priority': 'normal',
-      'isRead': false,
-      'createdAt':
-          DateTime.now().subtract(const Duration(minutes: 15)).toIso8601String(),
-      'timeAgo': '15 mins ago'
-    },
-    {
-      'id': 'NOTIF_PAR_002',
-      'userId': 'PAR001',
-      'targetRole': 'parent',
-      'title': 'Fee Reminder: ₹25,000 Balance Pending',
-      'body':
-          'Tuition installment of ₹25,000 for academic year 2025-2026 is due on 30th September.',
-      'type': 'fee',
-      'targetScreen': 'fees',
-      'priority': 'urgent',
-      'isRead': false,
-      'createdAt':
-          DateTime.now().subtract(const Duration(minutes: 45)).toIso8601String(),
-      'timeAgo': '45 mins ago'
-    },
-    {
-      'id': 'NOTIF_FAC_001',
-      'userId': 'FAC001',
-      'targetRole': 'faculty',
-      'title': '35 Assignment Submissions Pending Review',
-      'body':
-          '35 students submitted "Perceptron Implementation" for Neural Networks. Grade submissions before Friday.',
-      'type': 'assignment',
-      'targetScreen': 'assignments',
-      'priority': 'urgent',
-      'isRead': false,
-      'createdAt':
-          DateTime.now().subtract(const Duration(minutes: 20)).toIso8601String(),
-      'timeAgo': '20 mins ago'
-    },
-    {
-      'id': 'NOTIF_ADM_001',
-      'userId': 'ADM001',
-      'targetRole': 'admin',
-      'title': 'Daily Tuition Fee Collection Summary',
-      'body':
-          '₹4,85,000 received today in semester fee settlements. Campus collection milestone reached 82%.',
-      'type': 'fee',
-      'targetScreen': 'fees',
-      'priority': 'high',
-      'isRead': false,
-      'createdAt':
-          DateTime.now().subtract(const Duration(minutes: 30)).toIso8601String(),
-      'timeAgo': '30 mins ago'
+  final List<Map<String, dynamic>> _fallbackNotifications = [];
+
+  bool _isDemoNotification(Map<String, dynamic> item) {
+    final id = (item['id'] ?? '').toString();
+    final title = (item['title'] ?? '').toString();
+    // Exclude mock seed IDs (e.g. NOTIF_STU_001, NOTIF_STU_PAR_001, NOTIF_ALL_001)
+    if (RegExp(r'^NOTIF_[A-Z_]+_\d{3}$').hasMatch(id)) return true;
+    if (id.startsWith('mock_') || id.startsWith('demo_')) return true;
+    // Exclude mock seed titles
+    if (title == 'Project Milestone Review & Code Submission' ||
+        title == 'Campus Placement Registration Open' ||
+        title.startsWith('Daily Attendance Recorded: Present') ||
+        title == 'Assignment Due in 24 Hours' ||
+        title.startsWith('Tuition Fee Due Reminder') ||
+        title.startsWith('Semester 6 Mid-Term Hall Tickets') ||
+        title.startsWith('Ward Daily Attendance') ||
+        title.startsWith('Fee Reminder:') ||
+        title.startsWith('Parent-Teacher Meeting') ||
+        title.startsWith('Mid-Term Progress:') ||
+        title.startsWith('35 Assignment Submissions') ||
+        title.startsWith('Daily Attendance Lock') ||
+        title.startsWith('Student Medical Leave') ||
+        title.startsWith('Department Curriculum Council') ||
+        title.startsWith('Daily Tuition Fee Collection') ||
+        title.startsWith('Staff Leave Applications') ||
+        title.startsWith('Biometric Campus Gate') ||
+        title.startsWith('Symposium Circular')) {
+      return true;
     }
-  ];
+    return false;
+  }
 
   @override
   void initState() {
@@ -4378,60 +3919,216 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     };
   }
 
+  Future<List<Map<String, dynamic>>> _generateStudentDataAlerts() async {
+    final List<Map<String, dynamic>> alerts = [];
+    if (activeRole != 'student' && activeRole != 'parent') return alerts;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final scraper = HitamScraperService();
+      StudentAttendanceReport? report = scraper.latestAttendanceReport;
+
+      final roll = NotificationService().currentUserId.isNotEmpty
+          ? NotificationService().currentUserId
+          : (prefs.getString('hitam_user_id') ?? '');
+      final studentName = prefs.getString('hitam_student_name') ?? '';
+      final cachedPct = prefs.getDouble('hitam_student_percentage');
+      final cachedHeld = prefs.getInt('hitam_student_held') ?? 0;
+      final cachedAttended = prefs.getInt('hitam_student_attended') ?? 0;
+      final cachedBranch = prefs.getString('hitam_student_branch') ?? '';
+
+      if (report == null && roll.isNotEmpty) {
+        if (cachedHeld > 0 && cachedPct != null) {
+          report = StudentAttendanceReport(
+            rollNo: roll,
+            studentName: studentName,
+            course: 'B.Tech',
+            branch: cachedBranch,
+            semester: '',
+            totalHeld: cachedHeld,
+            totalAttended: cachedAttended,
+            overallPercentage: cachedPct,
+            subjects: [],
+          );
+        }
+      }
+
+      if (report == null && roll.isNotEmpty) {
+        try {
+          report = await scraper.fetchStudentAttendanceReport(roll);
+        } catch (_) {}
+      }
+
+      if (report == null) return alerts;
+
+      final double pct = report.overallPercentage;
+      final int held = report.totalHeld;
+      final int attended = report.totalAttended;
+
+      if (held <= 0) return alerts;
+
+      if (activeRole == 'student') {
+        if (pct < 75.0) {
+          final int needed = report.classesNeeded > 0
+              ? report.classesNeeded
+              : (((0.75 * held) - attended) / 0.25).ceil().clamp(1, 999);
+
+          alerts.add({
+            'id': 'notif_shortage_${roll}_$held',
+            'userId': roll,
+            'targetRole': 'student',
+            'senderRole': 'admin',
+            'senderName': 'HITAM Academic Cell',
+            'title': '🚨 Attendance Shortage: ${pct.toStringAsFixed(1)}% (Below 75%)',
+            'body': 'Your aggregate attendance is ${pct.toStringAsFixed(1)}% ($attended / $held classes conducted), which is below the mandatory 75% cutoff.\n\n'
+                '⚠️ You must attend the next $needed consecutive class(es) without absence to restore your semester examination clearance.',
+            'type': 'attendance',
+            'targetScreen': 'attendance',
+            'priority': 'urgent',
+            'isRead': false,
+            'timeAgo': 'Active Shortage Alert',
+          });
+
+          for (var s in report.subjects) {
+            if (s.classesHeld > 0 && s.percentage < 75.0) {
+              final int subNeeded = s.classesNeeded > 0 ? s.classesNeeded : 1;
+              alerts.add({
+                'id': 'notif_sub_${s.subjectCode}_${s.classesHeld}',
+                'userId': roll,
+                'targetRole': 'student',
+                'senderRole': 'faculty',
+                'senderName': 'Faculty Department',
+                'title': '⚠️ Subject Shortage: ${s.subjectName} (${s.percentage.toStringAsFixed(1)}%)',
+                'body': 'Attendance in ${s.subjectName} is currently ${s.percentage.toStringAsFixed(1)}% (${s.classesAttended}/${s.classesHeld} classes). Attend $subNeeded consecutive lecture(s) to reach 75%.',
+                'type': 'attendance',
+                'targetScreen': 'attendance',
+                'priority': 'urgent',
+                'isRead': false,
+                'timeAgo': 'Active Term',
+              });
+            }
+          }
+        } else {
+          final int safeBunks = report.safeBunks;
+          alerts.add({
+            'id': 'notif_safe_${roll}_$held',
+            'userId': roll,
+            'targetRole': 'student',
+            'senderRole': 'admin',
+            'senderName': 'HITAM Academic Cell',
+            'title': '✅ Attendance in Good Standing: ${pct.toStringAsFixed(1)}%',
+            'body': 'You are currently in the safe zone with ${pct.toStringAsFixed(1)}% attendance ($attended/$held classes attended). '
+                '${safeBunks > 0 ? "You have $safeBunks safe classes margin remaining." : "Maintain regular attendance."}',
+            'type': 'attendance',
+            'targetScreen': 'attendance',
+            'priority': 'normal',
+            'isRead': false,
+            'timeAgo': 'Live Status',
+          });
+        }
+
+        alerts.add({
+          'id': 'notif_summary_${roll}_$held',
+          'userId': roll,
+          'targetRole': 'student',
+          'senderRole': 'faculty',
+          'senderName': 'Faculty Department',
+          'title': '📊 Attendance Record: $attended/$held Classes Attended',
+          'body': 'Overall aggregate: ${pct.toStringAsFixed(1)}% • Status: ${report.academicStatus}. Tap to view your subject-wise attendance breakdown.',
+          'type': 'attendance',
+          'targetScreen': 'attendance',
+          'priority': 'normal',
+          'isRead': false,
+          'timeAgo': 'Today',
+        });
+      } else if (activeRole == 'parent') {
+        final name = studentName.isNotEmpty ? studentName : roll;
+        if (pct < 75.0) {
+          alerts.add({
+            'id': 'notif_parent_shortage_${roll}_$held',
+            'userId': roll,
+            'targetRole': 'parent',
+            'senderRole': 'admin',
+            'senderName': 'HITAM Administration',
+            'title': '🚨 Ward Attendance Shortage Alert: ${pct.toStringAsFixed(1)}% (Below 75%)',
+            'body': 'Your ward ($name) currently has an attendance of ${pct.toStringAsFixed(1)}% ($attended/$held classes), which is below the mandatory 75% cutoff. Please advise your ward to attend all upcoming classes.',
+            'type': 'attendance',
+            'targetScreen': 'attendance',
+            'priority': 'urgent',
+            'isRead': false,
+            'timeAgo': 'Action Required',
+          });
+        } else {
+          alerts.add({
+            'id': 'notif_parent_safe_${roll}_$held',
+            'userId': roll,
+            'targetRole': 'parent',
+            'senderRole': 'admin',
+            'senderName': 'HITAM Administration',
+            'title': '✅ Ward Attendance in Good Standing: ${pct.toStringAsFixed(1)}%',
+            'body': 'Your ward ($name) has an aggregate attendance of ${pct.toStringAsFixed(1)}% ($attended/$held classes) and is eligible for semester end examinations.',
+            'type': 'attendance',
+            'targetScreen': 'attendance',
+            'priority': 'normal',
+            'isRead': false,
+            'timeAgo': 'Live Status',
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error generating student data alerts: $e');
+    }
+
+    return alerts;
+  }
+
   Future<void> fetchNotifications() async {
     setState(() {
       isLoading = true;
     });
 
+    final List<Map<String, dynamic>> combined = [];
+
     try {
       final res = await http
           .get(Uri.parse(
               '${ApiConfig.baseUrl}/api/notifications?role=$activeRole&userId=${NotificationService().currentUserId}'))
-          .timeout(const Duration(seconds: 5));
+          .timeout(const Duration(seconds: 4));
 
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         final list = data['notifications'];
         if (list is List && list.isNotEmpty) {
-          final List<Map<String, dynamic>> parsed = [];
           for (var item in list) {
             final norm = _normalizeNotification(item);
-            if (norm.isNotEmpty) parsed.add(norm);
+            if (norm.isNotEmpty && !_isDemoNotification(norm)) {
+              final tRole = (norm['targetRole'] ?? 'all').toString().toLowerCase();
+              final bool matchesActiveRole = tRole == 'all' ||
+                  tRole == activeRole ||
+                  ((tRole == 'students_parents' || tRole == 'students_and_parents') &&
+                      (activeRole == 'student' || activeRole == 'parent'));
+              if (matchesActiveRole) {
+                combined.add(norm);
+              }
+            }
           }
-          if (mounted) {
-            setState(() {
-              notifications = parsed;
-              isLoading = false;
-            });
-          }
-          return;
         }
       }
+    } catch (_) {}
 
-      // Filter fallback based on active role
-      final filteredFallback = _fallbackNotifications.where((n) {
-        final r = (n['targetRole'] ?? 'all').toString().toLowerCase();
-        return r == 'all' || r == activeRole;
-      }).toList();
-
-      if (mounted) {
-        setState(() {
-          notifications = filteredFallback;
-          isLoading = false;
-        });
+    // Synthesize real-time alerts from individual student data
+    final dynamicAlerts = await _generateStudentDataAlerts();
+    for (var d in dynamicAlerts) {
+      if (!combined.any((n) => n['id'] == d['id'] || n['title'] == d['title'])) {
+        combined.add(d);
       }
-    } catch (_) {
-      final filteredFallback = _fallbackNotifications.where((n) {
-        final r = (n['targetRole'] ?? 'all').toString().toLowerCase();
-        return r == 'all' || r == activeRole;
-      }).toList();
+    }
 
-      if (mounted) {
-        setState(() {
-          notifications = filteredFallback;
-          isLoading = false;
-        });
-      }
+    if (mounted) {
+      setState(() {
+        notifications = combined;
+        isLoading = false;
+      });
     }
   }
 
@@ -4473,86 +4170,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         }),
       );
     } catch (_) {}
-  }
-
-  void _triggerBackgroundSimulation() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            const Icon(Icons.alarm_on_rounded, color: Color(0xFF2563EB)),
-            const SizedBox(width: 8),
-            Text('Simulate 5s Background Push ($activeRole)',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'This simulates a real-time $activeRole notification delivered outside the app in 5 seconds.',
-              style: const TextStyle(fontSize: 13.5, height: 1.4),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Text(
-                '👉 HOW TO TEST:\n1. Tap "Start 5s Countdown"\n2. Immediately press Home or minimize this app\n3. In 5s, the system banner alert will drop down in your notification tray with sound and vibration!',
-                style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF0F172A),
-                    height: 1.4),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              // Pick scenario based on active role
-              String scenario = 'attendance';
-              if (activeRole == 'parent') scenario = 'attendance';
-              if (activeRole == 'faculty') scenario = 'submissions';
-              if (activeRole == 'admin') scenario = 'finance';
-
-              NotificationService().simulateRoleNotification(
-                role: activeRole,
-                scenario: scenario,
-                delaySeconds: 5,
-              );
-
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    '⏳ 5s Background Push for $activeRole scheduled! Minimize app now to see notification.',
-                  ),
-                  backgroundColor: const Color(0xFF2563EB),
-                  duration: const Duration(seconds: 5),
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2563EB),
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Start 5s Countdown'),
-          ),
-        ],
-      ),
-    );
   }
 
   void _openBroadcastDialog() {
@@ -4834,27 +4451,31 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
-  IconData _getTypeIcon(String type) {
-    switch (type.toLowerCase()) {
-      case 'assignment':
-        return Icons.assignment_outlined;
-      case 'exam':
-        return Icons.quiz_outlined;
-      case 'fee':
-        return Icons.account_balance_wallet_outlined;
-      case 'announcement':
-        return Icons.campaign_outlined;
-      case 'attendance':
-        return Icons.calendar_month_outlined;
-      case 'system':
-        return Icons.security_outlined;
-      default:
-        return Icons.notifications_active_outlined;
-    }
-  }
-
   List<Map<String, dynamic>> get _filteredList {
     return notifications.where((n) {
+      // Role isolation: only show notifications targeted to the active role or all
+      final targetRole = (n['targetRole'] ?? 'all').toString().toLowerCase();
+      if (targetRole != 'all') {
+        if (activeRole == 'student' &&
+            targetRole != 'student' &&
+            targetRole != 'students_parents' &&
+            targetRole != 'students_and_parents') {
+          return false;
+        }
+        if (activeRole == 'parent' &&
+            targetRole != 'parent' &&
+            targetRole != 'students_parents' &&
+            targetRole != 'students_and_parents') {
+          return false;
+        }
+        if (activeRole == 'faculty' && targetRole != 'faculty') {
+          return false;
+        }
+        if (activeRole == 'admin' && targetRole != 'admin') {
+          return false;
+        }
+      }
+
       if (selectedFilter == 'All') return true;
       if (selectedFilter == 'Unread') return n['isRead'] == false;
       if (selectedFilter == 'From Faculty') {
@@ -4869,87 +4490,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       final t = (n['type'] ?? '').toString().toLowerCase();
       return t.contains(selectedFilter.toLowerCase());
     }).toList();
-  }
-
-  Widget _buildRoleSelectorPills() {
-    final roles = [
-      {'key': 'student', 'label': 'Student', 'icon': Icons.school_outlined},
-      {'key': 'parent', 'label': 'Parent', 'icon': Icons.family_restroom_outlined},
-      {'key': 'faculty', 'label': 'Faculty', 'icon': Icons.person_outline},
-      {'key': 'admin', 'label': 'Administrator', 'icon': Icons.admin_panel_settings_outlined},
-    ];
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: roles.map((r) {
-            final isSelected = activeRole == r['key'];
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 3),
-              child: InkWell(
-                onTap: () {
-                  setState(() {
-                    activeRole = r['key'] as String;
-                    selectedFilter = 'All';
-                  });
-                  fetchNotifications();
-                },
-                borderRadius: BorderRadius.circular(10),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? const Color(0xFF0F172A)
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        r['icon'] as IconData,
-                        size: 16,
-                        color: isSelected
-                            ? Colors.white
-                            : const Color(0xFF64748B),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        r['label'] as String,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: isSelected
-                              ? FontWeight.bold
-                              : FontWeight.w500,
-                          color: isSelected
-                              ? Colors.white
-                              : const Color(0xFF334155),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-      ),
-    );
   }
 
   Widget _buildHeroHeader(BoxConstraints constraints) {
@@ -4999,207 +4539,73 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Icon(
-                  Icons.notifications_active_rounded,
-                  color: Colors.white,
-                  size: 28,
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${activeRole[0].toUpperCase()}${activeRole.substring(1)} Notifications',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: isMobile ? 20 : 24,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.5,
+          Text(
+            activeRole == 'admin'
+                ? 'Administrator Notifications'
+                : '${activeRole[0].toUpperCase()}${activeRole.substring(1)} Notifications',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: isMobile ? 20 : 24,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '$unreadCount unread • $roleSubtitle',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.88),
+              fontSize: isMobile ? 12 : 13,
+              height: 1.4,
+            ),
+          ),
+          if (activeRole == 'faculty' || activeRole == 'admin') ...[
+            const SizedBox(height: 18),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                if (activeRole == 'faculty')
+                  ElevatedButton.icon(
+                    onPressed: _openBroadcastDialog,
+                    icon: const Icon(Icons.send_rounded, size: 16),
+                    label: const Text(
+                      'Push Update to Students & Parents',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0D9488),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '$unreadCount unread • $roleSubtitle',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.88),
-                        fontSize: isMobile ? 12 : 13,
-                        height: 1.4,
+                  ),
+                if (activeRole == 'admin')
+                  ElevatedButton.icon(
+                    onPressed: _openBroadcastDialog,
+                    icon: const Icon(Icons.campaign_rounded, size: 16),
+                    label: const Text(
+                      'Push College Notification',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF6366F1),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          // Action Buttons
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              if (activeRole == 'faculty')
-                ElevatedButton.icon(
-                  onPressed: _openBroadcastDialog,
-                  icon: const Icon(Icons.send_rounded, size: 16),
-                  label: const Text(
-                    'Push Update to Students & Parents',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                   ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0D9488),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-              if (activeRole == 'admin')
-                ElevatedButton.icon(
-                  onPressed: _openBroadcastDialog,
-                  icon: const Icon(Icons.campaign_rounded, size: 16),
-                  label: const Text(
-                    'Push College Notification',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6366F1),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-              ElevatedButton.icon(
-                onPressed: _triggerBackgroundSimulation,
-                icon: const Icon(Icons.alarm_on_rounded, size: 16),
-                label: Text(
-                  'Simulate 5s Background Push ($activeRole)',
-                  style: const TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.bold),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2563EB),
-                  foregroundColor: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInstantRoleSimulatorStrip() {
-    List<Map<String, String>> scenarios = [];
-    if (activeRole == 'student') {
-      scenarios = [
-        {'id': 'attendance_present', 'label': '🟢 Marked Present (Faculty)'},
-        {'id': 'attendance_absent', 'label': '🔴 Marked Absent (Faculty)'},
-        {'id': 'attendance_summary', 'label': '📊 Evening Attendance Summary'},
-        {'id': 'period_reminder', 'label': '🔔 Period / Class Alert'},
-        {'id': 'attendance', 'label': '+ Overall Attendance (85%)'},
-        {'id': 'fee', 'label': '+ Tuition Fee Due (₹25k)'},
-        {'id': 'assignment', 'label': '+ Assignment Due (24h)'},
-        {'id': 'exam', 'label': '+ Hall Tickets Ready'},
-      ];
-    } else if (activeRole == 'parent') {
-      scenarios = [
-        {'id': 'attendance', 'label': '+ Ward Present Today'},
-        {'id': 'fee', 'label': '+ Fee Invoice Reminder'},
-        {'id': 'ptm', 'label': '+ PTM Scheduled (Sat)'},
-        {'id': 'progress', 'label': '+ 8.65 SGPA Progress'},
-      ];
-    } else if (activeRole == 'faculty') {
-      scenarios = [
-        {'id': 'submissions', 'label': '+ 35 Submissions Pending'},
-        {'id': 'attendance', 'label': '+ Daily Attendance Lock'},
-        {'id': 'leave', 'label': '+ Student Leave Request'},
-        {'id': 'meeting', 'label': '+ Curriculum Council'},
-      ];
-    } else {
-      scenarios = [
-        {'id': 'finance', 'label': '+ Daily Fee Summary (₹4.85L)'},
-        {'id': 'staff', 'label': '+ Faculty Leave Queue'},
-        {'id': 'security', 'label': '+ Gate Biometric Sync'},
-        {'id': 'broadcast', 'label': '+ Official Notice Draft'},
-      ];
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Icon(Icons.bolt_rounded, size: 16, color: Color(0xFFF59E0B)),
-            const SizedBox(width: 4),
-            Text(
-              'Instant Real-Time Test Triggers ($activeRole):',
-              style: const TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF334155),
-              ),
+              ],
             ),
           ],
-        ),
-        const SizedBox(height: 8),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: scenarios.map((sc) {
-              return Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: ActionChip(
-                  label: Text(sc['label']!),
-                  avatar: const Icon(Icons.touch_app_rounded, size: 14),
-                  backgroundColor: Colors.white,
-                  labelStyle: const TextStyle(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF0F172A),
-                  ),
-                  side: const BorderSide(color: Color(0xFFCBD5E1)),
-                  onPressed: () {
-                    NotificationService().simulateRoleNotification(
-                      role: activeRole,
-                      scenario: sc['id']!,
-                      delaySeconds: 0,
-                    );
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('⚡ Instant $activeRole alert triggered!'),
-                        duration: const Duration(seconds: 2),
-                        backgroundColor: const Color(0xFF0F172A),
-                      ),
-                    );
-                  },
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -5330,29 +4736,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: const EdgeInsets.all(16),
-            child: Row(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Icon Avatar
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: themeColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    _getTypeIcon(type),
-                    color: themeColor,
-                    size: 22,
-                  ),
-                ),
-                const SizedBox(width: 12),
-
-                // Content Column
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
                       // Header Row: Sender Badge, Role chip, Type pill, Priority, TimeAgo, Unread dot
                       Wrap(
                         crossAxisAlignment: WrapCrossAlignment.center,
@@ -5371,41 +4757,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                       : const Color(0xFF64748B).withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(4),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  isFromFaculty
-                                      ? Icons.school_rounded
-                                      : isFromAdmin
-                                          ? Icons.account_balance_rounded
-                                          : Icons.info_outline_rounded,
-                                  size: 10,
-                                  color: isFromFaculty
-                                      ? const Color(0xFF0F766E)
-                                      : isFromAdmin
-                                          ? const Color(0xFF4338CA)
-                                          : const Color(0xFF475569),
-                                ),
-                                const SizedBox(width: 3),
-                                Text(
-                                  isFromFaculty
-                                      ? 'FROM FACULTY'
-                                      : isFromAdmin
-                                          ? 'FROM ADMINISTRATION'
-                                          : 'CAMPUS NOTICE',
-                                  style: TextStyle(
-                                    fontSize: 8.5,
-                                    fontWeight: FontWeight.bold,
-                                    color: isFromFaculty
-                                        ? const Color(0xFF0F766E)
-                                        : isFromAdmin
-                                            ? const Color(0xFF4338CA)
-                                            : const Color(0xFF475569),
-                                    letterSpacing: 0.3,
-                                  ),
-                                ),
-                              ],
+                            child: Text(
+                              isFromFaculty
+                                  ? 'FROM FACULTY'
+                                  : isFromAdmin
+                                      ? 'FROM ADMINISTRATION'
+                                      : 'CAMPUS NOTICE',
+                              style: TextStyle(
+                                fontSize: 8.5,
+                                fontWeight: FontWeight.bold,
+                                color: isFromFaculty
+                                    ? const Color(0xFF0F766E)
+                                    : isFromAdmin
+                                        ? const Color(0xFF4338CA)
+                                        : const Color(0xFF475569),
+                                letterSpacing: 0.3,
+                              ),
                             ),
                           ),
 
@@ -5550,9 +4917,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       ),
                     ],
                   ),
-                ),
-              ],
-            ),
           ),
         ),
       ),
@@ -5614,7 +4978,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: Text(
-          '${activeRole[0].toUpperCase()}${activeRole.substring(1)} Notifications',
+          activeRole == 'admin'
+              ? 'Administrator Notifications'
+              : '${activeRole[0].toUpperCase()}${activeRole.substring(1)} Notifications',
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         backgroundColor: Colors.white,
@@ -5659,12 +5025,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildRoleSelectorPills(),
-                            const SizedBox(height: 16),
                             _buildHeroHeader(constraints),
                             const SizedBox(height: 16),
-                            _buildInstantRoleSimulatorStrip(),
-                            const SizedBox(height: 18),
                             _buildFilterStrip(),
                             const SizedBox(height: 16),
                             if (filtered.isEmpty)
@@ -14621,7 +13983,7 @@ class _ParentFeeDetailsScreenState
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: Colors.grey.shade100,
+                              color: Colors.white,
                               borderRadius: BorderRadius.circular(6),
                               border: Border.all(color: Colors.grey.shade300),
                             ),
@@ -14633,25 +13995,25 @@ class _ParentFeeDetailsScreenState
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: Colors.blue.shade50,
+                              color: Colors.white,
                               borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: Colors.blue.shade200),
+                              border: Border.all(color: Colors.grey.shade300),
                             ),
                             child: Text(
                               department,
-                              style: TextStyle(fontSize: 12, color: Colors.blue.shade800, fontWeight: FontWeight.w500),
+                              style: TextStyle(fontSize: 12, color: Colors.grey.shade800, fontWeight: FontWeight.w500),
                             ),
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: Colors.purple.shade50,
+                              color: Colors.white,
                               borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: Colors.purple.shade200),
+                              border: Border.all(color: Colors.grey.shade300),
                             ),
                             child: Text(
                               'AY: $academicYear',
-                              style: TextStyle(fontSize: 12, color: Colors.purple.shade800, fontWeight: FontWeight.w500),
+                              style: TextStyle(fontSize: 12, color: Colors.grey.shade800, fontWeight: FontWeight.w500),
                             ),
                           ),
                         ],

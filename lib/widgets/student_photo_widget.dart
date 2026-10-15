@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../services/hitam_auth_service.dart';
+import 'animated_rays.dart';
 
 /// Universal, robust widget to display student profile pictures
 /// Handles:
@@ -285,91 +286,101 @@ void showStudentPhotoPreviewDialog(
     barrierDismissible: true,
     builder: (ctx) => Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.25),
-                width: 2,
+      elevation: 0,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
+      child: AnimatedRays(
+        borderRadius: 24,
+        backgroundColor: const Color(0xFF070B14),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.20),
+          width: 1.0,
+        ),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.25),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.5),
+                    blurRadius: 20,
+                    spreadRadius: 2,
+                  ),
+                ],
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.6),
-                  blurRadius: 28,
-                  spreadRadius: 4,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 330, maxWidth: 310),
+                  child: bytes != null
+                      ? Image.memory(
+                          bytes,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const SizedBox(
+                            height: 200,
+                            child: Center(
+                              child: Icon(Icons.broken_image_rounded,
+                                  color: Colors.white70, size: 48),
+                            ),
+                          ),
+                        )
+                      : Image.network(
+                          rawUrl,
+                          fit: BoxFit.contain,
+                          headers: HitamAuthService().sessionCookies.isNotEmpty
+                              ? {
+                                  'Cookie': HitamAuthService().cookieHeader,
+                                  'User-Agent':
+                                      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                                  'Referer': 'https://www.webprosindia.com/hitam/StudentMaster.aspx',
+                                }
+                              : null,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const SizedBox(
+                            height: 200,
+                            child: Center(
+                              child: Icon(Icons.broken_image_rounded,
+                                  color: Colors.white70, size: 48),
+                            ),
+                          ),
+                        ),
+                ),
+              ),
+            ),
+            if (name.isNotEmpty || (rollNo != null && rollNo.isNotEmpty)) ...[
+              const SizedBox(height: 14),
+              if (name.isNotEmpty)
+                Text(
+                  name,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              if (rollNo != null && rollNo.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  rollNo,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.85),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(18),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 340, maxWidth: 320),
-                child: bytes != null
-                    ? Image.memory(
-                        bytes,
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const SizedBox(
-                          height: 200,
-                          child: Center(
-                            child: Icon(Icons.broken_image_rounded,
-                                color: Colors.white70, size: 48),
-                          ),
-                        ),
-                      )
-                    : Image.network(
-                        rawUrl,
-                        fit: BoxFit.contain,
-                        headers: HitamAuthService().sessionCookies.isNotEmpty
-                            ? {
-                                'Cookie': HitamAuthService().cookieHeader,
-                                'User-Agent':
-                                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                                'Referer': 'https://www.webprosindia.com/hitam/StudentMaster.aspx',
-                              }
-                            : null,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const SizedBox(
-                          height: 200,
-                          child: Center(
-                            child: Icon(Icons.broken_image_rounded,
-                                color: Colors.white70, size: 48),
-                          ),
-                        ),
-                      ),
-              ),
-            ),
-          ),
-          if (name.isNotEmpty || (rollNo != null && rollNo.isNotEmpty)) ...[
-            const SizedBox(height: 14),
-            if (name.isNotEmpty)
-              Text(
-                name,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            if (rollNo != null && rollNo.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Text(
-                rollNo,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.85),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
             ],
           ],
-        ],
+        ),
       ),
     ),
   );

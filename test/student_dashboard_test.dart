@@ -33,9 +33,8 @@ void main() {
 
     await tester.pump();
 
-    // Verify Dashboard title and Section Header
+    // Verify Dashboard title
     expect(find.text('Student Dashboard'), findsOneWidget);
-    expect(find.text('ACADEMIC PORTAL SERVICES'), findsOneWidget);
 
     // Verify Bento Cards
     expect(find.text('Attendance'), findsOneWidget);

@@ -1,6 +1,6 @@
 {
   "name": "intelligent-erp-system",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "HITAM Intelligent ERP System root helper scripts",
   "scripts": {
     "dev": "npm --prefix backend run dev",
@@ -8,6 +8,9 @@
     "test:backend": "node --check backend/server.js",
     "test:flutter": "flutter test",
     "analyze": "flutter analyze --no-fatal-infos",
-    "build:apk": "flutter build apk --release --target-platform android-arm,android-arm64 --split-debug-info=build/symbols && cp build/app/outputs/flutter-apk/app-release.apk ~/Desktop/Intelligent.ERP.apk"
+    "build:apk": "flutter build apk --release --target-platform android-arm,android-arm64 --split-debug-info=build/symbols && cp build/app/outputs/flutter-apk/app-release.apk ~/Desktop/Intelligent.ERP.apk",
+    "dev:macos": "flutter run -d macos",
+    "open:macos": "open 'build/macos/Build/Products/Debug/Intelligent ERP.app'",
+    "reopen:macos": "killall 'Intelligent ERP' 2>/dev/null || true; sleep 0.5; flutter build macos --debug && open 'build/macos/Build/Products/Debug/Intelligent ERP.app' && osascript -e 'tell application \"Intelligent ERP\" to activate'"
   }
 }

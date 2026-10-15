@@ -76,6 +76,15 @@ exports.getNotifications = async (req, res) => {
                     timeAgo: getRelativeTime(n.created_at)
                 }));
 
+                // Strict role isolation: users only receive notifications intended for their role or all
+                if (role && role !== "all") {
+                    list = list.filter(n => matchesRole(n.targetRole, role));
+                }
+
+                if (userId) {
+                    list = list.filter(n => !n.userId || n.userId === userId);
+                }
+
                 if (senderRole && senderRole !== "all") {
                     list = list.filter(n => n.senderRole.toLowerCase() === senderRole);
                 }
@@ -159,23 +168,25 @@ exports.sendNotification = async (req, res) => {
                 .single();
 
             if (!error && data) {
+                const insertedNotif = {
+                    id: data.id.toString(),
+                    userId: data.user_id,
+                    targetRole: data.target_role,
+                    senderRole: data.sender_role || sRole,
+                    senderName: data.sender_name || sName,
+                    title: data.title,
+                    body: data.body,
+                    type: data.type,
+                    targetScreen: data.target_screen,
+                    priority: data.priority,
+                    isRead: data.is_read,
+                    createdAt: data.created_at,
+                    timeAgo: "Just now"
+                };
+                mockDb.notifications.unshift(insertedNotif);
                 return res.status(201).json({
                     message: "Role-targeted notification sent and dispatched in real-time!",
-                    notification: {
-                        id: data.id.toString(),
-                        userId: data.user_id,
-                        targetRole: data.target_role,
-                        senderRole: data.sender_role || sRole,
-                        senderName: data.sender_name || sName,
-                        title: data.title,
-                        body: data.body,
-                        type: data.type,
-                        targetScreen: data.target_screen,
-                        priority: data.priority,
-                        isRead: data.is_read,
-                        createdAt: data.created_at,
-                        timeAgo: "Just now"
-                    },
+                    notification: insertedNotif,
                     pushStatus: "dispatched_realtime"
                 });
             }
@@ -287,6 +298,46 @@ exports.pollNotifications = async (req, res) => {
         const userId = req.query.userId || "";
         const since = req.query.since;
         const sinceTime = since ? new Date(since).getTime() : 0;
+
+        if (isConfigured && supabase && since) {
+            let pollQuery = supabase
+                .from("notifications")
+                .select("*")
+                .gt("created_at", since)
+                .order("created_at", { ascending: false });
+
+            const { data, error } = await pollQuery;
+            if (!error && data && data.length > 0) {
+                let alerts = data.map(n => ({
+                    id: n.id.toString(),
+                    userId: n.user_id,
+                    targetRole: n.target_role || "all",
+                    senderRole: n.sender_role || "admin",
+                    senderName: n.sender_name || "HITAM Administration",
+                    title: n.title,
+                    body: n.body || n.message || "",
+                    type: n.type || "general",
+                    targetScreen: n.target_screen || n.type || "dashboard",
+                    priority: n.priority || "normal",
+                    isRead: Boolean(n.is_read),
+                    createdAt: n.created_at,
+                    timeAgo: getRelativeTime(n.created_at)
+                }));
+
+                if (role && role !== "all") {
+                    alerts = alerts.filter(n => matchesRole(n.targetRole, role));
+                }
+                if (userId) {
+                    alerts = alerts.filter(n => !n.userId || n.userId === userId);
+                }
+
+                return res.json({
+                    newAlerts: alerts,
+                    count: alerts.length,
+                    timestamp: new Date().toISOString()
+                });
+            }
+        }
 
         const newAlerts = mockDb.notifications.filter(n => {
             const matchRole = matchesRole(n.targetRole, role);

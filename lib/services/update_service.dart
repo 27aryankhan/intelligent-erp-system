@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:open_filex/open_filex.dart';
@@ -9,6 +8,8 @@ import 'package:ota_update/ota_update.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import '../config/api_config.dart';
+import '../widgets/animated_rays.dart';
+export '../widgets/animated_rays.dart';
 
 class AppUpdateInfo {
   final String latestVersion;
@@ -63,9 +64,9 @@ class UpdateService {
   factory UpdateService() => _instance;
   UpdateService._internal();
 
-  /// Current running version of the app (matches pubspec.yaml version 1.2.2+15)
-  static const String currentVersion = '1.2.2';
-  static const int currentVersionCode = 15;
+  /// Current running version of the app (matches pubspec.yaml version 1.2.3+16)
+  static const String currentVersion = '1.2.3';
+  static const int currentVersionCode = 16;
 
   static int get effectiveVersionCode => currentVersionCode;
 
@@ -217,227 +218,8 @@ class UpdateService {
   }
 }
 
-/// Authentic VengeanceUI Animated Rays background
-/// Source: https://www.vengenceui.com/components/animated-rays
-/// Implements 100° angled repeating linear ray beams with aurora color stops
-/// (#60a5fa Sky Blue, #e879f9 Fuchsia, #5eead4 Mint Teal)
-/// and a radial mask anchored at the top-right (100% 0%) with smooth drifting animation.
-class AnimatedRays extends StatefulWidget {
-  final Widget child;
-  final BorderRadius? borderRadius;
-  final Border? border;
-  final BoxShadow? glowShadow;
-  final EdgeInsetsGeometry? padding;
+// AnimatedRays is exported from package:intelligent_erp/widgets/animated_rays.dart
 
-  const AnimatedRays({
-    super.key,
-    required this.child,
-    this.borderRadius,
-    this.border,
-    this.glowShadow,
-    this.padding,
-  });
-
-  @override
-  State<AnimatedRays> createState() => _AnimatedRaysState();
-}
-
-class _AnimatedRaysState extends State<AnimatedRays>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 22),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final radius = widget.borderRadius ?? BorderRadius.circular(24);
-
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: radius,
-        boxShadow: widget.glowShadow != null
-            ? [widget.glowShadow!]
-            : [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.65),
-                  blurRadius: 40,
-                  spreadRadius: 4,
-                  offset: const Offset(0, 16),
-                ),
-                BoxShadow(
-                  color: const Color(0xFF60A5FA).withValues(alpha: 0.20),
-                  blurRadius: 44,
-                  spreadRadius: 0,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-      ),
-      child: ClipRRect(
-        borderRadius: radius,
-        child: Stack(
-          children: [
-            // 1. VengeanceUI Animated Rays Canvas (Aurora & 100° Repeating Beams)
-            Positioned.fill(
-              child: AnimatedBuilder(
-                animation: _controller,
-                builder: (context, _) {
-                  return RepaintBoundary(
-                    child: CustomPaint(
-                      painter: _AnimatedRaysPainter(
-                        animationValue: _controller.value,
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-            // 2. Subtle translucent glassmorphic dark surface to guarantee contrast
-            Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: radius,
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      const Color(0xFF0D1424).withValues(alpha: 0.70),
-                      const Color(0xFF080C16).withValues(alpha: 0.85),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            // 3. Sleek neon card edge border
-            Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: radius,
-                  border: widget.border ??
-                      Border.all(
-                        color: const Color(0xFF60A5FA).withValues(alpha: 0.22),
-                        width: 1.2,
-                      ),
-                ),
-              ),
-            ),
-            // 4. Foreground Content
-            Padding(
-              padding: widget.padding ?? EdgeInsets.zero,
-              child: widget.child,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _AnimatedRaysPainter extends CustomPainter {
-  final double animationValue;
-
-  _AnimatedRaysPainter({required this.animationValue});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rect = Offset.zero & size;
-
-    // 1. Deep cosmic dark base background (VengeanceUI Dark Mode)
-    final bgPaint = Paint()..color = const Color(0xFF070B14);
-    canvas.drawRect(rect, bgPaint);
-
-    // 2. Save layer for masked aurora rays
-    canvas.saveLayer(rect, Paint());
-
-    // 3. Draw 100° angled ray beams (10° tilt from vertical: (100 - 90) deg)
-    final double rayAngle = (100 - 90) * math.pi / 180;
-    final double stripePeriod = 72.0;
-    final double driftOffset = animationValue * stripePeriod;
-
-    canvas.save();
-    canvas.translate(size.width / 2, size.height / 2);
-    canvas.rotate(rayAngle);
-    canvas.translate(-size.width / 2, -size.height / 2);
-
-    final double expandedW = size.width * 2.5;
-    final double expandedH = size.height * 2.5;
-
-    // Repeating aurora rainbow stops: #60a5fa -> #e879f9 -> #60a5fa -> #5eead4 -> #60a5fa
-    for (double x = -expandedW * 0.4 + driftOffset;
-        x < expandedW * 1.3;
-        x += stripePeriod) {
-      final double normalized = ((x + expandedW) / (expandedW * 1.6)) % 1.0;
-
-      Color rayColor;
-      if (normalized < 0.25) {
-        rayColor = Color.lerp(const Color(0xFF60A5FA), const Color(0xFFE879F9),
-            normalized / 0.25)!;
-      } else if (normalized < 0.50) {
-        rayColor = Color.lerp(const Color(0xFFE879F9), const Color(0xFF60A5FA),
-            (normalized - 0.25) / 0.25)!;
-      } else if (normalized < 0.75) {
-        rayColor = Color.lerp(const Color(0xFF60A5FA), const Color(0xFF5EEAD4),
-            (normalized - 0.50) / 0.25)!;
-      } else {
-        rayColor = Color.lerp(const Color(0xFF5EEAD4), const Color(0xFF60A5FA),
-            (normalized - 0.75) / 0.25)!;
-      }
-
-      final rayPaint = Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            rayColor.withValues(alpha: 0.55),
-            rayColor.withValues(alpha: 0.30),
-            rayColor.withValues(alpha: 0.08),
-          ],
-          stops: const [0.0, 0.45, 1.0],
-        ).createShader(
-            Rect.fromLTWH(x, -expandedH * 0.4, stripePeriod * 0.60, expandedH))
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14);
-
-      canvas.drawRect(
-        Rect.fromLTWH(x, -expandedH * 0.4, stripePeriod * 0.60, expandedH),
-        rayPaint,
-      );
-    }
-    canvas.restore();
-
-    // 4. VengeanceUI Radial Mask: radial-gradient(ellipse at 100% 0%, black 40%, transparent 75%)
-    final maskPaint = Paint()
-      ..blendMode = BlendMode.dstIn
-      ..shader = RadialGradient(
-        center: const Alignment(1.0, -1.0), // Top-Right Corner
-        radius: 1.45,
-        colors: [
-          Colors.black.withValues(alpha: 0.95),
-          Colors.black.withValues(alpha: 0.65),
-          Colors.transparent,
-        ],
-        stops: const [0.0, 0.45, 0.80],
-      ).createShader(rect);
-    canvas.drawRect(rect, maskPaint);
-
-    canvas.restore(); // End masked aurora layer
-  }
-
-  @override
-  bool shouldRepaint(covariant _AnimatedRaysPainter oldDelegate) =>
-      oldDelegate.animationValue != animationValue;
-}
 
 class _InAppUpdateDialog extends StatefulWidget {
   final AppUpdateInfo info;
