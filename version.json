@@ -1,13 +1,14 @@
 {
-  "latest_version": "1.2.3",
-  "version_code": 16,
+  "latest_version": "1.2.4",
+  "version_code": 17,
   "min_supported_version_code": 11,
   "download_url": "https://github.com/27aryankhan/intelligent-erp-system/releases/latest/download/Intelligent.ERP.apk",
-  "file_size": "39 MB",
+  "file_size": "37 MB",
   "release_notes": [
-    "Streamlined Academic Cards: Removed redundant book and grade star icons across Backlog & SGPA views for clean browsing",
-    "Clean Neutral Status Pills: Neutral frosted glass indicators and refined aggregate attendance presentation",
-    "Enhanced Performance & Polish: Optimized physical mobile APK build (~39 MB) for armeabi-v7a & arm64-v8a"
+    "Butter-Smooth 60/120 FPS Scrolling: Completely eliminated jitter and frame drops across student dashboard & portal views",
+    "Instant Opening: Lazy windowed rendering for Academic Register and attendance sheets for zero-lag screen loads",
+    "Ultra-Fast Touch & Tap: Hardware-accelerated glass styling and RepaintBoundary isolation for instant ripple and navigation response",
+    "Clean Neutral Styling: Distraction-free typography, neutral pill shapes, and streamlined status presentation"
   ],
   "is_critical": false
 }
