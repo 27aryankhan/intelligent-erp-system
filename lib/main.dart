@@ -1624,8 +1624,10 @@ class _StudentDashboardState extends State<StudentDashboard> {
         children: [
           // Luminous cobalt & midnight obsidian silk aurora canvas
           const Positioned.fill(
-            child: CustomPaint(
-              painter: LuminousSilkAuroraPainter(),
+            child: RepaintBoundary(
+              child: CustomPaint(
+                painter: LuminousSilkAuroraPainter(),
+              ),
             ),
           ),
 
@@ -1665,6 +1667,9 @@ class _StudentDashboardState extends State<StudentDashboard> {
                         ),
                       )
                     : SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(
+                          parent: AlwaysScrollableScrollPhysics(),
+                        ),
                         padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1768,78 +1773,87 @@ class _StudentDashboardState extends State<StudentDashboard> {
 
   Widget _buildGlassContainer({
     required Widget child,
-    double borderRadius = 22,
+    double borderRadius = 26,
     EdgeInsetsGeometry? padding,
     VoidCallback? onTap,
     Border? border,
     List<Color>? gradientColors,
   }) {
-    final content = Container(
-      padding: padding ?? const EdgeInsets.all(16),
+    final rradius = BorderRadius.circular(borderRadius);
+
+    Widget cardContent = Container(
+      padding: padding ?? const EdgeInsets.all(18),
       decoration: BoxDecoration(
+        borderRadius: rradius,
         gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
           colors: gradientColors ?? [
-            Colors.white.withValues(alpha: 0.09),
-            Colors.white.withValues(alpha: 0.02),
+            Colors.white.withValues(alpha: 0.16),
+            Colors.white.withValues(alpha: 0.05),
           ],
         ),
-        borderRadius: BorderRadius.circular(borderRadius),
-        border: border ??
-            Border.all(
-              color: Colors.white.withValues(alpha: 0.18),
-              width: 1.0,
-            ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.32),
-            blurRadius: 22,
-            offset: const Offset(0, 8),
-          ),
-        ],
       ),
       child: child,
     );
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(borderRadius),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-        child: onTap != null
-            ? Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: onTap,
-                  borderRadius: BorderRadius.circular(borderRadius),
-                  splashColor: Colors.white.withValues(alpha: 0.08),
-                  highlightColor: Colors.white.withValues(alpha: 0.04),
-                  child: content,
-                ),
-              )
-            : content,
+    if (onTap != null) {
+      cardContent = Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: rradius,
+          splashColor: Colors.white.withValues(alpha: 0.08),
+          highlightColor: Colors.white.withValues(alpha: 0.04),
+          child: cardContent,
+        ),
+      );
+    }
+
+    return RepaintBoundary(
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: rradius,
+          color: const Color(0xFF161922).withValues(alpha: 0.82),
+          border: border ??
+              Border.all(
+                color: Colors.white.withValues(alpha: 0.10),
+                width: 1.0,
+              ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.35),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: rradius,
+          clipBehavior: Clip.antiAlias,
+          child: cardContent,
+        ),
       ),
     );
   }
 
   Widget _buildCapsulePill(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.22),
-          width: 1.0,
-        ),
-      ),
+    return LiquidGlassPill(
+      borderRadius: 18,
+      isSubtle: true,
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 4.5),
       child: Text(
         label,
         style: TextStyle(
-          color: Colors.white.withValues(alpha: 0.90),
-          fontSize: 10.5,
+          color: Colors.white.withValues(alpha: 0.92),
+          fontSize: 11,
           fontWeight: FontWeight.w600,
-          letterSpacing: 0.6,
+          letterSpacing: 0.4,
         ),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
@@ -1849,20 +1863,12 @@ class _StudentDashboardState extends State<StudentDashboard> {
 
   Widget _buildFrostedHeroCard(BuildContext context) {
     return _buildGlassContainer(
-      borderRadius: 22,
+      borderRadius: 28,
       padding: EdgeInsets.zero,
-      gradientColors: [
-        Colors.white.withValues(alpha: 0.10),
-        Colors.white.withValues(alpha: 0.03),
-      ],
-      border: Border.all(
-        color: Colors.white.withValues(alpha: 0.20),
-        width: 1.0,
-      ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(28),
           onTap: () {
             Navigator.push(
               context,
@@ -1872,18 +1878,18 @@ class _StudentDashboardState extends State<StudentDashboard> {
             );
           },
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(2),
+                      padding: const EdgeInsets.all(2.5),
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.35),
+                          color: Colors.white.withValues(alpha: 0.40),
                           width: 1.2,
                         ),
                       ),
@@ -1894,18 +1900,20 @@ class _StudentDashboardState extends State<StudentDashboard> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            studentName.isNotEmpty ? studentName : 'Student',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 17,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: -0.3,
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              studentName.isNotEmpty ? studentName : 'Student',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 17.5,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: -0.3,
+                              ),
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 5),
+                          const SizedBox(height: 6),
                           Row(
                             children: [
                               _buildCapsulePill(
@@ -1923,19 +1931,13 @@ class _StudentDashboardState extends State<StudentDashboard> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.08),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.16),
-                        ),
-                      ),
+                    const LiquidGlassPill(
+                      borderRadius: 14,
+                      padding: EdgeInsets.all(7),
                       child: Icon(
                         Icons.arrow_forward_ios_rounded,
-                        color: Colors.white.withValues(alpha: 0.85),
-                        size: 11,
+                        color: Colors.white,
+                        size: 11.5,
                       ),
                     ),
                   ],
@@ -1956,8 +1958,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
     final rep = HitamScraperService().latestAttendanceReport ?? widget.initialReport;
 
     return _buildGlassContainer(
-      borderRadius: 22,
-      padding: const EdgeInsets.all(18),
+      borderRadius: 28,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       onTap: () {
         Navigator.push(
           context,
@@ -1980,37 +1982,31 @@ class _StudentDashboardState extends State<StudentDashboard> {
                 const Text(
                   'Attendance',
                   style: TextStyle(
-                    fontSize: 16.5,
+                    fontSize: 17,
                     fontWeight: FontWeight.w700,
                     color: Colors.white,
                     letterSpacing: -0.2,
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 Text(
                   rep != null
                       ? '${rep.totalAttended} attended of ${rep.totalHeld} classes'
                       : 'Live subject-wise & aggregate portal record',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF94A3B8),
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: Colors.white.withValues(alpha: 0.70),
                     fontWeight: FontWeight.w500,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.20),
-                        ),
-                      ),
+                    const LiquidGlassPill(
+                      borderRadius: 18,
+                      padding: EdgeInsets.symmetric(horizontal: 11, vertical: 4.5),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -2018,15 +2014,16 @@ class _StudentDashboardState extends State<StudentDashboard> {
                             'View Details',
                             style: TextStyle(
                               fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white.withValues(alpha: 0.9),
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                              letterSpacing: 0.2,
                             ),
                           ),
-                          const SizedBox(width: 4),
+                          SizedBox(width: 4),
                           Icon(
                             Icons.arrow_forward_ios_rounded,
-                            size: 9,
-                            color: Colors.white.withValues(alpha: 0.7),
+                            size: 9.5,
+                            color: Colors.white,
                           ),
                         ],
                       ),
@@ -2038,31 +2035,31 @@ class _StudentDashboardState extends State<StudentDashboard> {
           ),
           const SizedBox(width: 14),
 
-          // Right Column: Apple-style Activity Progress Ring
+          // Right Column: One UI-style Smooth Activity Progress Ring
           SizedBox(
-            width: 72,
-            height: 72,
+            width: 74,
+            height: 74,
             child: Stack(
               alignment: Alignment.center,
               children: [
                 SizedBox(
-                  width: 72,
-                  height: 72,
+                  width: 74,
+                  height: 74,
                   child: CircularProgressIndicator(
                     value: (attendance / 100).clamp(0.0, 1.0),
-                    strokeWidth: 6.0,
+                    strokeWidth: 6.5,
                     strokeCap: StrokeCap.round,
-                    backgroundColor: Colors.white.withValues(alpha: 0.08),
+                    backgroundColor: Colors.white.withValues(alpha: 0.12),
                     color: Colors.white,
                   ),
                 ),
                 Text(
                   '${attendance.toStringAsFixed(1)}%',
                   style: const TextStyle(
-                    fontSize: 13,
+                    fontSize: 13.5,
                     fontWeight: FontWeight.w800,
                     color: Colors.white,
-                    letterSpacing: -0.5,
+                    letterSpacing: -0.4,
                   ),
                 ),
               ],
@@ -2080,7 +2077,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
     required VoidCallback onTap,
   }) {
     return _buildGlassContainer(
-      borderRadius: 20,
+      borderRadius: 26,
       padding: const EdgeInsets.all(16),
       onTap: onTap,
       child: Column(
@@ -2099,20 +2096,13 @@ class _StudentDashboardState extends State<StudentDashboard> {
                   letterSpacing: -0.2,
                 ),
               ),
-              Container(
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.06),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.15),
-                  ),
-                ),
+              const LiquidGlassPill(
+                borderRadius: 14,
+                padding: EdgeInsets.all(7),
                 child: Icon(
                   Icons.arrow_forward_ios_rounded,
-                  size: 10,
-                  color: Colors.white.withValues(alpha: 0.7),
+                  size: 11.5,
+                  color: Colors.white,
                 ),
               ),
             ],
@@ -2120,9 +2110,9 @@ class _StudentDashboardState extends State<StudentDashboard> {
           const SizedBox(height: 8),
           Text(
             subtitle,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
-              color: Color(0xFF94A3B8),
+              color: Colors.white.withValues(alpha: 0.70),
               height: 1.25,
             ),
             maxLines: 2,
@@ -2231,8 +2221,12 @@ class _StudentDashboardState extends State<StudentDashboard> {
 
   Widget _buildSpfBentoCard(BuildContext context) {
     return _buildGlassContainer(
-      borderRadius: 22,
+      borderRadius: 26,
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
+      gradientColors: [
+        Colors.white.withValues(alpha: 0.24),
+        Colors.white.withValues(alpha: 0.08),
+      ],
       onTap: () {
         Navigator.push(
           context,
@@ -2243,12 +2237,12 @@ class _StudentDashboardState extends State<StudentDashboard> {
       },
       child: Row(
         children: [
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
+                const Text(
                   'SPF Performance',
                   style: TextStyle(
                     fontSize: 15,
@@ -2257,12 +2251,12 @@ class _StudentDashboardState extends State<StudentDashboard> {
                     letterSpacing: -0.2,
                   ),
                 ),
-                SizedBox(height: 3),
+                const SizedBox(height: 3),
                 Text(
                   'Student Performance Framework cycle & tier',
                   style: TextStyle(
                     fontSize: 11.5,
-                    color: Color(0xFF94A3B8),
+                    color: Colors.white.withValues(alpha: 0.70),
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -2271,19 +2265,12 @@ class _StudentDashboardState extends State<StudentDashboard> {
             ),
           ),
           const SizedBox(width: 10),
-          Container(
-            width: 26,
-            height: 26,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white.withValues(alpha: 0.06),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.15),
-              ),
-            ),
-            child: const Icon(
+          const LiquidGlassPill(
+            borderRadius: 14,
+            padding: EdgeInsets.all(7),
+            child: Icon(
               Icons.arrow_forward_ios_rounded,
-              size: 11,
+              size: 11.5,
               color: Colors.white,
             ),
           ),
@@ -3034,13 +3021,8 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
 
   Widget _buildStudentHeroCard() {
     final bool isEligible = overallAttendance >= 75;
-    return AnimatedRays(
-      borderRadius: 20,
-      backgroundColor: const Color(0xFF070B14),
-      border: Border.all(
-        color: Colors.white.withValues(alpha: 0.18),
-        width: 1.0,
-      ),
+    return GlassContainer(
+      borderRadius: 28,
       padding: const EdgeInsets.all(18.0),
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -3468,13 +3450,20 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
         color: Colors.transparent,
         child: InkWell(
           onTap: onPressed,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           child: Container(
             height: 48,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.06),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withOpacity(0.14)),
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.white.withValues(alpha: 0.12),
+                  Colors.white.withValues(alpha: 0.04),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -3487,7 +3476,7 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w700,
                       fontSize: 13,
                     ),
                   ),
@@ -3524,8 +3513,11 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
 
   Widget _buildRegulationsCard() {
     return GlassContainer(
-      color: const Color(0xFF0284C7).withOpacity(0.08),
-      borderColor: const Color(0xFF38BDF8).withOpacity(0.25),
+      gradientColors: [
+        const Color(0xFF0284C7).withValues(alpha: 0.18),
+        const Color(0xFF0284C7).withValues(alpha: 0.06),
+      ],
+      borderColor: const Color(0xFF38BDF8).withValues(alpha: 0.35),
       padding: const EdgeInsets.all(18),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -3658,7 +3650,7 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
                           _buildSubjectGrid(),
                           const SizedBox(height: 28),
                           _buildRegulationsCard(),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 48),
                         ],
                       ),
                     ),

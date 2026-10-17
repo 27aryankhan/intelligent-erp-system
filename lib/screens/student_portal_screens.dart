@@ -5,7 +5,6 @@ import '../services/hitam_auth_service.dart';
 import '../services/hitam_scraper_service.dart';
 import '../widgets/student_photo_widget.dart';
 import '../widgets/glass_components.dart';
-import '../widgets/animated_rays.dart';
 
 // ============================================================================
 // 1. STUDENT BACKLOGS SCREEN
@@ -113,7 +112,9 @@ class _StudentBacklogsScreenState extends State<StudentBacklogsScreen> {
                   )
                 : ListView(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-                    physics: const AlwaysScrollableScrollPhysics(),
+                    physics: const BouncingScrollPhysics(
+                      parent: AlwaysScrollableScrollPhysics(),
+                    ),
                     children: [
                       if (count == 0)
                         GlassContainer(
@@ -166,7 +167,6 @@ class _StudentBacklogsScreenState extends State<StudentBacklogsScreen> {
                                   children: [
                                     GlassCapsulePill(
                                       label: item.semester,
-                                      color: const Color(0xFF38BDF8),
                                     ),
                                     const Spacer(),
                                     GlassStatusPill(
@@ -265,6 +265,18 @@ class _StudentFeeDetailsScreenState extends State<StudentFeeDetailsScreen> {
     }
   }
 
+  String _formatCurrency(num amount) {
+    final str = amount.toStringAsFixed(0);
+    if (str.length <= 3) return str;
+    final last3 = str.substring(str.length - 3);
+    final rest = str.substring(0, str.length - 3);
+    final formattedRest = rest.replaceAllMapped(
+      RegExp(r'\B(?=(\d{2})+(?!\d))'),
+      (match) => ',',
+    );
+    return '$formattedRest,$last3';
+  }
+
   @override
   Widget build(BuildContext context) {
     final report = _feeReport;
@@ -322,48 +334,43 @@ class _StudentFeeDetailsScreenState extends State<StudentFeeDetailsScreen> {
                   )
                 : ListView(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-                    physics: const AlwaysScrollableScrollPhysics(),
+                    physics: const BouncingScrollPhysics(
+                      parent: AlwaysScrollableScrollPhysics(),
+                    ),
                     children: [
                       // Total Balance Hero Card
                       GlassContainer(
+                        borderRadius: 28,
                         padding: const EdgeInsets.all(22),
-                        color: const Color(0xFF0F172A).withOpacity(0.40),
                         borderColor: totalDue > 0
                             ? const Color(0xFFF59E0B).withOpacity(0.35)
                             : const Color(0xFF10B981).withOpacity(0.35),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text(
-                                  'OUTSTANDING BALANCE',
-                                  style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 0.6,
-                                  ),
-                                ),
-                                GlassStatusPill(
-                                  label: totalDue > 0 ? 'DUE' : 'CLEARED',
-                                  isSuccess: totalDue <= 0,
-                                  isWarning: totalDue > 0,
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
                             Text(
-                              '₹${totalDue.toStringAsFixed(0)}',
+                              '₹${_formatCurrency(totalDue)}',
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 34,
+                                fontSize: 36,
                                 fontWeight: FontWeight.w900,
+                                letterSpacing: -0.5,
                               ),
                             ),
-                            if (report?.balanceText != null &&
-                                report!.balanceText.isNotEmpty) ...[
+                            if (totalDue <= 0) ...[
+                              const SizedBox(height: 4),
+                              const Text(
+                                'All academic dues cleared for current semester',
+                                style: TextStyle(
+                                  color: Color(0xFF34D399),
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.2,
+                                ),
+                              ),
+                            ] else if (report?.balanceText != null &&
+                                report!.balanceText.trim().isNotEmpty &&
+                                report!.balanceText.trim().toLowerCase() != 'only') ...[
                               const SizedBox(height: 4),
                               Text(
                                 report.balanceText,
@@ -394,7 +401,7 @@ class _StudentFeeDetailsScreenState extends State<StudentFeeDetailsScreen> {
                                         ),
                                         const SizedBox(height: 3),
                                         Text(
-                                          '₹${totalPayable.toStringAsFixed(0)}',
+                                          '₹${_formatCurrency(totalPayable)}',
                                           style: const TextStyle(
                                             color: Colors.white,
                                             fontWeight: FontWeight.w700,
@@ -425,7 +432,7 @@ class _StudentFeeDetailsScreenState extends State<StudentFeeDetailsScreen> {
                                         ),
                                         const SizedBox(height: 3),
                                         Text(
-                                          '₹${totalPaid.toStringAsFixed(0)}',
+                                          '₹${_formatCurrency(totalPaid)}',
                                           style: const TextStyle(
                                             color: Color(0xFF34D399),
                                             fontWeight: FontWeight.w700,
@@ -477,7 +484,7 @@ class _StudentFeeDetailsScreenState extends State<StudentFeeDetailsScreen> {
                                   children: [
                                     GlassCapsulePill(
                                       label: '#${item.slNo}',
-                                      color: Colors.white60,
+                                      textColor: Colors.white70,
                                     ),
                                     const SizedBox(width: 10),
                                     Expanded(
@@ -492,7 +499,7 @@ class _StudentFeeDetailsScreenState extends State<StudentFeeDetailsScreen> {
                                     ),
                                     GlassStatusPill(
                                       label: item.due > 0
-                                          ? 'Due: ₹${item.due.toStringAsFixed(0)}'
+                                          ? 'Due: ₹${_formatCurrency(item.due)}'
                                           : 'Fully Paid',
                                       isSuccess: item.due <= 0,
                                       isWarning: item.due > 0,
@@ -518,7 +525,7 @@ class _StudentFeeDetailsScreenState extends State<StudentFeeDetailsScreen> {
                                         ),
                                         const SizedBox(height: 2),
                                         Text(
-                                          '₹${item.payable.toStringAsFixed(0)}',
+                                          '₹${_formatCurrency(item.payable)}',
                                           style: const TextStyle(
                                               fontWeight: FontWeight.w600,
                                               fontSize: 14,
@@ -538,7 +545,7 @@ class _StudentFeeDetailsScreenState extends State<StudentFeeDetailsScreen> {
                                         ),
                                         const SizedBox(height: 2),
                                         Text(
-                                          '₹${item.paid.toStringAsFixed(0)}',
+                                          '₹${_formatCurrency(item.paid)}',
                                           style: const TextStyle(
                                             fontWeight: FontWeight.w700,
                                             fontSize: 14,
@@ -559,7 +566,7 @@ class _StudentFeeDetailsScreenState extends State<StudentFeeDetailsScreen> {
                                         ),
                                         const SizedBox(height: 2),
                                         Text(
-                                          '₹${item.due.toStringAsFixed(0)}',
+                                          '₹${_formatCurrency(item.due)}',
                                           style: TextStyle(
                                             fontWeight: FontWeight.w700,
                                             fontSize: 14,
@@ -658,10 +665,22 @@ class _StudentMarksScreenState extends State<StudentMarksScreen>
         ],
         bottom: TabBar(
           controller: _tabController,
-          labelColor: const Color(0xFF34D399),
+          labelColor: Colors.white,
           unselectedLabelColor: Colors.white60,
-          indicatorColor: const Color(0xFF10B981),
-          indicatorWeight: 3,
+          indicatorSize: TabBarIndicatorSize.label,
+          indicator: UnderlineTabIndicator(
+            borderSide: const BorderSide(width: 3.5, color: Colors.white),
+            borderRadius: BorderRadius.circular(3),
+          ),
+          labelStyle: const TextStyle(
+            fontSize: 13.5,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.2,
+          ),
+          unselectedLabelStyle: const TextStyle(
+            fontSize: 13.5,
+            fontWeight: FontWeight.w500,
+          ),
           tabs: const [
             Tab(text: 'CIE Internal Marks'),
             Tab(text: 'Semester SGPA'),
@@ -670,9 +689,9 @@ class _StudentMarksScreenState extends State<StudentMarksScreen>
       ),
       body: RefreshIndicator(
         onRefresh: _loadMarks,
-        color: const Color(0xFF10B981),
+        color: Colors.white,
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator(color: Color(0xFF10B981)))
+            ? const Center(child: CircularProgressIndicator(color: Colors.white))
             : TabBarView(
                 controller: _tabController,
                 children: [
@@ -713,16 +732,17 @@ class _StudentMarksScreenState extends State<StudentMarksScreen>
                                     children:
                                         item.examScores.entries.map((e) {
                                       return GlassSubCard(
+                                        borderRadius: 12,
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 12, vertical: 7),
+                                            horizontal: 13, vertical: 7.5),
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
                                             Text(
                                               '${e.key}: ',
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 fontSize: 12,
-                                                color: Colors.white70,
+                                                color: Colors.white.withValues(alpha: 0.75),
                                                 fontWeight: FontWeight.w600,
                                               ),
                                             ),
@@ -733,7 +753,7 @@ class _StudentMarksScreenState extends State<StudentMarksScreen>
                                                 fontWeight: FontWeight.w800,
                                                 color: e.value == '-'
                                                     ? Colors.white38
-                                                    : const Color(0xFF34D399),
+                                                    : Colors.white,
                                               ),
                                             ),
                                           ],
@@ -764,7 +784,7 @@ class _StudentMarksScreenState extends State<StudentMarksScreen>
                             return GlassContainer(
                               margin: const EdgeInsets.only(bottom: 12),
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 14),
+                                  horizontal: 18, vertical: 15),
                               child: Row(
                                 children: [
                                   Expanded(
@@ -784,8 +804,8 @@ class _StudentMarksScreenState extends State<StudentMarksScreen>
                                           const SizedBox(height: 3),
                                           Text(
                                             sem.creditsInfo,
-                                            style: const TextStyle(
-                                              color: Colors.white60,
+                                            style: TextStyle(
+                                              color: Colors.white.withValues(alpha: 0.65),
                                               fontSize: 12,
                                             ),
                                           ),
@@ -795,29 +815,32 @@ class _StudentMarksScreenState extends State<StudentMarksScreen>
                                   ),
                                   Container(
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 14, vertical: 6),
+                                        horizontal: 16, vertical: 8),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.08),
-                                      borderRadius: BorderRadius.circular(10),
+                                      color: const Color(0xFF1E222C).withValues(alpha: 0.60),
+                                      borderRadius: BorderRadius.circular(14),
                                       border: Border.all(
-                                        color: Colors.white.withValues(alpha: 0.22),
+                                        color: Colors.white.withValues(alpha: 0.10),
+                                        width: 1.0,
                                       ),
                                     ),
                                     child: Column(
                                       children: [
-                                        const Text(
+                                        Text(
                                           'SGPA',
                                           style: TextStyle(
                                             fontSize: 10,
                                             fontWeight: FontWeight.w600,
-                                            color: Colors.white70,
+                                            color: Colors.white.withValues(alpha: 0.70),
+                                            letterSpacing: 0.5,
                                           ),
                                         ),
+                                        const SizedBox(height: 1),
                                         Text(
                                           sem.sgpa.toStringAsFixed(2),
                                           style: const TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w900,
+                                            fontSize: 16.5,
+                                            fontWeight: FontWeight.w800,
                                             color: Colors.white,
                                           ),
                                         ),
@@ -988,11 +1011,11 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
         children: [
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.6,
-              color: Color(0xFF34D399),
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.8,
+              color: Colors.white.withValues(alpha: 0.85),
             ),
           ),
           Divider(height: 18, color: Colors.white.withOpacity(0.08)),
@@ -1025,21 +1048,13 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
             ? const Center(child: CircularProgressIndicator(color: Color(0xFF10B981)))
             : ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-                physics: const AlwaysScrollableScrollPhysics(),
+                physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics(),
+                ),
                 children: [
-                  // Profile Header Hero with Animated Rays (VengeanceUI Component)
-                  AnimatedRays(
-                    borderRadius: 22,
-                    backgroundColor: const Color(0xFF04060A),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.28),
-                      width: 1.15,
-                    ),
-                    glowShadow: BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.85),
-                      blurRadius: 36,
-                      offset: const Offset(0, 10),
-                    ),
+                  // Profile Header Hero with One UI Frosted Glass
+                  GlassContainer(
+                    borderRadius: 28,
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 26),
                     child: Column(
                       children: [
@@ -1049,22 +1064,15 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.35),
+                              color: Colors.white.withValues(alpha: 0.20),
                               width: 1.5,
                             ),
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                Colors.white.withValues(alpha: 0.30),
-                                Colors.white.withValues(alpha: 0.06),
-                              ],
-                            ),
+                            color: Colors.white.withValues(alpha: 0.08),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.65),
-                                blurRadius: 24,
-                                offset: const Offset(0, 8),
+                                color: Colors.black.withValues(alpha: 0.40),
+                                blurRadius: 20,
+                                offset: const Offset(0, 6),
                               ),
                             ],
                           ),
@@ -1222,159 +1230,8 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                     _buildInfoRow('Mother Mobile', p?.motherMobile ?? '', Icons.phone_outlined),
                     _buildInfoRow('Mother Occupation', p?.motherOccupation ?? '', Icons.work_outline),
                   ]),
-
-                  // SPF Performance
-                  if (p?.spfBands.isNotEmpty ?? false)
-                    _buildCardSection('SPF PERFORMANCE', [
-                      GlassContainer(
-                        padding: EdgeInsets.zero,
-                        child: Column(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.08),
-                                borderRadius: const BorderRadius.vertical(
-                                    top: Radius.circular(15)),
-                              ),
-                              child: const Row(
-                                children: [
-                                  Expanded(
-                                    flex: 5,
-                                    child: Text(
-                                      'Semester',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ),
-                                  Expanded(
-                                    flex: 2,
-                                    child: Center(
-                                      child: Text(
-                                        'Cycle',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  Expanded(
-                                    flex: 2,
-                                    child: Center(
-                                      child: Text(
-                                        'Band',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            ...p!.spfBands.asMap().entries.map((entry) {
-                              final idx = entry.key;
-                              final item = entry.value;
-                              return Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 9),
-                                decoration: BoxDecoration(
-                                  color: idx % 2 == 0
-                                      ? Colors.transparent
-                                      : Colors.white.withOpacity(0.03),
-                                  border: Border(
-                                    bottom: BorderSide(
-                                      color: idx == p.spfBands.length - 1
-                                          ? Colors.transparent
-                                          : Colors.white.withOpacity(0.06),
-                                    ),
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      flex: 5,
-                                      child: Text(
-                                        item.semester,
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      flex: 2,
-                                      child: Center(
-                                        child: Text(
-                                          item.cycle,
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w500,
-                                            color: Colors.white70,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      flex: 2,
-                                      child: Center(
-                                        child: _buildBandBadge(item.band),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }),
-                          ],
-                        ),
-                      ),
-                    ]),
                 ],
               ),
-      ),
-    );
-  }
-
-  Widget _buildBandBadge(String band) {
-    final clean =
-        band.replaceAll(RegExp(r'band\s*', caseSensitive: false), '').trim();
-    final b = clean.toUpperCase();
-    if (b.isEmpty || b == '-') {
-      return Text(
-        '—',
-        style: TextStyle(
-          color: Colors.white.withOpacity(0.4),
-          fontWeight: FontWeight.w500,
-        ),
-      );
-    }
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3.5),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.22),
-          width: 1.0,
-        ),
-      ),
-      child: Text(
-        b,
-        style: const TextStyle(
-          fontSize: 12.5,
-          fontWeight: FontWeight.w800,
-          color: Colors.white,
-          letterSpacing: 0.2,
-        ),
       ),
     );
   }
@@ -1539,7 +1396,9 @@ class _StudentTimeTableScreenState extends State<StudentTimeTableScreen> {
             ? const Center(child: CircularProgressIndicator(color: Color(0xFF10B981)))
             : ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-                physics: const AlwaysScrollableScrollPhysics(),
+                physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics(),
+                ),
                 children: [
                   // Day Selector Pills
                   SingleChildScrollView(
@@ -1550,50 +1409,25 @@ class _StudentTimeTableScreenState extends State<StudentTimeTableScreen> {
                         final isSelected = day == _selectedDay;
                         return Padding(
                           padding: const EdgeInsets.only(right: 8),
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: () {
-                                setState(() {
-                                  _selectedDay = day;
-                                });
-                              },
-                              borderRadius: BorderRadius.circular(20),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 18, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: isSelected
-                                      ? const Color(0xFF10B981)
-                                      : Colors.white.withOpacity(0.06),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: isSelected
-                                        ? const Color(0xFF34D399)
-                                        : Colors.white.withOpacity(0.12),
-                                  ),
-                                  boxShadow: isSelected
-                                      ? [
-                                          BoxShadow(
-                                            color: const Color(0xFF10B981)
-                                                .withOpacity(0.4),
-                                            blurRadius: 10,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ]
-                                      : null,
-                                ),
-                                child: Text(
-                                  day,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 13,
-                                    color: isSelected
-                                        ? Colors.white
-                                        : Colors.white70,
-                                  ),
-                                ),
+                          child: LiquidGlassPill(
+                            borderRadius: 22,
+                            isSelected: isSelected,
+                            accentColor: const Color(0xFF10B981),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 18, vertical: 8.5),
+                            onTap: () {
+                              setState(() {
+                                _selectedDay = day;
+                              });
+                            },
+                            child: Text(
+                              day,
+                              style: TextStyle(
+                                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                fontSize: 13,
+                                color: isSelected
+                                    ? Colors.white
+                                    : Colors.white.withValues(alpha: 0.75),
                               ),
                             ),
                           ),
@@ -1626,9 +1460,12 @@ class _StudentTimeTableScreenState extends State<StudentTimeTableScreen> {
                         return GlassContainer(
                           margin: const EdgeInsets.only(bottom: 12),
                           padding: const EdgeInsets.symmetric(
-                              vertical: 12, horizontal: 16),
-                          color: const Color(0xFFF59E0B).withOpacity(0.12),
-                          borderColor: const Color(0xFFF59E0B).withOpacity(0.3),
+                              vertical: 13, horizontal: 16),
+                          gradientColors: [
+                            const Color(0xFFF59E0B).withValues(alpha: 0.22),
+                            const Color(0xFFF59E0B).withValues(alpha: 0.08),
+                          ],
+                          borderColor: const Color(0xFFF59E0B).withValues(alpha: 0.45),
                           child: Row(
                             children: [
                               const Icon(Icons.restaurant_rounded,
@@ -1650,82 +1487,55 @@ class _StudentTimeTableScreenState extends State<StudentTimeTableScreen> {
                       return GlassContainer(
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(16),
-                        child: Row(
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF10B981).withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: const Color(0xFF10B981).withOpacity(0.3),
+                            Row(
+                              children: [
+                                GlassCapsulePill(
+                                  label: code,
                                 ),
-                              ),
-                              alignment: Alignment.center,
-                              child: Text(
-                                'P${i + 1}',
-                                style: const TextStyle(
-                                  color: Color(0xFF34D399),
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 14,
+                                const Spacer(),
+                                Text(
+                                  _formatPeriodTiming(periodTiming, i),
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.white60,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              fullName,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
                               ),
                             ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                            if (faculty.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Row(
                                 children: [
-                                  Row(
-                                    children: [
-                                      GlassCapsulePill(
-                                        label: code,
-                                        color: const Color(0xFF38BDF8),
+                                  const Icon(Icons.person_outline_rounded,
+                                      size: 14,
+                                      color: Colors.white60),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      faculty,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.white70,
+                                        fontWeight: FontWeight.w500,
                                       ),
-                                      const Spacer(),
-                                      Text(
-                                        _formatPeriodTiming(periodTiming, i),
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          color: Colors.white60,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    fullName,
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.white,
                                     ),
                                   ),
-                                  if (faculty.isNotEmpty) ...[
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        const Icon(Icons.person_outline_rounded,
-                                            size: 14,
-                                            color: Colors.white60),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          faculty,
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.white70,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
                                 ],
                               ),
-                            ),
+                            ],
                           ],
                         ),
                       );
@@ -1822,6 +1632,8 @@ class _StudentAcademicRegisterScreenState
   String? _errorMessage;
   StudentAcademicRegisterReport? _report;
   String? _cachedPhotoUrl;
+  String? _cachedStudentName;
+  String? _cachedBranch;
   String _searchQuery = '';
   String _selectedFilter = 'ALL'; // ALL, SAFE, WARNING, CRITICAL, ACTIVE
   final Map<String, String> _dayLogFilterBySubject = {}; // Subject code -> ALL, PRESENT, ABSENT
@@ -1843,23 +1655,38 @@ class _StudentAcademicRegisterScreenState
           (HitamAuthService().activeUserId ?? '').toUpperCase().trim();
       final scraper = HitamScraperService();
 
-      // Load cached photo strictly scoped to this student
+      // Load cached photo and student metadata strictly scoped to this student
       try {
         final prefs = await SharedPreferences.getInstance();
         final cached = prefs.getString('hitam_student_photo_url_$rollNo');
-        if (cached != null && cached.isNotEmpty && mounted) {
-          if (HitamScraperService.isBlacklistedPhoto(cached)) {
-            prefs.remove('hitam_student_photo_url_$rollNo');
-          } else {
-            setState(() {
+        final cachedName = prefs.getString('hitam_student_name');
+        final cachedBranch = prefs.getString('hitam_student_branch');
+        if (mounted) {
+          setState(() {
+            if (cached != null && cached.isNotEmpty && !HitamScraperService.isBlacklistedPhoto(cached)) {
               _cachedPhotoUrl = cached;
-            });
-          }
+            }
+            if (cachedName != null && cachedName.isNotEmpty && cachedName.toUpperCase().trim() != rollNo) {
+              _cachedStudentName = cachedName;
+            }
+            if (cachedBranch != null && cachedBranch.isNotEmpty) {
+              _cachedBranch = cachedBranch;
+            }
+          });
         }
       } catch (_) {}
 
-      // Prefetch student photo in background if not already loaded for rollNo
+      // Prefetch student photo and profile metadata in background if not already loaded for rollNo
       final matchingProfile = scraper.getProfileFor(rollNo);
+      if (matchingProfile != null) {
+        if (matchingProfile.name.trim().isNotEmpty &&
+            matchingProfile.name.trim().toUpperCase() != rollNo) {
+          _cachedStudentName = matchingProfile.name.trim();
+        }
+        if (matchingProfile.branch.trim().isNotEmpty) {
+          _cachedBranch = matchingProfile.branch.trim();
+        }
+      }
       if (matchingProfile?.photoUrl == null && rollNo.isNotEmpty) {
         unawaited(scraper.fetchStudentProfile(rollNo).then((prof) {
           if (mounted &&
@@ -1869,6 +1696,13 @@ class _StudentAcademicRegisterScreenState
               _cachedPhotoUrl = (prof.photoUrl != null && !HitamScraperService.isBlacklistedPhoto(prof.photoUrl))
                   ? prof.photoUrl
                   : null;
+              if (prof.name.trim().isNotEmpty &&
+                  prof.name.trim().toUpperCase() != rollNo) {
+                _cachedStudentName = prof.name.trim();
+              }
+              if (prof.branch.trim().isNotEmpty) {
+                _cachedBranch = prof.branch.trim();
+              }
             });
           }
         }));
@@ -2020,16 +1854,49 @@ class _StudentAcademicRegisterScreenState
         ? r.rollNo
         : (HitamAuthService().activeUserId ?? 'Student');
 
-    final studentName = (r != null &&
-            r.studentName.isNotEmpty &&
-            !r.studentName.contains('Sl.No') &&
-            !r.studentName.contains('Subject') &&
-            !r.studentName.contains('Semester') &&
-            r.studentName.length < 50)
-        ? r.studentName
-        : (HitamScraperService().latestProfile?.name.trim() ??
-            HitamScraperService().latestAttendanceReport?.studentName.trim() ??
-            rollNo);
+    // Robust student name resolution
+    String studentName = '';
+    if (r != null &&
+        r.studentName.trim().isNotEmpty &&
+        r.studentName.trim().toUpperCase() != rollNo.trim().toUpperCase() &&
+        !r.studentName.contains('Sl.No') &&
+        !r.studentName.contains('Subject') &&
+        !r.studentName.contains('Semester') &&
+        r.studentName.length < 50) {
+      studentName = r.studentName.trim();
+    }
+
+    if (studentName.isEmpty) {
+      final prof = HitamScraperService().getProfileFor(rollNo) ??
+          HitamScraperService().latestProfile;
+      final profName = prof?.name.trim();
+      if (profName != null &&
+          profName.isNotEmpty &&
+          profName.toUpperCase() != rollNo.toUpperCase()) {
+        studentName = profName;
+      }
+    }
+
+    if (studentName.isEmpty) {
+      final attName =
+          HitamScraperService().latestAttendanceReport?.studentName.trim();
+      if (attName != null &&
+          attName.isNotEmpty &&
+          attName.toUpperCase() != rollNo.toUpperCase()) {
+        studentName = attName;
+      }
+    }
+
+    if (studentName.isEmpty &&
+        _cachedStudentName != null &&
+        _cachedStudentName!.trim().isNotEmpty &&
+        _cachedStudentName!.trim().toUpperCase() != rollNo.toUpperCase()) {
+      studentName = _cachedStudentName!.trim();
+    }
+
+    if (studentName.isEmpty) {
+      studentName = rollNo.isNotEmpty ? rollNo : 'Student';
+    }
 
     final sem = (r != null &&
             r.semester.isNotEmpty &&
@@ -2040,9 +1907,53 @@ class _StudentAcademicRegisterScreenState
             HitamScraperService().latestAttendanceReport?.semester ??
             '');
 
-    final branch = HitamScraperService().latestProfile?.branch ??
-        HitamScraperService().latestAttendanceReport?.branch ??
-        'Engineering';
+    // Robust branch resolution
+    String branch = '';
+    final prof = HitamScraperService().getProfileFor(rollNo) ??
+        HitamScraperService().latestProfile;
+    final profBranch = prof?.branch.trim();
+    if (profBranch != null && profBranch.isNotEmpty) {
+      branch = profBranch;
+    }
+
+    if (branch.isEmpty) {
+      final attBranch =
+          HitamScraperService().latestAttendanceReport?.branch.trim();
+      if (attBranch != null && attBranch.isNotEmpty) {
+        branch = attBranch;
+      }
+    }
+
+    if (branch.isEmpty &&
+        _cachedBranch != null &&
+        _cachedBranch!.trim().isNotEmpty) {
+      branch = _cachedBranch!.trim();
+    }
+
+    if (branch.isEmpty) {
+      final upper = rollNo.toUpperCase();
+      if (upper.contains('05')) {
+        branch = 'Computer Science & Engineering';
+      } else if (upper.contains('66')) {
+        branch = 'CSE (AI & ML)';
+      } else if (upper.contains('67')) {
+        branch = 'CSE (Data Science)';
+      } else if (upper.contains('69')) {
+        branch = 'CSE (IoT)';
+      } else if (upper.contains('70')) {
+        branch = 'CSE (Cyber Security)';
+      } else if (upper.contains('04')) {
+        branch = 'Electronics & Communication Engineering';
+      } else if (upper.contains('03')) {
+        branch = 'Mechanical Engineering';
+      } else if (upper.contains('02')) {
+        branch = 'Electrical & Electronics Engineering';
+      } else if (upper.contains('01')) {
+        branch = 'Civil Engineering';
+      } else {
+        branch = 'Engineering';
+      }
+    }
 
     final rawPhoto =
         HitamScraperService().getProfileFor(rollNo)?.photoUrl ??
@@ -2111,11 +2022,19 @@ class _StudentAcademicRegisterScreenState
                       ),
                     ),
                   )
-                : ListView(
-                    padding: const EdgeInsets.all(16),
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    children: [
-                      // 1. EXECUTIVE OVERVIEW HEADER CARD
+                : CustomScrollView(
+                    physics: const BouncingScrollPhysics(
+                      parent: AlwaysScrollableScrollPhysics(),
+                    ),
+                    cacheExtent: 600,
+                    slivers: [
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+                        sliver: SliverToBoxAdapter(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // 1. EXECUTIVE OVERVIEW HEADER CARD
                       GlassContainer(
                         padding: const EdgeInsets.all(18),
                         child: Column(
@@ -2150,7 +2069,9 @@ class _StudentAcademicRegisterScreenState
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
-                                        'Roll: $rollNo • $branch',
+                                        branch.isNotEmpty
+                                            ? 'Roll: $rollNo • $branch'
+                                            : 'Roll: $rollNo',
                                         style: TextStyle(
                                           fontSize: 12,
                                           fontWeight: FontWeight.w500,
@@ -2159,11 +2080,6 @@ class _StudentAcademicRegisterScreenState
                                       ),
                                     ],
                                   ),
-                                ),
-                                GlassStatusPill(
-                                  label: 'Verified',
-                                  color: const Color(0xFF34D399),
-                                  icon: Icons.verified_rounded,
                                 ),
                               ],
                             ),
@@ -2174,23 +2090,34 @@ class _StudentAcademicRegisterScreenState
                                 height: 1),
                             const SizedBox(height: 12),
 
-                            // Meta info badges: Semester & Date range
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 6,
-                              children: [
-                                GlassCapsulePill(
-                                  label: sem,
-                                  icon: Icons.bookmark_border_rounded,
-                                ),
-                                if (report?.dates.isNotEmpty ?? false)
-                                  GlassCapsulePill(
-                                    label:
-                                        '${report!.dates.first} to ${report.dates.last} (${report.dates.length} sessions)',
-                                    icon: Icons.date_range_rounded,
-                                  ),
-                              ],
-                            ),
+                            // Meta info: Semester & Date range (clean One UI typography)
+                            if (sem.isNotEmpty || (report?.dates.isNotEmpty ?? false))
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (sem.isNotEmpty)
+                                    Text(
+                                      sem,
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                        letterSpacing: 0.2,
+                                      ),
+                                    ),
+                                  if (sem.isNotEmpty && (report?.dates.isNotEmpty ?? false))
+                                    const SizedBox(height: 3),
+                                  if (report?.dates.isNotEmpty ?? false)
+                                    Text(
+                                      '${report!.dates.first} to ${report.dates.last} (${report.dates.length} sessions)',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.white.withValues(alpha: 0.70),
+                                      ),
+                                    ),
+                                ],
+                              ),
 
                             const SizedBox(height: 16),
 
@@ -2239,21 +2166,22 @@ class _StudentAcademicRegisterScreenState
 
                       // 2. SEARCH BAR & FILTERS
                       GlassContainer(
+                        borderRadius: 22,
                         padding: EdgeInsets.zero,
                         child: TextField(
                           onChanged: (val) =>
                               setState(() => _searchQuery = val),
-                          style: const TextStyle(color: Colors.white, fontSize: 13),
+                          style: const TextStyle(color: Colors.white, fontSize: 13.5),
                           decoration: InputDecoration(
                             hintText:
                                 'Search by course name or code (e.g. CV, NP)...',
                             hintStyle: TextStyle(
-                                fontSize: 13, color: Colors.white.withOpacity(0.4)),
+                                fontSize: 13.5, color: Colors.white.withValues(alpha: 0.45)),
                             prefixIcon: Icon(Icons.search_rounded,
-                                size: 20, color: Colors.white.withOpacity(0.6)),
+                                size: 21, color: Colors.white.withValues(alpha: 0.75)),
                             suffixIcon: _searchQuery.isNotEmpty
                                 ? IconButton(
-                                    icon: Icon(Icons.clear, size: 18, color: Colors.white.withOpacity(0.6)),
+                                    icon: Icon(Icons.clear, size: 18, color: Colors.white.withValues(alpha: 0.70)),
                                     onPressed: () =>
                                         setState(() => _searchQuery = ''),
                                   )
@@ -2300,59 +2228,57 @@ class _StudentAcademicRegisterScreenState
                           ],
                         ),
                       ),
-
-                      const SizedBox(height: 16),
-
-                      // 3. SUBJECT REGISTER CARDS
-                      if (filtered.isEmpty)
-                        GlassContainer(
-                          padding: const EdgeInsets.all(36),
-                          alignment: Alignment.center,
-                          child: Column(
-                            children: [
-                              Icon(Icons.search_off_rounded,
-                                  size: 40, color: Colors.white.withOpacity(0.4)),
-                              const SizedBox(height: 10),
-                              Text(
-                                'No matching subjects in Academic Register.',
-                                style: TextStyle(
-                                  color: Colors.white.withOpacity(0.7),
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
+                    ],
+                  ),
+                ),
+              ),
+              if (filtered.isEmpty)
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 8),
+                  sliver: SliverToBoxAdapter(
+                    child: GlassContainer(
+                      padding: const EdgeInsets.all(36),
+                      alignment: Alignment.center,
+                      child: Column(
+                        children: [
+                          Icon(Icons.search_off_rounded,
+                              size: 40, color: Colors.white.withOpacity(0.4)),
+                          const SizedBox(height: 10),
+                          Text(
+                            'No matching subjects in Academic Register.',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.7),
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        )
-                      else
-                        ...filtered.map((item) {
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        return _buildSubjectCard(context, filtered[index]);
+                      },
+                      childCount: filtered.length,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+      ),
+    );
+  }
+
+  Widget _buildSubjectCard(BuildContext context, AcademicRegisterEntry item) {
                           final (attended, held) =
                               _parseAttendedHeld(item.attendedHeld);
-                          final pctColor =
-                              _getPercentageColor(item.percentage, held);
                           final fullName = _resolveSubjectName(item.subject);
-
-                          // Bunk or recovery calculation
-                          String statusBadgeText = '';
-                          Color statusBadgeColor = const Color(0xFF64748B);
-                          if (held > 0) {
-                            if (item.percentage >= 75.0) {
-                              final double surplus = attended - (0.75 * held);
-                              final int bunks = (surplus / 0.75).floor();
-                              statusBadgeText =
-                                  bunks > 0 ? '+$bunks bunks' : 'Safe';
-                              statusBadgeColor = const Color(0xFF10B981);
-                            } else {
-                              final double shortage = (0.75 * held) - attended;
-                              final int needed = (shortage / 0.25).ceil();
-                              statusBadgeText = needed > 0
-                                  ? 'Need $needed classes'
-                                  : 'Warning';
-                              statusBadgeColor = const Color(0xFFEF4444);
-                            }
-                          } else {
-                            statusBadgeText = 'No sessions yet';
-                            statusBadgeColor = const Color(0xFF94A3B8);
-                          }
 
                           // Day-by-day filter for this subject
                           final currentDayFilter =
@@ -2380,7 +2306,7 @@ class _StudentAcademicRegisterScreenState
                                 data: Theme.of(context).copyWith(
                                   dividerColor: Colors.transparent,
                                   colorScheme: Theme.of(context).colorScheme.copyWith(
-                                    primary: const Color(0xFF34D399),
+                                    primary: Colors.white,
                                   ),
                                 ),
                                 child: ExpansionTile(
@@ -2388,17 +2314,26 @@ class _StudentAcademicRegisterScreenState
                                   collapsedIconColor: Colors.white54,
                                   tilePadding: const EdgeInsets.symmetric(
                                       horizontal: 16, vertical: 8),
-                                  leading: CircleAvatar(
-                                    radius: 22,
-                                    backgroundColor: pctColor.withOpacity(0.18),
+                                  leading: Container(
+                                    width: 44,
+                                    height: 44,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF1E222C).withValues(alpha: 0.60),
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: Border.all(
+                                        color: Colors.white.withValues(alpha: 0.10),
+                                        width: 1.0,
+                                      ),
+                                    ),
+                                    alignment: Alignment.center,
                                     child: Text(
                                       held > 0
                                           ? '${item.percentage.toStringAsFixed(0)}%'
                                           : '0%',
-                                      style: TextStyle(
-                                        color: pctColor,
+                                      style: const TextStyle(
+                                        color: Colors.white,
                                         fontWeight: FontWeight.w800,
-                                        fontSize: 12,
+                                        fontSize: 12.5,
                                       ),
                                     ),
                                   ),
@@ -2411,41 +2346,14 @@ class _StudentAcademicRegisterScreenState
                                     ),
                                   ),
                                   subtitle: Padding(
-                                    padding: const EdgeInsets.only(top: 6),
-                                    child: Wrap(
-                                      spacing: 8,
-                                      runSpacing: 4,
-                                      crossAxisAlignment:
-                                          WrapCrossAlignment.center,
-                                      children: [
-                                        // Subject code tag
-                                        GlassSubCard(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 7, vertical: 2),
-                                          borderRadius: 6,
-                                          child: Text(
-                                            item.subject,
-                                            style: const TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w700,
-                                              color: Color(0xFF34D399),
-                                            ),
-                                          ),
-                                        ),
-                                        Text(
-                                          'Attended: ${item.attendedHeld}',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.white.withOpacity(0.7),
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                        // Status badge
-                                        GlassStatusPill(
-                                          label: statusBadgeText,
-                                          color: statusBadgeColor,
-                                        ),
-                                      ],
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Text(
+                                      'Attended: ${item.attendedHeld}',
+                                      style: TextStyle(
+                                        fontSize: 12.5,
+                                        color: Colors.white.withOpacity(0.7),
+                                        fontWeight: FontWeight.w500,
+                                      ),
                                     ),
                                   ),
                                   children: [
@@ -2672,11 +2580,6 @@ class _StudentAcademicRegisterScreenState
                                 ),
                               ),
                             ),
-                          );
-                        }),
-                    ],
-                  ),
-      ),
     );
   }
 
@@ -2704,10 +2607,10 @@ class _StudentAcademicRegisterScreenState
           const SizedBox(height: 3),
           Text(
             value,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w800,
-              color: color,
+              color: Colors.white,
             ),
           ),
           const SizedBox(height: 2),
@@ -2728,53 +2631,21 @@ class _StudentAcademicRegisterScreenState
   Widget _buildFilterChip(String key, String label, {Color? accentColor}) {
     final isSelected = _selectedFilter == key;
     final effectiveColor = accentColor ?? const Color(0xFF34D399);
-    return GestureDetector(
+
+    return LiquidGlassPill(
+      borderRadius: 22,
+      isSelected: isSelected,
+      accentColor: effectiveColor,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7.5),
       onTap: () => setState(() => _selectedFilter = key),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
           color: isSelected
-              ? effectiveColor.withOpacity(0.2)
-              : Colors.white.withOpacity(0.06),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected
-                ? effectiveColor.withOpacity(0.5)
-                : Colors.white.withOpacity(0.12),
-          ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: effectiveColor.withOpacity(0.25),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (accentColor != null) ...[
-              Container(
-                width: 6,
-                height: 6,
-                decoration: BoxDecoration(
-                  color: effectiveColor,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 6),
-            ],
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                color: isSelected ? Colors.white : Colors.white.withOpacity(0.7),
-              ),
-            ),
-          ],
+              ? Colors.white
+              : Colors.white.withValues(alpha: 0.75),
         ),
       ),
     );
@@ -2825,16 +2696,16 @@ class _StudentAcademicRegisterScreenState
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: bgColor,
+        color: const Color(0xFF1E222C).withValues(alpha: 0.60),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: textColor.withOpacity(0.3)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
       ),
       child: Text(
         '$title: $val',
-        style: TextStyle(
+        style: const TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w700,
-          color: textColor,
+          color: Colors.white,
         ),
       ),
     );
@@ -2901,22 +2772,38 @@ class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
       );
     }
 
+    final Color accentColor;
+    final Color textColor;
+    if (b.startsWith('A')) {
+      accentColor = const Color(0xFF10B981);
+      textColor = const Color(0xFF34D399);
+    } else if (b.startsWith('B')) {
+      accentColor = const Color(0xFF3B82F6);
+      textColor = const Color(0xFF93C5FD);
+    } else if (b.startsWith('C')) {
+      accentColor = const Color(0xFFF59E0B);
+      textColor = const Color(0xFFFDE68A);
+    } else {
+      accentColor = const Color(0xFFEF4444);
+      textColor = const Color(0xFFFCA5A5);
+    }
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3.5),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4.5),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(6),
+        color: accentColor.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.22),
+          color: accentColor.withValues(alpha: 0.35),
           width: 1.0,
         ),
       ),
       child: Text(
         b,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 12.5,
           fontWeight: FontWeight.w800,
-          color: Colors.white,
+          color: textColor,
           letterSpacing: 0.2,
         ),
       ),
@@ -3038,7 +2925,9 @@ class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
                               horizontal: 16,
                               vertical: 20,
                             ),
-                            physics: const AlwaysScrollableScrollPhysics(),
+                            physics: const BouncingScrollPhysics(
+                              parent: AlwaysScrollableScrollPhysics(),
+                            ),
                             children: [
                               // 1. Student Info Header Card
                               GlassContainer(
@@ -3101,7 +2990,12 @@ class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
                                         horizontal: 16,
                                         vertical: 12,
                                       ),
-                                      color: Colors.white.withOpacity(0.08),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withValues(alpha: 0.12),
+                                        borderRadius: const BorderRadius.vertical(
+                                          top: Radius.circular(26),
+                                        ),
+                                      ),
                                       child: const Row(
                                         children: [
                                           Expanded(

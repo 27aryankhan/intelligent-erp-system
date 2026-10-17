@@ -1557,13 +1557,38 @@ class HitamScraperService {
 
       // Safe fallbacks to prevent any table data from ever appearing as student name
       if (studentName.isEmpty ||
+          studentName.toUpperCase().trim() == rollNo.toUpperCase().trim() ||
           studentName.contains('Sl.No') ||
           studentName.contains('Subject') ||
           studentName.contains('Semester') ||
           studentName.length > 50) {
-        studentName = latestProfile?.name.trim() ??
-            latestAttendanceReport?.studentName.trim() ??
-            '';
+        studentName = '';
+        final prof = getProfileFor(rollNo) ?? latestProfile;
+        final profName = prof?.name.trim();
+        if (profName != null &&
+            profName.isNotEmpty &&
+            profName.toUpperCase() != rollNo.toUpperCase()) {
+          studentName = profName;
+        }
+        if (studentName.isEmpty) {
+          final attName = latestAttendanceReport?.studentName.trim();
+          if (attName != null &&
+              attName.isNotEmpty &&
+              attName.toUpperCase() != rollNo.toUpperCase()) {
+            studentName = attName;
+          }
+        }
+        if (studentName.isEmpty) {
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            final cached = prefs.getString('hitam_student_name');
+            if (cached != null &&
+                cached.trim().isNotEmpty &&
+                cached.trim().toUpperCase() != rollNo.toUpperCase().trim()) {
+              studentName = cached.trim();
+            }
+          } catch (_) {}
+        }
       }
       if (studentName.isEmpty) {
         studentName = rollNo.isNotEmpty ? rollNo : 'Student';

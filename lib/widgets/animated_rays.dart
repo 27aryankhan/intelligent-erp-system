@@ -208,46 +208,13 @@ class SpecularGlassBorderPainter extends CustomPainter {
       }
     }
 
-    // 1. Primary Specular Rim Gradient (Top-left light source across all 4 corners)
+    // 1. Clean, subtle One UI frosted glass border (soft uniform stroke)
     final strokeRRect = rrect.deflate(strokeWidth / 2.0);
     final borderPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
-      ..shader = ui.Gradient.linear(
-        Offset.zero,
-        Offset(size.width, size.height),
-        [
-          baseColor?.withValues(alpha: (baseColor.a * 1.35).clamp(0.0, 1.0)) ??
-              Colors.white.withValues(alpha: 0.38),
-          baseColor?.withValues(alpha: (baseColor.a * 0.85).clamp(0.0, 1.0)) ??
-              Colors.white.withValues(alpha: 0.22),
-          baseColor?.withValues(alpha: (baseColor.a * 0.50).clamp(0.0, 1.0)) ??
-              Colors.white.withValues(alpha: 0.14),
-          baseColor?.withValues(alpha: (baseColor.a * 0.25).clamp(0.0, 1.0)) ??
-              Colors.white.withValues(alpha: 0.07),
-        ],
-        const [0.0, 0.35, 0.70, 1.0],
-      );
+      ..color = baseColor ?? Colors.white.withValues(alpha: 0.10);
     canvas.drawRRect(strokeRRect, borderPaint);
-
-    // 2. Subtle Inner Corner Bevel (Frosted lens highlight along top curves)
-    final innerRRect = rrect.deflate(strokeWidth + 0.6);
-    if (innerRRect.width > 0 && innerRRect.height > 0) {
-      final innerPaint = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 0.65
-        ..shader = ui.Gradient.linear(
-          Offset(size.width * 0.15, 0),
-          Offset(size.width * 0.85, size.height * 0.50),
-          [
-            Colors.white.withValues(alpha: 0.18),
-            Colors.white.withValues(alpha: 0.04),
-            Colors.transparent,
-          ],
-          const [0.0, 0.45, 1.0],
-        );
-      canvas.drawRRect(innerRRect, innerPaint);
-    }
   }
 
   @override
