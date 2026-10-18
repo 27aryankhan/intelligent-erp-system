@@ -54,8 +54,9 @@ exports.login = async (req, res) => {
 
         // 2. Mock Role-Based Fallback for Local Development Only
         let userRole = role || "student";
-        let userName = "Bhargavi";
-        let userId = "STU001";
+        const emailPrefix = normalizedEmail ? normalizedEmail.split("@")[0] : "Student";
+        let userName = emailPrefix ? (emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1)) : "Student";
+        let userId = emailPrefix || "Student";
 
         if (normalizedEmail.includes("faculty") || normalizedEmail.includes("ramesh")) {
             userRole = "faculty";

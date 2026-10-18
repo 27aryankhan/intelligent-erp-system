@@ -182,25 +182,166 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
         });
       }
 
-      // Populate records for all days in window
+      // Populate records for all days in window with strictly max 6 periods per day
+      // (HITAM schedule: 3 morning classes, lunch 12:15 PM - 1:00 PM, 3 afternoon classes)
       DateTime cur = start;
       while (!cur.isAfter(end)) {
         final k = _formatKey(cur);
-        final attended = dayAttended[k] ?? 0;
-        final held = dayHeld[k] ?? 0;
-        final subjList = daySubjects[k] ?? [];
+        final rawAttended = dayAttended[k] ?? 0;
+        final rawHeld = dayHeld[k] ?? 0;
+        final rawSubjList = daySubjects[k] ?? [];
 
+        int held = 0;
+        int attended = 0;
         int level = 0;
-        if (held > 0) {
-          final ratio = attended / held;
-          if (ratio >= 0.85) {
-            level = 4;
-          } else if (ratio >= 0.60) {
-            level = 3;
-          } else if (ratio >= 0.35) {
-            level = 2;
-          } else if (attended > 0) {
-            level = 1;
+        List<Map<String, String>> subjList = [];
+
+        if (rawHeld > 0) {
+          // Group raw subjects by unique name to eliminate accidental duplicates from
+          // multiple scraped columns / remedial rows
+          final Map<String, List<String>> uniqueSubjStatuses = {};
+          for (var item in rawSubjList) {
+            final name = item['subject'] ?? 'Course';
+            final status = item['status'] ?? 'Absent';
+            uniqueSubjStatuses.putIfAbsent(name, () => []).add(status);
+          }
+
+          // In HITAM, a college day consists of strictly 6 classes (periods of 1 hour):
+          // - 1st Class: 09:15 - 10:15 AM
+          // - 2nd Class: 10:15 - 11:15 AM
+          // - 3rd Class: 11:15 AM - 12:15 PM
+          // - Lunch Break: 12:15 PM - 01:00 PM
+          // - 4th Class: 01:00 - 02:00 PM
+          // - 5th Class: 02:00 - 03:00 PM
+          // - 6th Class: 03:00 - 04:00 PM
+          // Each class is 1 hour. On some days, only specific subjects have 2 classes (CV, FSWD LAB, MINI PROJECT).
+          // All other subjects have 1 class. Total classes in a day never exceed 6.
+          final List<({String name, String status, int hours})> dayCourses = [];
+          int allocatedHours = 0;
+
+          uniqueSubjStatuses.forEach((name, statuses) {
+            final int pCount = statuses.where((s) => s == 'Present').length;
+            final int aCount = statuses.where((s) => s == 'Absent').length;
+            final bool isP = pCount >= aCount;
+
+            final upper = name.toUpperCase().trim();
+            // Only CV, FSWD LAB, and MINI / MINI PROJECT can have 2 classes (2 hours)
+            final bool canHaveTwoClasses = upper == 'CV' ||
+                upper.contains('FSWD LAB') ||
+                upper.contains('MINI');
+
+            // 1 hour for each subject; 2 classes if it's CV, FSWD LAB, or MINI and raw data had >= 2 sessions
+            int hrs = 1;
+            if (canHaveTwoClasses && statuses.length >= 2) {
+              hrs = 2;
+            }
+
+            dayCourses.add((
+              name: name,
+              status: isP ? 'Present' : 'Absent',
+              hours: hrs,
+            ));
+            allocatedHours += hrs;
+          });
+
+          // Limit total courses so that total classes never exceed 6
+          if (dayCourses.length > 6) {
+            dayCourses.removeRange(6, dayCourses.length);
+            allocatedHours = dayCourses.fold(0, (sum, c) => sum + c.hours);
+          }
+
+          // If allocated hours exceed 6, adjust 2-hour subjects down to 1 hour
+          while (allocatedHours > 6) {
+            bool reduced = false;
+            for (int i = 0; i < dayCourses.length; i++) {
+              if (dayCourses[i].hours > 1) {
+                dayCourses[i] = (
+                  name: dayCourses[i].name,
+                  status: dayCourses[i].status,
+                  hours: dayCourses[i].hours - 1,
+                );
+                allocatedHours--;
+                reduced = true;
+                if (allocatedHours <= 6) break;
+              }
+            }
+            if (!reduced) {
+              if (dayCourses.length > 6) {
+                dayCourses.removeLast();
+                allocatedHours--;
+              } else {
+                break;
+              }
+            }
+          }
+
+          // If allocated hours are less than 6, expand subjects to reach the fixed 6 classes
+          if (allocatedHours < 6 && dayCourses.isNotEmpty) {
+            // First pass: allow CV, FSWD LAB, MINI to take 2 classes
+            for (int i = 0; i < dayCourses.length && allocatedHours < 6; i++) {
+              final upper = dayCourses[i].name.toUpperCase().trim();
+              final bool canHaveTwo = upper == 'CV' ||
+                  upper.contains('FSWD LAB') ||
+                  upper.contains('MINI');
+              if (canHaveTwo && dayCourses[i].hours == 1) {
+                dayCourses[i] = (
+                  name: dayCourses[i].name,
+                  status: dayCourses[i].status,
+                  hours: 2,
+                );
+                allocatedHours++;
+              }
+            }
+            // Second pass: if still < 6, expand remaining subjects (up to 2 hrs max)
+            for (int i = 0; i < dayCourses.length && allocatedHours < 6; i++) {
+              if (dayCourses[i].hours < 2) {
+                dayCourses[i] = (
+                  name: dayCourses[i].name,
+                  status: dayCourses[i].status,
+                  hours: 2,
+                );
+                allocatedHours++;
+              }
+            }
+          }
+
+          int presentHours = 0;
+          for (var c in dayCourses) {
+            for (int h = 0; h < c.hours; h++) {
+              subjList.add({
+                'subject': c.name,
+                'status': c.status,
+              });
+            }
+            if (c.status == 'Present') {
+              presentHours += c.hours;
+            }
+          }
+
+          held = 6; // FIXED: strictly 6 classes in a day at HITAM
+          if (allocatedHours > 0) {
+            attended = ((presentHours / allocatedHours) * 6).round().clamp(0, 6);
+          } else {
+            attended = ((rawAttended / rawHeld) * 6).round().clamp(0, 6);
+          }
+          if (presentHours > 0 && attended == 0) {
+            attended = 1;
+          }
+          if (presentHours == allocatedHours && allocatedHours > 0) {
+            attended = 6;
+          }
+
+          if (held > 0) {
+            final ratio = attended / held;
+            if (ratio >= 0.85) {
+              level = 4;
+            } else if (ratio >= 0.60) {
+              level = 3;
+            } else if (ratio >= 0.35) {
+              level = 2;
+            } else if (attended > 0) {
+              level = 1;
+            }
           }
         }
 
@@ -239,22 +380,69 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
 
       if (!isSunday && isDuringSession) {
         dayIndex++;
-        held = 5; // Monday to Saturday are all regular working days
+        held = 6; // Exactly 6 classes in a day: 3 morning, lunch 12:15-1:00 PM, 3 afternoon
         final bool isGoodDay =
             ((dayIndex * 19 + cur.day * 7) % 100) < (attendanceRatio * 100);
         if (isGoodDay) {
           attended = held;
           level = 4;
         } else {
-          attended = (held * 0.5).round();
-          level = attended > 0 ? 2 : 0;
+          attended = (held * attendanceRatio).round().clamp(1, 5);
+          level = attended >= 5 ? 3 : (attended >= 3 ? 2 : 1);
         }
 
-        for (var s in widget.subjects.take(held)) {
-          subjList.add({
-            'subject': s['subject']?.toString() ?? 'Course',
-            'status': isGoodDay ? 'Present' : 'Absent',
-          });
+        // Standard schedule: 1 hour for each subject.
+        // On specific days, only CV, FSWD LAB, or MINI has 2 classes. Total is always 6 classes.
+        final isMiniDay = cur.weekday == DateTime.tuesday;
+        final isLabDay = cur.weekday == DateTime.wednesday || cur.weekday == DateTime.friday;
+        final isCvDoubleDay = cur.weekday == DateTime.thursday;
+
+        List<({String name, int hours})> dailySchedule;
+        if (isMiniDay) {
+          dailySchedule = [
+            (name: 'Computer Vision', hours: 1),
+            (name: 'Full Stack Web Dev', hours: 1),
+            (name: 'Neural Networks & Deep Learning', hours: 1),
+            (name: 'Mini Project', hours: 2),
+            (name: 'Problem Solving', hours: 1),
+          ];
+        } else if (isLabDay) {
+          dailySchedule = [
+            (name: 'Computer Vision', hours: 1),
+            (name: 'Blockchain Technology', hours: 1),
+            (name: 'Problem Solving', hours: 1),
+            (name: 'FSWD Lab', hours: 2),
+            (name: 'Neural Networks & Deep Learning', hours: 1),
+          ];
+        } else if (isCvDoubleDay) {
+          dailySchedule = [
+            (name: 'Computer Vision', hours: 2),
+            (name: 'Full Stack Web Dev', hours: 1),
+            (name: 'Blockchain Technology', hours: 1),
+            (name: 'Neural Networks & Deep Learning', hours: 1),
+            (name: 'Problem Solving', hours: 1),
+          ];
+        } else {
+          dailySchedule = [
+            (name: 'Computer Vision', hours: 1),
+            (name: 'Full Stack Web Dev', hours: 1),
+            (name: 'Blockchain Technology', hours: 1),
+            (name: 'Neural Networks & Deep Learning', hours: 1),
+            (name: 'Problem Solving', hours: 1),
+            (name: 'Network Programming', hours: 1),
+          ];
+        }
+
+        int periodsAssigned = 0;
+        for (var item in dailySchedule) {
+          for (int h = 0; h < item.hours; h++) {
+            final bool isPresent = periodsAssigned < attended;
+            subjList.add({
+              'subject': item.name,
+              'status': isPresent ? 'Present' : 'Absent',
+            });
+            periodsAssigned++;
+          }
         }
       }
 
@@ -631,7 +819,7 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
 
     return Tooltip(
       message: '${_formatDisplayDate(record.date)}\n'
-          '${record.hasClasses ? "${record.attended} / ${record.held} classes attended" : "No scheduled lectures"}',
+          '${record.hasClasses ? "${record.attended} / 6 classes attended" : "No scheduled lectures"}',
       decoration: BoxDecoration(
         color: const Color(0xFF1E293B),
         borderRadius: BorderRadius.circular(8),

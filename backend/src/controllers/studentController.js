@@ -3,11 +3,12 @@ const { supabase, isConfigured, mockDb } = require("../config/supabase");
 // 1. Student Dashboard Summary
 exports.getStudentOverview = async (req, res) => {
     try {
-        if (isConfigured && supabase) {
+        const rollNo = req.query.rollNo || req.query.studentId || (req.user && req.user.id) || "";
+        if (isConfigured && supabase && rollNo) {
             const { data, error } = await supabase
                 .from("students")
                 .select("id, name, department, year, overall_attendance, assignments_pending, upcoming_exams, new_announcements")
-                .eq("id", "STU001")
+                .eq("id", rollNo)
                 .single();
 
             if (data && !error) {
@@ -33,22 +34,27 @@ exports.getStudentOverview = async (req, res) => {
 // 2. Student Attendance Breakdown
 exports.getStudentAttendance = async (req, res) => {
     try {
-        if (isConfigured && supabase) {
+        const studentId = req.query.rollNo || req.query.studentId || (req.user && req.user.id) || "";
+        const studentName = req.query.name || req.query.studentName || (req.user && req.user.name) || "";
+        const department = req.query.department || "";
+        const semester = req.query.semester || "";
+
+        if (isConfigured && supabase && studentId) {
             const { data, error } = await supabase
                 .from("attendance_subjects")
                 .select("subject, attended, total, percentage")
-                .eq("student_id", "STU001");
+                .eq("student_id", studentId);
 
             if (data && !error && data.length > 0) {
                 const total = data.reduce((sum, s) => sum + Number(s.total || 0), 0);
                 const attended = data.reduce((sum, s) => sum + Number(s.attended || 0), 0);
-                const overall = total > 0 ? Math.round((attended / total) * 100) : 85;
+                const overall = total > 0 ? Math.round((attended / total) * 100) : 0;
 
                 return res.json({
-                    studentId: "22K91A0501",
-                    studentName: "Bhargavi",
-                    department: "CSE - 4th Year",
-                    semester: "Semester 7",
+                    studentId,
+                    studentName,
+                    department,
+                    semester,
                     overallAttendance: overall,
                     totalClasses: total,
                     attendedClasses: attended,
@@ -57,7 +63,13 @@ exports.getStudentAttendance = async (req, res) => {
                 });
             }
         }
-        return res.json(mockDb.attendance);
+        return res.json({
+            ...mockDb.attendance,
+            studentId,
+            studentName,
+            department,
+            semester
+        });
     } catch (err) {
         console.error("Error in getStudentAttendance:", err);
         return res.json(mockDb.attendance);
@@ -111,9 +123,11 @@ exports.submitStudentAssignment = async (req, res) => {
         }
 
         // Update in mockDb student assignments
+        const activeRoll = req.body.rollNo || req.body.studentId || "";
+        const activeName = req.body.studentName || req.body.name || "Student";
         const item = mockDb.assignments.find(a => a.id === assignmentId);
         const submissionTimestamp = "Just now • " + new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-        const finalFileName = fileName || "assignment_solution_22K91A0501.pdf";
+        const finalFileName = fileName || `assignment_solution_${activeRoll || 'document'}.pdf`;
 
         if (item) {
             item.status = "Completed";
@@ -127,7 +141,7 @@ exports.submitStudentAssignment = async (req, res) => {
         const facultyAsg = mockDb.facultyAssignments.find(a => a.id === assignmentId || a.title === (item ? item.title : null));
         if (facultyAsg) {
             if (!facultyAsg.submissions) facultyAsg.submissions = [];
-            const studentSub = facultyAsg.submissions.find(s => s.rollNo === "22K91A0501" || s.studentId === "STU001");
+            const studentSub = facultyAsg.submissions.find(s => (activeRoll && (s.rollNo === activeRoll || s.studentId === activeRoll)));
             if (studentSub) {
                 studentSub.status = "Submitted";
                 studentSub.submittedAt = submissionTimestamp;
@@ -138,10 +152,10 @@ exports.submitStudentAssignment = async (req, res) => {
                 studentSub.feedback = studentSub.feedback || null;
             } else {
                 facultyAsg.submissions.unshift({
-                    studentId: "STU001",
-                    studentName: "Bhargavi",
-                    rollNo: "22K91A0501",
-                    department: "B.Tech CSE - Sec A",
+                    studentId: activeRoll || "STU",
+                    studentName: activeName,
+                    rollNo: activeRoll,
+                    department: "Engineering",
                     status: "Submitted",
                     submittedAt: submissionTimestamp,
                     fileName: finalFileName,
@@ -160,7 +174,7 @@ exports.submitStudentAssignment = async (req, res) => {
                 role: "faculty",
                 type: "assignment_submission",
                 title: `New Assignment Submission Received`,
-                body: `Bhargavi (22K91A0501) submitted PDF for "${item ? item.title : assignmentId}".`,
+                body: `${activeName}${activeRoll ? ` (${activeRoll})` : ''} submitted PDF for "${item ? item.title : assignmentId}".`,
                 timestamp: new Date().toISOString(),
                 read: false
             });

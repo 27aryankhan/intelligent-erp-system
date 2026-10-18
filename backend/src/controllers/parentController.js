@@ -20,21 +20,21 @@ exports.getParentOverview = async (req, res) => {
 
             if (student && !error) {
                 return res.json({
-                    parentName: "Mr. Narayana Rao",
-                    studentName: student.name || "Bhargavi",
-                    studentId: student.roll_no || "22K91A0501",
-                    attendance: Number(student.overall_attendance || 85),
-                    assignmentsPending: Number(student.assignments_pending || 3),
-                    upcomingExams: Number(student.upcoming_exams || 2),
-                    feeReminder: `₹${totalDue.toLocaleString("en-IN")} Pending`,
-                    newAnnouncements: Number(student.new_announcements || 4),
+                    parentName: "Parent",
+                    studentName: student.name || "Student",
+                    studentId: student.roll_no || "",
+                    attendance: Number(student.overall_attendance || 0),
+                    assignmentsPending: Number(student.assignments_pending || 0),
+                    upcomingExams: Number(student.upcoming_exams || 0),
+                    feeReminder: totalDue > 0 ? `₹${totalDue.toLocaleString("en-IN")} Pending` : `All Cleared`,
+                    newAnnouncements: Number(student.new_announcements || 0),
                     // Compatibility aliases
-                    rollNo: student.roll_no || "22K91A0501",
-                    department: `${student.department} - ${student.year}`,
-                    overallAttendance: `${student.overall_attendance}%`,
+                    rollNo: student.roll_no || "",
+                    department: `${student.department || ''}${student.year ? ' - ' + student.year : ''}`.trim(),
+                    overallAttendance: `${student.overall_attendance || 0}%`,
                     pendingFees: `₹${totalDue.toLocaleString("en-IN")}`,
-                    recentGpa: "8.65",
-                    alerts: 2
+                    recentGpa: "0.00",
+                    alerts: 0
                 });
             }
         }
@@ -67,9 +67,9 @@ exports.getParentFees = async (req, res) => {
                 const pendingItem = feesList.find(f => f.status === "Pending") || feesList[0];
 
                 return res.json({
-                    studentName: student?.name || "Bhargavi",
-                    studentId: student?.roll_no || "22K91A0501",
-                    department: student?.department ? `${student.department} - ${student.year || '4th Year'}` : "CSE - 4th Year",
+                    studentName: student?.name || "Student",
+                    studentId: student?.roll_no || "",
+                    department: student?.department ? `${student.department} - ${student.year || ''}` : "Engineering",
                     academicYear: "2025 - 2026",
                     totalFee: Math.round(total),
                     paidFee: Math.round(paid),

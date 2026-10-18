@@ -202,10 +202,10 @@ INSERT INTO profiles (username, email, full_name, role, department) VALUES
 
 -- Student: Bhargavi (STU001)
 INSERT INTO students (id, name, department, year, overall_attendance, assignments_pending, upcoming_exams, new_announcements, roll_no, parent_email) VALUES
-('STU001', 'Bhargavi', 'CSE', '4th Year', 85, 3, 2, 4, '22K91A0501', 'parent.bhargavi@gmail.com'),
-('STU002', 'Anjali', 'CSE', '4th Year', 92, 1, 2, 4, '22K91A0502', 'parent.anjali@gmail.com'),
-('STU003', 'Rahul', 'CSE', '4th Year', 78, 4, 2, 4, '22K91A0503', 'parent.rahul@gmail.com'),
-('STU004', 'Sneha', 'CSE', '4th Year', 88, 2, 2, 4, '22K91A0504', 'parent.sneha@gmail.com');
+('STU001', 'Student 01', 'CSE', '4th Year', 85, 3, 2, 4, '22K91A0501', 'parent1@hitam.edu'),
+('STU002', 'Student 02', 'CSE', '4th Year', 92, 1, 2, 4, '22K91A0502', 'parent2@hitam.edu'),
+('STU003', 'Student 03', 'CSE', '4th Year', 78, 4, 2, 4, '22K91A0503', 'parent3@hitam.edu'),
+('STU004', 'Student 04', 'CSE', '4th Year', 88, 2, 2, 4, '22K91A0504', 'parent4@hitam.edu');
 
 -- Attendance for Bhargavi
 INSERT INTO attendance_subjects (student_id, subject, attended, total) VALUES
@@ -243,10 +243,10 @@ INSERT INTO faculty (id, name, department, students_count, active_assignments, d
 
 -- Faculty Roster
 INSERT INTO faculty_attendance (faculty_id, student_id, student_name, attendance, assignments_pending) VALUES
-('FAC001', 'STU001', 'Bhargavi', 85, 3),
-('FAC001', 'STU002', 'Anjali', 92, 1),
-('FAC001', 'STU003', 'Rahul', 78, 4),
-('FAC001', 'STU004', 'Sneha', 88, 2);
+('FAC001', 'STU001', '22K91A0501', 85, 3),
+('FAC001', 'STU002', '22K91A0502', 92, 1),
+('FAC001', 'STU003', '22K91A0503', 78, 4),
+('FAC001', 'STU004', '22K91A0504', 88, 2);
 
 -- Announcements
 INSERT INTO announcements (title, content, author_name, author_role, target_audience, department) VALUES
@@ -271,15 +271,15 @@ INSERT INTO notifications (user_id, target_role, title, body, type, target_scree
 ('STU001', 'student', 'Semester 6 Hall Tickets Released', 'Odd semester mid-term examination timetable is now active. Verify assigned room number.', 'exam', 'exams', 'high', true),
 
 -- Parent Notifications
-('PAR001', 'parent', 'Ward Daily Attendance Update', 'Bhargavi (22K91A0501) was marked Present in all 4 lecture sessions today (Overall: 85%).', 'attendance', 'attendance', 'normal', false),
+('PAR001', 'parent', 'Ward Daily Attendance Update', 'Ward was marked Present in all 4 lecture sessions today (Overall: 85%).', 'attendance', 'attendance', 'normal', false),
 ('PAR001', 'parent', 'Fee Payment Reminder: ₹25,000 Pending', 'The second installment tuition fee of ₹25,000 for academic year 2025-2026 is due soon.', 'fee', 'fees', 'urgent', false),
 ('PAR001', 'parent', 'Parent-Teacher Meeting (PTM) Scheduled', 'Interactive PTM is scheduled for Saturday 20th September at 10:00 AM in CSE Block.', 'announcement', 'announcements', 'high', false),
-('PAR001', 'parent', 'Academic Performance: 8.65 SGPA', 'Bhargavi scored 8.65 SGPA with grade A+ in Data Structures in Semester 6 results.', 'academic', 'academic', 'normal', true),
+('PAR001', 'parent', 'Academic Performance: 8.65 SGPA', 'Ward scored 8.65 SGPA with grade A+ in Data Structures in Semester 6 results.', 'academic', 'academic', 'normal', true),
 
 -- Faculty Notifications
 ('FAC001', 'faculty', '35 New Assignment Submissions', '35 students submitted Neural Networks assignment "Perceptron Implementation" awaiting evaluation.', 'assignment', 'assignments', 'urgent', false),
 ('FAC001', 'faculty', 'Daily Attendance Lock Reminder', 'Please finalize and lock Section-A attendance for Computer Networks before 4:30 PM.', 'attendance', 'attendance', 'high', false),
-('FAC001', 'faculty', 'Student Medical Leave Request', 'Rahul (22K91A0503) submitted a medical leave application for 3 days awaiting your approval.', 'system', 'dashboard', 'normal', false),
+('FAC001', 'faculty', 'Student Medical Leave Request', 'A student submitted a medical leave application for 3 days awaiting your approval.', 'system', 'dashboard', 'normal', false),
 ('FAC001', 'faculty', 'Curriculum Committee Meeting', 'Academic council curriculum revision meeting tomorrow at 3:00 PM in Conference Hall A.', 'announcement', 'announcements', 'high', true),
 
 -- Administrator Notifications

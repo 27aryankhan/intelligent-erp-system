@@ -342,9 +342,6 @@ class _StudentFeeDetailsScreenState extends State<StudentFeeDetailsScreen> {
                       GlassContainer(
                         borderRadius: 28,
                         padding: const EdgeInsets.all(22),
-                        borderColor: totalDue > 0
-                            ? const Color(0xFFF59E0B).withOpacity(0.35)
-                            : const Color(0xFF10B981).withOpacity(0.35),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -966,30 +963,37 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
   Widget _buildInfoRow(String label, String value, IconData icon) {
     if (value.trim().isEmpty) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 7.5),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: Colors.white60),
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Icon(icon, size: 16, color: Colors.white.withValues(alpha: 0.50)),
+          ),
           const SizedBox(width: 12),
-          SizedBox(
-            width: 120,
+          Expanded(
+            flex: 4,
             child: Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
-                color: Colors.white70,
+                color: Colors.white.withValues(alpha: 0.60),
                 fontWeight: FontWeight.w500,
               ),
             ),
           ),
+          const SizedBox(width: 10),
           Expanded(
+            flex: 6,
             child: Text(
               value,
+              textAlign: TextAlign.end,
               style: const TextStyle(
-                fontSize: 14,
+                fontSize: 13.5,
                 fontWeight: FontWeight.w600,
                 color: Colors.white,
+                height: 1.25,
               ),
             ),
           ),
@@ -998,27 +1002,28 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     );
   }
 
-  Widget _buildCardSection(String title, List<Widget> children) {
+  Widget _buildCardSection(String title, List<Widget> children, {Color? borderColor}) {
     final validChildren =
         children.where((w) => w is! SizedBox || (w.height != 0)).toList();
     if (validChildren.isEmpty) return const SizedBox.shrink();
 
     return GlassContainer(
       margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
+      borderColor: borderColor,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
             style: TextStyle(
-              fontSize: 12.5,
+              fontSize: 12,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.8,
-              color: Colors.white.withValues(alpha: 0.85),
+              color: Colors.white.withValues(alpha: 0.75),
             ),
           ),
-          Divider(height: 18, color: Colors.white.withOpacity(0.08)),
+          Divider(height: 20, color: Colors.white.withValues(alpha: 0.08)),
           ...children,
         ],
       ),
@@ -1055,24 +1060,24 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                   // Profile Header Hero with One UI Frosted Glass
                   GlassContainer(
                     borderRadius: 28,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 26),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
                     child: Column(
                       children: [
-                        // Glass Lens Floating Avatar Ring
+                        // Softened Glass Lens Floating Avatar Ring
                         Container(
-                          padding: const EdgeInsets.all(4),
+                          padding: const EdgeInsets.all(3.5),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.20),
-                              width: 1.5,
+                              color: Colors.white.withValues(alpha: 0.22),
+                              width: 1.2,
                             ),
-                            color: Colors.white.withValues(alpha: 0.08),
+                            color: Colors.white.withValues(alpha: 0.05),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.40),
-                                blurRadius: 20,
-                                offset: const Offset(0, 6),
+                                color: Colors.black.withValues(alpha: 0.35),
+                                blurRadius: 18,
+                                offset: const Offset(0, 4),
                               ),
                             ],
                           ),
@@ -1080,11 +1085,11 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                             photoUrl: p?.photoUrl,
                             name: p?.name ?? '',
                             rollNo: p?.rollNo,
-                            size: 98,
+                            size: 96,
                             enableZoom: true,
                             border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.40),
-                              width: 2.0,
+                              color: Colors.white.withValues(alpha: 0.28),
+                              width: 1.0,
                             ),
                             backgroundColor: const Color(0xFF0F172A),
                           ),
@@ -1095,20 +1100,20 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                               ? p!.name.toUpperCase()
                               : 'STUDENT PROFILE',
                           textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 19,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 0.8,
-                            shadows: [
-                              Shadow(color: Colors.black87, blurRadius: 16, offset: Offset(0, 2)),
-                            ],
+                            fontSize: 18.5,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.3,
+                            height: 1.2,
                           ),
                         ),
                         if (p?.rollNo != null && p!.rollNo.isNotEmpty) ...[
                           const SizedBox(height: 10),
                           GlassCapsulePill(
-                            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 6.5),
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6.5),
                             borderRadius: 20,
                             child: Text(
                               p.rollNo,
@@ -1116,18 +1121,18 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                                 color: Colors.white,
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
-                                letterSpacing: 1.1,
+                                letterSpacing: 0.8,
                               ),
                             ),
                           ),
                         ],
-                        const SizedBox(height: 18),
+                        const SizedBox(height: 16),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             if (p?.cgpa != null && p!.cgpa.isNotEmpty)
                               GlassCapsulePill(
-                                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8.5),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                 borderRadius: 22,
                                 child: RichText(
                                   text: TextSpan(
@@ -1135,10 +1140,10 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                                       TextSpan(
                                         text: 'CGPA: ',
                                         style: TextStyle(
-                                          color: Colors.white.withValues(alpha: 0.70),
+                                          color: Colors.white.withValues(alpha: 0.65),
                                           fontSize: 12.5,
                                           fontWeight: FontWeight.w600,
-                                          letterSpacing: 0.4,
+                                          letterSpacing: 0.3,
                                         ),
                                       ),
                                       TextSpan(
@@ -1147,7 +1152,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                                           color: Colors.white,
                                           fontSize: 13.5,
                                           fontWeight: FontWeight.w800,
-                                          letterSpacing: 0.4,
+                                          letterSpacing: 0.3,
                                         ),
                                       ),
                                     ],
@@ -1159,7 +1164,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                               const SizedBox(width: 12),
                             if (p?.credits.isNotEmpty ?? false)
                               GlassCapsulePill(
-                                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8.5),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                 borderRadius: 22,
                                 child: RichText(
                                   text: TextSpan(
@@ -1167,10 +1172,10 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                                       TextSpan(
                                         text: 'Credits: ',
                                         style: TextStyle(
-                                          color: Colors.white.withValues(alpha: 0.70),
+                                          color: Colors.white.withValues(alpha: 0.65),
                                           fontSize: 12.5,
                                           fontWeight: FontWeight.w600,
-                                          letterSpacing: 0.4,
+                                          letterSpacing: 0.3,
                                         ),
                                       ),
                                       TextSpan(
@@ -1179,7 +1184,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                                           color: Colors.white,
                                           fontSize: 13.5,
                                           fontWeight: FontWeight.w800,
-                                          letterSpacing: 0.4,
+                                          letterSpacing: 0.3,
                                         ),
                                       ),
                                     ],
@@ -1193,16 +1198,20 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Academic Details
-                  _buildCardSection('ACADEMIC PROGRAM', [
-                    _buildInfoRow('Course', p?.course ?? '', Icons.school_outlined),
-                    _buildInfoRow('Branch', p?.branch ?? '', Icons.account_tree_outlined),
-                    _buildInfoRow('Semester', p?.semester ?? '', Icons.calendar_view_week_outlined),
-                    _buildInfoRow('Admission No', p?.admissionNo ?? '', Icons.confirmation_number_outlined),
-                    _buildInfoRow('Entrance Rank', p?.rank ?? '', Icons.military_tech_outlined),
-                    _buildInfoRow('Seat Type', p?.seatType ?? '', Icons.airline_seat_recline_normal_outlined),
-                    _buildInfoRow('Joining Date', p?.joiningDate ?? '', Icons.event_available_outlined),
-                  ]),
+                  // Academic Details with intentional subtle green accent border
+                  _buildCardSection(
+                    'ACADEMIC PROGRAM',
+                    [
+                      _buildInfoRow('Course', p?.course ?? '', Icons.school_outlined),
+                      _buildInfoRow('Branch', p?.branch ?? '', Icons.account_tree_outlined),
+                      _buildInfoRow('Semester', p?.semester ?? '', Icons.calendar_view_week_outlined),
+                      _buildInfoRow('Admission No', p?.admissionNo ?? '', Icons.confirmation_number_outlined),
+                      _buildInfoRow('Entrance Rank', p?.rank ?? '', Icons.military_tech_outlined),
+                      _buildInfoRow('Seat Type', p?.seatType ?? '', Icons.airline_seat_recline_normal_outlined),
+                      _buildInfoRow('Joining Date', p?.joiningDate ?? '', Icons.event_available_outlined),
+                    ],
+                    borderColor: const Color(0xFF10B981).withValues(alpha: 0.22),
+                  ),
 
                   // Personal Information
                   _buildCardSection('PERSONAL DETAILS', [
@@ -1310,7 +1319,22 @@ class _StudentTimeTableScreenState extends State<StudentTimeTableScreen> {
   }
 
   String _formatPeriodTiming(String rawTiming, int periodIndex) {
-    if (rawTiming.isEmpty) return 'Period ${periodIndex + 1}';
+    if (rawTiming.isEmpty) {
+      const hitamPeriodTimings = [
+        '09:15 - 10:15 AM',
+        '10:15 - 11:15 AM',
+        '11:15 AM - 12:15 PM',
+        '01:00 - 02:00 PM',
+        '02:00 - 03:00 PM',
+        '03:00 - 04:00 PM',
+      ];
+      final timing = periodIndex < hitamPeriodTimings.length
+          ? hitamPeriodTimings[periodIndex]
+          : '';
+      return timing.isNotEmpty
+          ? 'Period ${periodIndex + 1}  •  $timing'
+          : 'Period ${periodIndex + 1}';
+    }
 
     final clean = rawTiming
         .replaceAll(RegExp(r'<[^>]+>'), ' ')
@@ -1341,7 +1365,21 @@ class _StudentTimeTableScreenState extends State<StudentTimeTableScreen> {
     } else if (timeMatches.length == 1) {
       return 'Period $periodNum  •  ${timeMatches[0]}';
     }
-    return 'Period $periodNum';
+
+    const hitamPeriodTimings = [
+      '09:15 - 10:15 AM',
+      '10:15 - 11:15 AM',
+      '11:15 AM - 12:15 PM',
+      '01:00 - 02:00 PM',
+      '02:00 - 03:00 PM',
+      '03:00 - 04:00 PM',
+    ];
+    final timing = periodIndex < hitamPeriodTimings.length
+        ? hitamPeriodTimings[periodIndex]
+        : '';
+    return timing.isNotEmpty
+        ? 'Period $periodNum  •  $timing'
+        : 'Period $periodNum';
   }
 
   String _formatBreakTiming(String rawTiming) {
@@ -1363,7 +1401,7 @@ class _StudentTimeTableScreenState extends State<StudentTimeTableScreen> {
     } else if (timeMatches.length == 1) {
       return timeMatches[0];
     }
-    return clean;
+    return '12:15 PM - 01:00 PM';
   }
 
   @override
@@ -1562,29 +1600,36 @@ class _StudentTimeTableScreenState extends State<StudentTimeTableScreen> {
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: allocations.length,
-                        separatorBuilder: (_, __) => Divider(
+                        separatorBuilder: (context, index) => Divider(
                             height: 1, color: Colors.white.withOpacity(0.06)),
                         itemBuilder: (context, idx) {
                           final a = allocations[idx];
                           return ListTile(
                             dense: true,
                             leading: Container(
-                              width: 38,
-                              height: 38,
+                              width: 60,
+                              height: 34,
+                              padding: const EdgeInsets.symmetric(horizontal: 4),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF38BDF8).withOpacity(0.15),
+                                color: Colors.white.withValues(alpha: 0.08),
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
-                                  color: const Color(0xFF38BDF8).withOpacity(0.3),
+                                  color: Colors.white.withValues(alpha: 0.15),
                                 ),
                               ),
                               alignment: Alignment.center,
-                              child: Text(
-                                a.code,
-                                style: const TextStyle(
-                                  color: Color(0xFF38BDF8),
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 11,
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  a.code,
+                                  maxLines: 1,
+                                  softWrap: false,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 11,
+                                  ),
                                 ),
                               ),
                             ),
@@ -1636,7 +1681,6 @@ class _StudentAcademicRegisterScreenState
   String? _cachedBranch;
   String _searchQuery = '';
   String _selectedFilter = 'ALL'; // ALL, SAFE, WARNING, CRITICAL, ACTIVE
-  final Map<String, String> _dayLogFilterBySubject = {}; // Subject code -> ALL, PRESENT, ABSENT
 
   @override
   void initState() {
@@ -2174,7 +2218,7 @@ class _StudentAcademicRegisterScreenState
                           style: const TextStyle(color: Colors.white, fontSize: 13.5),
                           decoration: InputDecoration(
                             hintText:
-                                'Search by course name or code (e.g. CV, NP)...',
+                                'Search by course name or code...',
                             hintStyle: TextStyle(
                                 fontSize: 13.5, color: Colors.white.withValues(alpha: 0.45)),
                             prefixIcon: Icon(Icons.search_rounded,
@@ -2280,23 +2324,7 @@ class _StudentAcademicRegisterScreenState
                               _parseAttendedHeld(item.attendedHeld);
                           final fullName = _resolveSubjectName(item.subject);
 
-                          // Day-by-day filter for this subject
-                          final currentDayFilter =
-                              _dayLogFilterBySubject[item.subject] ?? 'ALL';
-
-                          final allDates = item.attendanceByDate.entries.toList();
-                          final presentDates = allDates
-                              .where((d) => d.value.contains('P'))
-                              .toList();
-                          final absentDates = allDates
-                              .where((d) => d.value.contains('A'))
-                              .toList();
-
-                          final visibleDates = currentDayFilter == 'PRESENT'
-                              ? presentDates
-                              : currentDayFilter == 'ABSENT'
-                                  ? absentDates
-                                  : allDates;
+                          final visibleDates = item.attendanceByDate.entries.toList();
 
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 14),
@@ -2419,49 +2447,15 @@ class _StudentAcademicRegisterScreenState
 
                                           const SizedBox(height: 16),
 
-                                          // Day by Day Attendance Section Header with sub-filter toggles
-                                          Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Text(
-                                                'DAY-BY-DAY ATTENDANCE LOG',
-                                                style: TextStyle(
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.w700,
-                                                  color: Colors.white.withOpacity(0.6),
-                                                  letterSpacing: 0.5,
-                                                ),
-                                              ),
-                                              Row(
-                                                children: [
-                                                  _buildLogFilterButton(
-                                                    item.subject,
-                                                    'ALL',
-                                                    'All (${allDates.length})',
-                                                    currentDayFilter,
-                                                  ),
-                                                  const SizedBox(width: 4),
-                                                  _buildLogFilterButton(
-                                                    item.subject,
-                                                    'PRESENT',
-                                                    'P (${presentDates.length})',
-                                                    currentDayFilter,
-                                                    color:
-                                                        const Color(0xFF10B981),
-                                                  ),
-                                                  const SizedBox(width: 4),
-                                                  _buildLogFilterButton(
-                                                    item.subject,
-                                                    'ABSENT',
-                                                    'A (${absentDates.length})',
-                                                    currentDayFilter,
-                                                    color:
-                                                        const Color(0xFFEF4444),
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
+                                          // Day by Day Attendance Section Header
+                                          Text(
+                                            'DAY-BY-DAY ATTENDANCE LOG',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w700,
+                                              color: Colors.white.withOpacity(0.6),
+                                              letterSpacing: 0.5,
+                                            ),
                                           ),
                                           const SizedBox(height: 10),
 
@@ -2470,12 +2464,7 @@ class _StudentAcademicRegisterScreenState
                                               padding: const EdgeInsets.symmetric(
                                                   vertical: 8),
                                               child: Text(
-                                                currentDayFilter == 'PRESENT'
-                                                    ? 'No present sessions recorded.'
-                                                    : currentDayFilter ==
-                                                            'ABSENT'
-                                                        ? 'Zero absent sessions (Perfect attendance)!'
-                                                        : 'No session dates recorded.',
+                                                'No session dates recorded.',
                                                 style: TextStyle(
                                                   fontSize: 12,
                                                   color: Colors.white.withOpacity(0.5),
@@ -2651,46 +2640,6 @@ class _StudentAcademicRegisterScreenState
     );
   }
 
-  Widget _buildLogFilterButton(
-    String subject,
-    String filterKey,
-    String label,
-    String currentFilter, {
-    Color? color,
-  }) {
-    final isSelected = currentFilter == filterKey;
-    final activeColor = color ?? const Color(0xFF34D399);
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _dayLogFilterBySubject[subject] = filterKey;
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? activeColor.withOpacity(0.25)
-              : Colors.white.withOpacity(0.06),
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(
-            color: isSelected
-                ? activeColor.withOpacity(0.5)
-                : Colors.white.withOpacity(0.08),
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.w700,
-            color: isSelected ? Colors.white : Colors.white.withOpacity(0.6),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildCieBadge(
       String title, String val, Color textColor, Color bgColor) {
     return Container(
@@ -2772,40 +2721,12 @@ class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
       );
     }
 
-    final Color accentColor;
-    final Color textColor;
-    if (b.startsWith('A')) {
-      accentColor = const Color(0xFF10B981);
-      textColor = const Color(0xFF34D399);
-    } else if (b.startsWith('B')) {
-      accentColor = const Color(0xFF3B82F6);
-      textColor = const Color(0xFF93C5FD);
-    } else if (b.startsWith('C')) {
-      accentColor = const Color(0xFFF59E0B);
-      textColor = const Color(0xFFFDE68A);
-    } else {
-      accentColor = const Color(0xFFEF4444);
-      textColor = const Color(0xFFFCA5A5);
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4.5),
-      decoration: BoxDecoration(
-        color: accentColor.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: accentColor.withValues(alpha: 0.35),
-          width: 1.0,
-        ),
-      ),
-      child: Text(
-        b,
-        style: TextStyle(
-          fontSize: 12.5,
-          fontWeight: FontWeight.w800,
-          color: textColor,
-          letterSpacing: 0.2,
-        ),
+    return Text(
+      b,
+      style: const TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w700,
+        color: Colors.white,
       ),
     );
   }

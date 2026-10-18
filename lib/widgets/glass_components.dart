@@ -112,26 +112,24 @@ class FrostedGlassAppBar extends StatelessWidget implements PreferredSizeWidget 
       leading: leading ??
           (canPop
               ? Center(
-                  child: Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.28),
-                        width: 1.0,
+                  child: LiquidGlassPill(
+                    borderRadius: 20,
+                    enableBlur: true,
+                    padding: EdgeInsets.zero,
+                    onTap: () => Navigator.of(context).maybePop(),
+                    child: const SizedBox(
+                      width: 40,
+                      height: 40,
+                      child: Center(
+                        child: Padding(
+                          padding: EdgeInsets.only(right: 1.5),
+                          child: Icon(
+                            Icons.arrow_back_ios_new_rounded,
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
-                    ),
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                        size: 16,
-                        color: Colors.white,
-                      ),
-                      padding: EdgeInsets.zero,
-                      tooltip: 'Back',
-                      onPressed: () => Navigator.of(context).maybePop(),
                     ),
                   ),
                 )
@@ -177,33 +175,32 @@ class FrostedAppBarAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 38,
-      height: 38,
-      margin: const EdgeInsets.symmetric(horizontal: 4),
-      decoration: BoxDecoration(
-        color: isDestructive
-            ? const Color(0xFFEF4444).withValues(alpha: 0.14)
-            : Colors.white.withValues(alpha: 0.12),
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: isDestructive
-              ? const Color(0xFFEF4444).withValues(alpha: 0.35)
-              : Colors.white.withValues(alpha: 0.28),
-          width: 1.0,
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: Tooltip(
+          message: tooltip,
+          child: LiquidGlassPill(
+            borderRadius: 20,
+            enableBlur: true,
+            padding: EdgeInsets.zero,
+            accentColor: isDestructive ? const Color(0xFFEF4444) : null,
+            onTap: onPressed,
+            child: SizedBox(
+              width: 40,
+              height: 40,
+              child: Center(
+                child: Icon(
+                  icon,
+                  size: 18,
+                  color: isDestructive
+                      ? const Color(0xFFFCA5A5)
+                      : Colors.white.withValues(alpha: 0.95),
+                ),
+              ),
+            ),
+          ),
         ),
-      ),
-      child: IconButton(
-        icon: Icon(
-          icon,
-          size: 19,
-          color: isDestructive
-              ? const Color(0xFFFCA5A5)
-              : Colors.white.withValues(alpha: 0.95),
-        ),
-        padding: EdgeInsets.zero,
-        tooltip: tooltip,
-        onPressed: onPressed,
       ),
     );
   }
@@ -250,7 +247,7 @@ class GlassContainer extends StatelessWidget {
     final effectiveBorder = border ??
         (borderColor != null
             ? Border.all(color: borderColor!, width: 1.0)
-            : Border.all(color: Colors.white.withValues(alpha: 0.10), width: 1.0));
+            : Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1.0));
 
     Widget card = Container(
       width: width,
@@ -258,17 +255,17 @@ class GlassContainer extends StatelessWidget {
       alignment: alignment,
       padding: padding ?? const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color ?? const Color(0xFF161922).withValues(alpha: 0.82),
+        color: color ?? const Color(0xFF141720).withValues(alpha: 0.88),
         borderRadius: rradius,
         border: effectiveBorder,
         boxShadow: const [
           BoxShadow(
-            color: Color(0x4D000000), // black 30%
-            blurRadius: 18,
-            offset: Offset(0, 5),
+            color: Color(0x38000000), // black 22%
+            blurRadius: 16,
+            offset: Offset(0, 4),
           ),
           BoxShadow(
-            color: Color(0x1A000000), // black 10%
+            color: Color(0x15000000), // black 8%
             blurRadius: 6,
             offset: Offset(0, 2),
           ),
@@ -384,92 +381,124 @@ class LiquidGlassPillPainter extends CustomPainter {
     final r = math.min(borderRadius, math.min(size.width, size.height) / 2);
     final rradius = Radius.circular(r);
     final rrect = RRect.fromRectAndRadius(rect, rradius);
+    final isCompact = size.width <= 34 || size.height <= 34;
 
-    // 1. Internal Liquid Cylindrical Lens Fill (Curved light refraction)
-    // Simulates optical liquid light concentration in upper half of the capsule
-    final inset = 1.0;
-    final innerR = math.max(0.0, r - inset);
-    final topLensHeight = math.min(size.height * 0.52, size.height - 2.0);
-    if (topLensHeight > 0 && size.width > inset * 2) {
-      final topLensRect = Rect.fromLTWH(inset, inset, size.width - inset * 2, topLensHeight);
-      final topLensRRect = RRect.fromRectAndCorners(
-        topLensRect,
-        topLeft: Radius.circular(innerR),
-        topRight: Radius.circular(innerR),
-        bottomLeft: const Radius.circular(3),
-        bottomRight: const Radius.circular(3),
+    // 1. 3D Volumetric Convex Reflection Dome (Whisper of Upper Glass Highlight)
+    final capInsetX = math.max(1.5, r * 0.22);
+    final capInsetY = isCompact ? 1.0 : 1.5;
+    final capW = size.width - (capInsetX * 2);
+    final capH = isCompact
+        ? math.min(size.height * 0.32, 6.5)
+        : math.min(size.height * 0.38, size.height - 4.0);
+    if (capW > 4 && capH > 2) {
+      final capR = math.max(1.0, r - capInsetX);
+      final capRRect = RRect.fromRectAndCorners(
+        Rect.fromLTWH(capInsetX, capInsetY, capW, capH),
+        topLeft: Radius.circular(capR),
+        topRight: Radius.circular(capR),
+        bottomLeft: Radius.circular(math.min(capR, 4.0)),
+        bottomRight: Radius.circular(math.min(capR, 4.0)),
       );
-      final lensPaint = Paint()
+      final domeAlpha = isCompact
+          ? (isSubtle ? 0.08 : 0.12)
+          : (isSelected ? 0.24 : (isSubtle ? 0.12 : 0.16));
+      final domePaint = Paint()
         ..style = PaintingStyle.fill
         ..shader = ui.Gradient.linear(
-          Offset(0, inset),
-          Offset(0, topLensHeight),
+          Offset(0, capInsetY),
+          Offset(0, capInsetY + capH),
           [
-            Colors.white.withValues(alpha: isSelected ? 0.16 : (isSubtle ? 0.06 : 0.12)),
+            Colors.white.withValues(alpha: domeAlpha),
+            Colors.white.withValues(alpha: domeAlpha * 0.25),
             Colors.white.withValues(alpha: 0.0),
           ],
+          const [0.0, 0.45, 1.0],
         );
-      canvas.drawRRect(topLensRRect, lensPaint);
+      canvas.drawRRect(capRRect, domePaint);
     }
 
-    // 2. Outer Optical Glass Perimeter Rim
-    // Refined, crystal-clear physical glass rim (no artificial rainbow gradients)
+    // 2. 3D Bottom Inner Shadow (Volumetric Glass Thickness & Recessed Optics)
+    final bottomShadowRRect = rrect.deflate(1.0);
+    if (bottomShadowRRect.width > 0 && bottomShadowRRect.height > 0) {
+      final bottomShadowPaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = isCompact ? 0.75 : 1.5
+        ..shader = ui.Gradient.linear(
+          Offset(0, size.height * 0.50),
+          Offset(0, size.height),
+          [
+            Colors.transparent,
+            Colors.black.withValues(alpha: isCompact ? 0.16 : (isSubtle ? 0.20 : 0.28)),
+          ],
+        );
+      canvas.save();
+      canvas.clipRRect(rrect);
+      canvas.drawRRect(bottomShadowRRect, bottomShadowPaint);
+      canvas.restore();
+    }
+
+    // 3. Outer Optical Glass Perimeter Rim (Delicate Luminous Hairline Rim)
     final strokeRRect = rrect.deflate(0.5);
     final rimPaint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 0.95
+      ..strokeWidth = isCompact ? 0.75 : 0.90
       ..shader = ui.Gradient.linear(
-        Offset(size.width * 0.25, 0),
-        Offset(size.width * 0.75, size.height),
+        Offset(size.width * 0.20, 0),
+        Offset(size.width * 0.80, size.height),
         isSelected
             ? [
-                Colors.white.withValues(alpha: 0.95), // Crisp luminous top reflection
-                Colors.white.withValues(alpha: 0.45), // Clear glass lateral edge
-                const Color(0xFF94A3B8).withValues(alpha: 0.22), // Soft slate refraction
-                Colors.white.withValues(alpha: 0.25), // Subtle bottom ground bounce
+                Colors.white.withValues(alpha: 0.65),
+                Colors.white.withValues(alpha: 0.22),
+                const Color(0xFF94A3B8).withValues(alpha: 0.12),
+                Colors.white.withValues(alpha: 0.20),
               ]
             : [
-                Colors.white.withValues(alpha: isSubtle ? 0.48 : 0.72), // Top light entry
-                Colors.white.withValues(alpha: isSubtle ? 0.16 : 0.25), // Clean glass lateral edge
-                const Color(0xFF64748B).withValues(alpha: 0.14), // Deep slate reflection
-                Colors.white.withValues(alpha: isSubtle ? 0.12 : 0.18), // Bottom ground refraction
+                Colors.white.withValues(
+                    alpha: isCompact
+                        ? (isSubtle ? 0.38 : 0.45)
+                        : (isSubtle ? 0.42 : 0.52)), // Delicate top light rim
+                Colors.white.withValues(
+                    alpha: isCompact ? 0.08 : (isSubtle ? 0.10 : 0.14)), // Translucent side edge
+                const Color(0xFF64748B).withValues(alpha: 0.08), // Gentle refraction
+                Colors.white.withValues(
+                    alpha: isCompact ? 0.12 : (isSubtle ? 0.14 : 0.18)), // Soft bottom rebound
               ],
-        const [0.0, 0.30, 0.72, 1.0],
+        const [0.0, 0.28, 0.70, 1.0],
       );
     canvas.drawRRect(strokeRRect, rimPaint);
 
-    // 3. Inner Liquid Bevel / Meniscus Ring
-    final innerRRect = rrect.deflate(1.4);
-    if (innerRRect.width > 0 && innerRRect.height > 0) {
-      final innerPaint = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 0.7
-        ..shader = ui.Gradient.linear(
-          Offset.zero,
-          Offset(0, size.height),
-          [
-            Colors.white.withValues(alpha: isSelected ? 0.38 : (isSubtle ? 0.16 : 0.26)),
-            Colors.white.withValues(alpha: 0.03),
-            Colors.white.withValues(alpha: isSubtle ? 0.05 : 0.08),
-          ],
-          const [0.0, 0.50, 1.0],
-        );
-      canvas.drawRRect(innerRRect, innerPaint);
+    // 4. Inner Liquid Meniscus Ring
+    if (!isCompact) {
+      final innerRRect = rrect.deflate(1.4);
+      if (innerRRect.width > 0 && innerRRect.height > 0) {
+        final innerPaint = Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 0.65
+          ..shader = ui.Gradient.linear(
+            Offset.zero,
+            Offset(0, size.height),
+            [
+              Colors.white.withValues(alpha: isSelected ? 0.22 : (isSubtle ? 0.10 : 0.14)),
+              Colors.white.withValues(alpha: 0.02),
+              Colors.white.withValues(alpha: isSubtle ? 0.04 : 0.08),
+            ],
+            const [0.0, 0.50, 1.0],
+          );
+        canvas.drawRRect(innerRRect, innerPaint);
+      }
     }
 
-    // 4. Top Specular Glare Arc (Curved liquid glass meniscus crowning sheen)
+    // 5. Top Specular Glare Arc (Natural curved liquid meniscus sheen, not metallic chrome)
     if (hasTopGlare && size.width > 14) {
       final glarePath = Path();
-      final arcInset = 1.8; // Gracefully inset from the outer rim
+      final arcInset = isCompact ? 1.2 : 1.6;
       final cornerRadius = math.max(1.0, r - arcInset);
 
-      // Tracing top rounded cap smoothly
       final leftCenter = Offset(r, r);
       final rightCenter = Offset(size.width - r, r);
       final leftRect = Rect.fromCircle(center: leftCenter, radius: cornerRadius);
       final rightRect = Rect.fromCircle(center: rightCenter, radius: cornerRadius);
 
-      // Sweep: from upper-left curve through top straight edge to upper-right curve
       glarePath.addArc(leftRect, math.pi * 1.15, math.pi * 0.35);
       glarePath.lineTo(math.max(r, size.width - r), arcInset);
       if (size.width - r > r) {
@@ -477,10 +506,12 @@ class LiquidGlassPillPainter extends CustomPainter {
       }
 
       // Pass A: Soft Luminous Sheen Bloom
-      final bloomAlpha = isSelected ? 0.38 : (isSubtle ? 0.18 : 0.26);
+      final bloomAlpha = isCompact
+          ? (isSubtle ? 0.08 : 0.12)
+          : (isSelected ? 0.22 : (isSubtle ? 0.10 : 0.15));
       final bloomPaint = Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.0
+        ..strokeWidth = isCompact ? 1.0 : 1.8
         ..strokeCap = StrokeCap.round
         ..shader = ui.Gradient.linear(
           Offset(0, arcInset),
@@ -494,38 +525,42 @@ class LiquidGlassPillPainter extends CustomPainter {
         );
       canvas.drawPath(glarePath, bloomPaint);
 
-      // Pass B: Crisp Razor Specular Highlight Core
-      final coreAlpha = isSelected ? 0.90 : (isSubtle ? 0.45 : 0.78);
+      // Pass B: Subtle Optical Glare Core
+      final coreAlpha = isCompact
+          ? (isSubtle ? 0.28 : 0.35)
+          : (isSelected ? 0.50 : (isSubtle ? 0.32 : 0.40));
       final corePaint = Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 0.85
+        ..strokeWidth = isCompact ? 0.70 : 0.85
         ..strokeCap = StrokeCap.round
         ..shader = ui.Gradient.linear(
-          Offset(size.width * 0.18, arcInset),
-          Offset(size.width * 0.82, arcInset),
+          Offset(size.width * 0.15, arcInset),
+          Offset(size.width * 0.85, arcInset),
           [
             Colors.white.withValues(alpha: 0.0),
+            Colors.white.withValues(alpha: coreAlpha * 0.5),
             Colors.white.withValues(alpha: coreAlpha),
+            Colors.white.withValues(alpha: coreAlpha * 0.5),
             Colors.white.withValues(alpha: 0.0),
           ],
-          const [0.0, 0.5, 1.0],
+          const [0.0, 0.25, 0.50, 0.75, 1.0],
         );
       canvas.drawPath(glarePath, corePaint);
     }
 
-    // 5. Bottom Caustic Ground Bounce
-    if (size.width > 16 && size.height > 12) {
+    // 6. Bottom Caustic Ground Bounce
+    if (!isCompact && size.width > 16 && size.height > 12) {
       final bottomPath = Path();
-      final bottomY = size.height - 1.4;
-      final startX = math.max(r * 0.8, size.width * 0.25);
-      final endX = math.min(size.width - r * 0.8, size.width * 0.75);
+      final bottomY = size.height - 1.2;
+      final startX = math.max(r * 0.7, size.width * 0.20);
+      final endX = math.min(size.width - r * 0.7, size.width * 0.80);
       bottomPath.moveTo(startX, bottomY);
       bottomPath.lineTo(endX, bottomY);
 
-      final causticAlpha = isSelected ? 0.28 : (isSubtle ? 0.08 : 0.15);
+      final causticAlpha = isSelected ? 0.20 : (isSubtle ? 0.08 : 0.14);
       final causticPaint = Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 0.75
+        ..strokeWidth = 0.8
         ..strokeCap = StrokeCap.round
         ..shader = ui.Gradient.linear(
           Offset(startX, bottomY),
@@ -558,6 +593,7 @@ class LiquidGlassPill extends StatelessWidget {
   final Color? accentColor;
   final bool isSelected;
   final bool isSubtle;
+  final bool enableBlur;
   final EdgeInsetsGeometry? padding;
   final EdgeInsetsGeometry? margin;
   final VoidCallback? onTap;
@@ -570,6 +606,7 @@ class LiquidGlassPill extends StatelessWidget {
     this.accentColor,
     this.isSelected = false,
     this.isSubtle = false,
+    this.enableBlur = false,
     this.padding,
     this.margin,
     this.onTap,
@@ -579,7 +616,7 @@ class LiquidGlassPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final rradius = BorderRadius.circular(borderRadius);
 
-    final content = Container(
+    Widget content = Container(
       padding: padding ?? const EdgeInsets.symmetric(horizontal: 14, vertical: 7.5),
       decoration: BoxDecoration(
         borderRadius: rradius,
@@ -588,74 +625,101 @@ class LiquidGlassPill extends StatelessWidget {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Color(0x35FFFFFF), // brighter 21% white top gloss
-                  Color(0x80252C3E), // translucent optical fluid
-                  Color(0xBA12151D), // dark obsidian liquid depth
+                  Color(0x35FFFFFF), // 21% white top gloss
+                  Color(0x12FFFFFF), // soft sheen
+                  Color(0x28222A3C), // translucent optical fluid
+                  Color(0x3C0B0E16), // deep obsidian core
+                  Color(0x5006080D), // shadowed underside
                 ],
-                stops: [0.0, 0.45, 1.0],
+                stops: [0.0, 0.12, 0.45, 0.82, 1.0],
               )
             : LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: isSubtle
                     ? const [
-                        Color(0x18FFFFFF), // 9% white top
-                        Color(0x551E2330), // translucent slate
-                        Color(0x8812151D), // soft dark obsidian
+                        Color(0x24FFFFFF), // 14% white top gloss
+                        Color(0x0AFFFFFF), // soft falloff
+                        Color(0x1A181E2E), // translucent optical fluid (10%)
+                        Color(0x280C0F16), // dark obsidian liquid core (16%)
+                        Color(0x3606080C), // gentle bottom shadow (21%)
                       ]
                     : const [
-                        Color(0x28FFFFFF), // 16% white top gloss
-                        Color(0x771E2330), // translucent optical fluid
-                        Color(0xAA12151D), // obsidian liquid depth
+                        Color(0x2AFFFFFF), // 16% white top gloss
+                        Color(0x0CFFFFFF), // soft roll-off
+                        Color(0x221A2234), // translucent optical fluid (13%)
+                        Color(0x320B0E15), // deep obsidian liquid core (20%)
+                        Color(0x4006080C), // gentle bottom shadow (25%)
                       ],
-                stops: const [0.0, 0.45, 1.0],
+                stops: const [0.0, 0.12, 0.45, 0.82, 1.0],
               ),
       ),
       child: child,
     );
 
+    if (onTap != null) {
+      content = Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: rradius,
+          splashColor: Colors.white.withValues(alpha: 0.12),
+          highlightColor: Colors.white.withValues(alpha: 0.05),
+          child: content,
+        ),
+      );
+    }
+
+    Widget glassSurface = CustomPaint(
+      foregroundPainter: LiquidGlassPillPainter(
+        borderRadius: borderRadius,
+        accentColor: accentColor,
+        isSelected: isSelected,
+        isSubtle: isSubtle,
+      ),
+      child: content,
+    );
+
+    if (enableBlur) {
+      glassSurface = BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+        child: glassSurface,
+      );
+    }
+
     Widget pill = Container(
       decoration: BoxDecoration(
         borderRadius: rradius,
-        boxShadow: [
-          // Ambient drop shadow
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isSubtle ? 0.20 : 0.35),
-            blurRadius: isSubtle ? 6 : 10,
-            offset: const Offset(0, 3),
-          ),
-          // Subtle luminous white optical bounce when selected
-          if (isSelected)
-            BoxShadow(
-              color: Colors.white.withValues(alpha: 0.08),
-              blurRadius: 10,
-              offset: const Offset(0, 1),
-            ),
-        ],
+        boxShadow: isSubtle
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.22),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+                BoxShadow(
+                  color: Colors.white.withValues(alpha: 0.04),
+                  blurRadius: 4,
+                  offset: const Offset(0, -1),
+                ),
+              ]
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.28),
+                  blurRadius: 14,
+                  offset: const Offset(0, 5),
+                ),
+                BoxShadow(
+                  color: Colors.white.withValues(alpha: 0.05),
+                  blurRadius: 6,
+                  offset: const Offset(0, 1),
+                ),
+              ],
       ),
       child: ClipRRect(
         borderRadius: rradius,
         clipBehavior: Clip.antiAlias,
-        child: CustomPaint(
-          foregroundPainter: LiquidGlassPillPainter(
-            borderRadius: borderRadius,
-            accentColor: accentColor,
-            isSelected: isSelected,
-            isSubtle: isSubtle,
-          ),
-          child: onTap != null
-              ? Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: onTap,
-                    borderRadius: rradius,
-                    splashColor: Colors.white.withValues(alpha: 0.12),
-                    highlightColor: Colors.white.withValues(alpha: 0.05),
-                    child: content,
-                  ),
-                )
-              : content,
-        ),
+        child: glassSurface,
       ),
     );
 
@@ -663,6 +727,130 @@ class LiquidGlassPill extends StatelessWidget {
       pill = Padding(padding: margin!, child: pill);
     }
     return RepaintBoundary(child: pill);
+  }
+}
+
+// ============================================================================
+// 8. LIQUID GLASS CIRCLE BUTTON (MINIMAL TRANSLUCENT OPTICAL GLASS LENS)
+// High-fidelity visionOS translucent circular lens button for chevrons & actions.
+// Features genuine backdrop refraction, subtle luminous rim, and natural highlights.
+// ============================================================================
+class LiquidGlassCircleButton extends StatelessWidget {
+  final double size;
+  final Widget? child;
+  final IconData? icon;
+  final double iconSize;
+  final Color iconColor;
+  final VoidCallback? onTap;
+  final String? tooltip;
+
+  const LiquidGlassCircleButton({
+    super.key,
+    this.size = 28,
+    this.child,
+    this.icon,
+    this.iconSize = 11,
+    this.iconColor = Colors.white,
+    this.onTap,
+    this.tooltip,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final rradius = BorderRadius.circular(size / 2);
+
+    Widget buttonContent = SizedBox(
+      width: size,
+      height: size,
+      child: Center(
+        child: child ??
+            (icon != null
+                ? Padding(
+                    padding: icon == Icons.arrow_forward_ios_rounded
+                        ? const EdgeInsets.only(left: 1.5)
+                        : EdgeInsets.zero,
+                    child: Icon(
+                      icon,
+                      size: iconSize,
+                      color: iconColor,
+                    ),
+                  )
+                : null),
+      ),
+    );
+
+    if (tooltip != null) {
+      buttonContent = Tooltip(message: tooltip!, child: buttonContent);
+    }
+
+    Widget glassLens = Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        // Lighter, luminous optical glass surface that pops forward on dark cards
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0x48FFFFFF), // 28% white crystal highlight entry
+            Color(0x22FFFFFF), // 13% clear optical fluid body
+            Color(0x181F2B3E), // translucent blue-slate tint
+            Color(0x350D131F), // soft depth tone
+          ],
+          stops: [0.0, 0.35, 0.70, 1.0],
+        ),
+        // Brighter, distinct optical glass rim so users immediately recognize it as interactive
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.34),
+          width: 0.95,
+        ),
+      ),
+      child: buttonContent,
+    );
+
+    if (onTap != null) {
+      glassLens = Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: rradius,
+          splashColor: Colors.white.withValues(alpha: 0.15),
+          highlightColor: Colors.white.withValues(alpha: 0.08),
+          child: glassLens,
+        ),
+      );
+    }
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: [
+          // Crisp grounding shadow
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.40),
+            blurRadius: 8,
+            offset: const Offset(0, 2.5),
+          ),
+          // Ambient floor bounce
+          BoxShadow(
+            color: Colors.white.withValues(alpha: 0.08),
+            blurRadius: 4,
+            offset: const Offset(0, -0.5),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: rradius,
+        clipBehavior: Clip.antiAlias,
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+          child: glassLens,
+        ),
+      ),
+    );
   }
 }
 
@@ -680,6 +868,7 @@ class GlassCapsulePill extends StatelessWidget {
   final double fontSize;
   final double borderRadius;
   final bool isSubtle;
+  final bool enableBlur;
   final EdgeInsetsGeometry? padding;
   final VoidCallback? onTap;
 
@@ -694,7 +883,8 @@ class GlassCapsulePill extends StatelessWidget {
     this.borderColor,
     this.fontSize = 12,
     this.borderRadius = 22,
-    this.isSubtle = true,
+    this.isSubtle = false,
+    this.enableBlur = false,
     this.padding,
     this.onTap,
   });
@@ -730,6 +920,7 @@ class GlassCapsulePill extends StatelessWidget {
       borderRadius: borderRadius,
       padding: padding ?? const EdgeInsets.symmetric(horizontal: 12, vertical: 5.5),
       isSubtle: isSubtle,
+      enableBlur: enableBlur,
       onTap: onTap,
       child: content,
     );
@@ -750,6 +941,7 @@ class GlassStatusPill extends StatelessWidget {
   final bool? isSuccess;
   final bool? isWarning;
   final bool? isError;
+  final bool enableBlur;
 
   const GlassStatusPill({
     super.key,
@@ -762,6 +954,7 @@ class GlassStatusPill extends StatelessWidget {
     this.isSuccess,
     this.isWarning,
     this.isError,
+    this.enableBlur = false,
   }) : text = text ?? label ?? '';
 
   @override
@@ -769,8 +962,10 @@ class GlassStatusPill extends StatelessWidget {
     final finalTextColor = textColor ?? Colors.white;
 
     return LiquidGlassPill(
-      borderRadius: 16,
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+      borderRadius: 18,
+      enableBlur: enableBlur,
+      isSubtle: false,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5.5),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -781,7 +976,7 @@ class GlassStatusPill extends StatelessWidget {
           Text(
             text,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 11.5,
               fontWeight: FontWeight.w700,
               color: finalTextColor,
               letterSpacing: 0.4,

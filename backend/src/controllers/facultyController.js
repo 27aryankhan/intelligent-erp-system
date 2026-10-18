@@ -119,18 +119,6 @@ exports.createFacultyAssignment = async (req, res) => {
 
         const newId = `ASG${String(mockDb.facultyAssignments.length + 1).padStart(3, '0')}`;
         
-        // Base student roster template for the class (CSE Year 4)
-        const defaultStudentsRoster = [
-            { studentId: "STU001", studentName: "Bhargavi", rollNo: "22K91A0501", department: "B.Tech CSE - Sec A", status: "Pending", submittedAt: null, fileName: null, fileSize: null, score: null, grade: null, feedback: null },
-            { studentId: "STU002", studentName: "Anjali Sharma", rollNo: "22K91A0502", department: "B.Tech CSE - Sec A", status: "Pending", submittedAt: null, fileName: null, fileSize: null, score: null, grade: null, feedback: null },
-            { studentId: "STU003", studentName: "Rahul Varma", rollNo: "22K91A0503", department: "B.Tech CSE - Sec A", status: "Pending", submittedAt: null, fileName: null, fileSize: null, score: null, grade: null, feedback: null },
-            { studentId: "STU004", studentName: "Sneha Reddy", rollNo: "22K91A0504", department: "B.Tech CSE - Sec A", status: "Pending", submittedAt: null, fileName: null, fileSize: null, score: null, grade: null, feedback: null },
-            { studentId: "STU005", studentName: "Vikram Patel", rollNo: "22K91A0505", department: "B.Tech CSE - Sec A", status: "Pending", submittedAt: null, fileName: null, fileSize: null, score: null, grade: null, feedback: null },
-            { studentId: "STU006", studentName: "Aditya Roy", rollNo: "22K91A0506", department: "B.Tech CSE - Sec A", status: "Pending", submittedAt: null, fileName: null, fileSize: null, score: null, grade: null, feedback: null },
-            { studentId: "STU007", studentName: "Priya Nair", rollNo: "22K91A0507", department: "B.Tech CSE - Sec A", status: "Pending", submittedAt: null, fileName: null, fileSize: null, score: null, grade: null, feedback: null },
-            { studentId: "STU008", studentName: "Karthik Raja", rollNo: "22K91A0508", department: "B.Tech CSE - Sec A", status: "Pending", submittedAt: null, fileName: null, fileSize: null, score: null, grade: null, feedback: null }
-        ];
-
         const newFacultyAssignment = {
             id: newId,
             subject: subject,
@@ -145,7 +133,7 @@ exports.createFacultyAssignment = async (req, res) => {
             status: "Active",
             description: description || "Complete the assignment as instructed and upload your PDF.",
             instructions: instructions || "Upload your complete report in PDF format.",
-            submissions: defaultStudentsRoster
+            submissions: []
         };
 
         // Add to faculty list
@@ -277,7 +265,7 @@ exports.gradeStudentSubmission = async (req, res) => {
 
         // Also update student's view if matching
         const studentAsg = mockDb.assignments.find(a => a.id === id);
-        if (studentAsg && (rollNo === "22K91A0501" || studentId === "STU001")) {
+        if (studentAsg && (rollNo || studentId)) {
             studentAsg.score = submission.score;
             studentAsg.grade = submission.grade;
             studentAsg.feedback = submission.feedback;
@@ -355,13 +343,7 @@ function getRosterForClass(branch, year, section) {
     const sec = (section || "A").replace(/Section\s*/i, "").trim().toUpperCase() || "A";
     const secOffset = { "A": 1, "B": 11, "C": 21, "D": 31, "E": 41 }[sec] || 1;
 
-    const baseNames = [
-        "Bhargavi K", "Anjali Sharma", "Rahul Varma", "Sneha Reddy",
-        "Vikram Patel", "Aditya Roy", "Priya Nair", "Karthik Raja",
-        "Divya Teja", "Nikhil Kumar", "Sravani Goud", "Harish Rao"
-    ];
-
-    return baseNames.map((name, idx) => {
+    return Array.from({ length: 12 }, (_, idx) => {
         const num = secOffset + idx;
         const numStr = String(num).padStart(2, '0');
         const rollNo = `${yearPrefix}K91A${bInfo.code}${numStr}`;
@@ -369,8 +351,8 @@ function getRosterForClass(branch, year, section) {
         return {
             id: `STU_${bInfo.short}_${sec}_${numStr}`,
             studentId: `STU_${bInfo.short}_${sec}_${numStr}`,
-            name: name,
-            studentName: name,
+            name: rollNo,
+            studentName: rollNo,
             rollNo: rollNo,
             status: pct >= 80 ? "Present" : "Absent",
             percentage: pct,
@@ -403,7 +385,7 @@ exports.getFacultyAttendance = async (req, res) => {
                     studentId: item.student_id,
                     name: item.student_name,
                     studentName: item.student_name,
-                    rollNo: "22K91A0501",
+                    rollNo: item.roll_no || item.student_id || "",
                     status: item.attendance >= 80 ? "Present" : "Absent",
                     percentage: item.attendance,
                     attendance: item.attendance,

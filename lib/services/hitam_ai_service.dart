@@ -108,7 +108,7 @@ TONE & PERSONALITY:
           ? '✅ You are safely above the mandatory 75% threshold!'
           : aggregate >= 65.0
               ? '⚠️ You are in the condonation bracket (65%-75%). Submit medical certificates if applicable.'
-              : '🚨 CRITICAL: Below 65%. You are at risk of semester detention under HITAM HR regulations.');
+              : 'CRITICAL: Below 65%. You are at risk of semester detention under HITAM HR regulations.');
 
       if (criticalSubjects.isNotEmpty) {
         buffer.writeln('\n⚠️ **Subjects Needing Attention (< 75%):**');

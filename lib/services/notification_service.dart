@@ -460,7 +460,7 @@ class NotificationService {
 
         await showNotification(
           id: notifId,
-          title: '🚨 Attendance Shortage: ${report.overallPercentage.toStringAsFixed(1)}% (Below 75%)',
+          title: 'Attendance Shortage: ${report.overallPercentage.toStringAsFixed(1)}%',
           body: 'Your attendance is ${report.overallPercentage.toStringAsFixed(1)}%, which is below the mandatory 75% cutoff (${report.totalAttended}/${report.totalHeld} classes).\n'
               '$classesNeeded Tap to view subject-wise breakdown.',
           payload: 'attendance',
@@ -474,7 +474,7 @@ class NotificationService {
             Uri.parse('${ApiConfig.baseUrl}/api/notifications'),
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({
-              'title': '🚨 Attendance Shortage: ${report.overallPercentage.toStringAsFixed(1)}% (Below 75%)',
+              'title': 'Attendance Shortage: ${report.overallPercentage.toStringAsFixed(1)}%',
               'body': 'Your aggregate attendance is ${report.overallPercentage.toStringAsFixed(1)}%, which is below the mandatory 75% cutoff (${report.totalAttended}/${report.totalHeld} classes).\n$classesNeeded',
               'targetRole': 'student',
               'senderRole': 'admin',
@@ -490,7 +490,7 @@ class NotificationService {
             Uri.parse('${ApiConfig.baseUrl}/api/notifications'),
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({
-              'title': '🚨 Ward Attendance Shortage Alert: ${report.overallPercentage.toStringAsFixed(1)}% (Below 75%)',
+              'title': 'Ward Attendance Shortage Alert: ${report.overallPercentage.toStringAsFixed(1)}%',
               'body': 'Your ward (${report.studentName.isNotEmpty ? report.studentName : report.rollNo}) is at ${report.overallPercentage.toStringAsFixed(1)}% attendance (${report.totalAttended}/${report.totalHeld} classes), below the mandatory 75% cutoff.',
               'targetRole': 'parent',
               'senderRole': 'admin',
@@ -660,11 +660,11 @@ class NotificationService {
     String body;
 
     if (conductedToday > 0) {
-      title = '📊 Daily Attendance Summary: $attendedToday/$conductedToday Attended';
+      title = 'Daily Attendance Summary: $attendedToday/$conductedToday Attended';
       body = 'Classes Today: $conductedToday conducted • $attendedToday attended • $missedToday missed.\n'
           'Overall Attendance: ${report.totalAttended}/${report.totalHeld} (${report.overallPercentage.toStringAsFixed(1)}%) • ${report.academicStatus}';
     } else {
-      title = '📊 Evening Attendance Summary: ${report.overallPercentage.toStringAsFixed(1)}%';
+      title = 'Evening Attendance Summary: ${report.overallPercentage.toStringAsFixed(1)}%';
       body = 'No additional lectures conducted today.\n'
           'Overall Attendance: ${report.totalAttended}/${report.totalHeld} (${report.overallPercentage.toStringAsFixed(1)}%) • ${report.academicStatus}';
     }
@@ -708,7 +708,7 @@ class NotificationService {
     final missed = conducted - attended;
     await showNotification(
       id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
-      title: '📊 Daily Attendance Summary: $attended/$conducted Attended',
+      title: 'Daily Attendance Summary: $attended/$conducted Attended',
       body: 'Classes Today: $conducted conducted • $attended attended • $missed missed.\n'
           'Overall Attendance: 142/168 (${overall.toStringAsFixed(1)}%) • GOOD STANDING',
       payload: 'attendance',
@@ -747,14 +747,15 @@ class NotificationService {
     };
 
     // Standard HITAM College Period Timings
+    // 3 morning classes, lunch 12:15 PM - 1:00 PM, 3 afternoon classes (6 periods total)
     final defaultPeriodTimes = [
-      const TimeOfDay(hour: 9, minute: 15),  // Period 1
-      const TimeOfDay(hour: 10, minute: 5),  // Period 2
-      const TimeOfDay(hour: 11, minute: 5),  // Period 3
-      const TimeOfDay(hour: 11, minute: 55), // Period 4
-      const TimeOfDay(hour: 13, minute: 25), // Period 5
-      const TimeOfDay(hour: 14, minute: 15), // Period 6
-      const TimeOfDay(hour: 15, minute: 5),  // Period 7
+      const TimeOfDay(hour: 9, minute: 15),  // Period 1 (09:15 - 10:15 AM)
+      const TimeOfDay(hour: 10, minute: 15), // Period 2 (10:15 - 11:15 AM)
+      const TimeOfDay(hour: 11, minute: 15), // Period 3 (11:15 AM - 12:15 PM)
+      // LUNCH: 12:15 PM - 01:00 PM
+      const TimeOfDay(hour: 13, minute: 0),  // Period 4 (01:00 - 02:00 PM)
+      const TimeOfDay(hour: 14, minute: 0),  // Period 5 (02:00 - 03:00 PM)
+      const TimeOfDay(hour: 15, minute: 0),  // Period 6 (03:00 - 04:00 PM)
     ];
 
     int scheduledCount = 0;
@@ -865,7 +866,7 @@ class NotificationService {
       }
       await _localNotifications.zonedSchedule(
         id: 88888,
-        title: '📊 Daily Attendance Summary',
+        title: 'Daily Attendance Summary',
         body: 'Today\'s lectures are concluded. Tap to see classes attended, missed, and overall percentage.',
         scheduledDate: eveningTime,
         notificationDetails: const NotificationDetails(
@@ -1080,7 +1081,7 @@ class NotificationService {
   ) async {
     final statusEmoji = report.overallPercentage >= 75.0
         ? '✅'
-        : (report.overallPercentage >= 65.0 ? '⚠️' : '🚨');
+        : '⚠️';
 
     final standingAdvice = report.safeBunks > 0
         ? 'Safe Bunks Margin: ${report.safeBunks} classes remaining'
@@ -1203,7 +1204,7 @@ class NotificationService {
           break;
         case 'attendance_summary':
         case 'evening_summary':
-          title = '📊 Daily Attendance Summary: 5/6 Classes Attended';
+          title = 'Daily Attendance Summary: 5/6 Classes Attended';
           body =
               'Classes Today: 6 conducted • 5 attended • 1 missed.\nOverall Attendance: 142/168 (84.5%) • GOOD STANDING';
           type = 'summary';
@@ -1218,7 +1219,7 @@ class NotificationService {
           screen = 'timetable';
           break;
         case 'attendance':
-          title = '📊 Total Attendance: 84.6% (GOOD STANDING)';
+          title = 'Total Attendance: 84.6% (GOOD STANDING)';
           body =
               'Classes Attended: 142/168 (84.6%)\nSafe Bunks Margin: 12 classes remaining across 8 subjects.';
           type = 'attendance';

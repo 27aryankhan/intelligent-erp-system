@@ -23,3 +23,14 @@
 
 ## 2. UI / UX Rules
 - In the student portal backlogs view (`StudentBacklogsScreen`), do not show alarming red alert boxes or "Active Backlogs" warning banners. Present the pending subjects cleanly and directly.
+
+## 3. Laptop App Live Preview Workflow
+- Whenever code changes are made to the app, close the running app on the laptop, rebuild, and reopen it so the user can visually verify the changes immediately on their screen:
+  ```bash
+  npm run reopen:macos
+  ```
+  or:
+  ```bash
+  killall 'Intelligent ERP' 2>/dev/null || true
+  flutter build macos --debug && open 'build/macos/Build/Products/Debug/Intelligent ERP.app'
+  ```
