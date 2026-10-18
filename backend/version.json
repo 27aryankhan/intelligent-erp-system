@@ -5,8 +5,6 @@
   "download_url": "https://github.com/27aryankhan/intelligent-erp-system/releases/latest/download/Intelligent.ERP.apk",
   "file_size": "38 MB",
   "release_notes": [
-    "Clear iOS Glassmorphism Modal: Sleek, high-clarity translucent Log Out dialog with specular border highlights and native iOS pill buttons",
-    "Matrix Rain Cyber Visuals: Cinematic falling Katakana code rain background animation when initiating logout",
     "Touch Protection: Eliminated accidental barrier touch dismissals to ensure deliberate cancellation",
     "Timetable Accuracy: Fixed 6-period daily schedule with accurate multi-period lab and project allocations"
   ],
