@@ -1,14 +1,14 @@
 {
-  "latest_version": "1.2.4",
-  "version_code": 17,
+  "latest_version": "1.2.5",
+  "version_code": 18,
   "min_supported_version_code": 11,
   "download_url": "https://github.com/27aryankhan/intelligent-erp-system/releases/latest/download/Intelligent.ERP.apk",
-  "file_size": "37 MB",
+  "file_size": "38 MB",
   "release_notes": [
-    "Butter-Smooth 60/120 FPS Scrolling: Completely eliminated jitter and frame drops across student dashboard & portal views",
-    "Instant Opening: Lazy windowed rendering for Academic Register and attendance sheets for zero-lag screen loads",
-    "Ultra-Fast Touch & Tap: Hardware-accelerated glass styling and RepaintBoundary isolation for instant ripple and navigation response",
-    "Clean Neutral Styling: Distraction-free typography, neutral pill shapes, and streamlined status presentation"
+    "Clear iOS Glassmorphism Modal: Sleek, high-clarity translucent Log Out dialog with specular border highlights and native iOS pill buttons",
+    "Matrix Rain Cyber Visuals: Cinematic falling Katakana code rain background animation when initiating logout",
+    "Touch Protection: Eliminated accidental barrier touch dismissals to ensure deliberate cancellation",
+    "Timetable Accuracy: Fixed 6-period daily schedule with accurate multi-period lab and project allocations"
   ],
   "is_critical": false
 }
