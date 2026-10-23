@@ -1330,18 +1330,13 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                             child: CursorRingField(
                               backgroundColor: Color(0xFF04050A),
                               particleColor: Colors.white,
-                              density: 300,
-                              dotSize: 95.0,
+                              density: 480,
                               speed: 5.0,
-                              autoSpeed: 0.88,
-                              cameraDistance: 160.0,
-                              ringRadius: 36.0,
-                              ringWidth: 8.5,
-                              ringPush: 45.0,
-                              turbulence: 80.0,
+                              autoSpeed: 0.85,
+                              ringRadius: 65.0,
                             ),
                           ),
-                          // 2. Subtle glassmorphism vignette for optimal text readability
+                          // 2. Clean subtle vignette allowing particles to shine at full brightness
                           Positioned.fill(
                             child: DecoratedBox(
                               decoration: BoxDecoration(
@@ -1349,8 +1344,8 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                                   center: Alignment.center,
                                   radius: 0.95,
                                   colors: [
-                                    const Color(0xFF04050A).withValues(alpha: 0.08),
-                                    const Color(0xFF04050A).withValues(alpha: 0.48),
+                                    Colors.transparent,
+                                    const Color(0xFF04050A).withValues(alpha: 0.18),
                                   ],
                                 ),
                               ),
@@ -1373,8 +1368,8 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                                     color: Colors.white.withValues(alpha: 0.05),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.black.withValues(alpha: 0.35),
-                                        blurRadius: 18,
+                                        color: Colors.black.withValues(alpha: 0.45),
+                                        blurRadius: 20,
                                         offset: const Offset(0, 4),
                                       ),
                                     ],
@@ -1406,6 +1401,12 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                                     fontWeight: FontWeight.w800,
                                     letterSpacing: 0.3,
                                     height: 1.2,
+                                    shadows: [
+                                      Shadow(
+                                        color: Colors.black,
+                                        blurRadius: 12,
+                                      ),
+                                    ],
                                   ),
                                 ),
                                 if (p?.rollNo != null && p!.rollNo.isNotEmpty) ...[
