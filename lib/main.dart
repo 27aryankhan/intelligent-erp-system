@@ -113,11 +113,39 @@ class _IntelligentERPState extends State<IntelligentERP>
       debugShowCheckedModeBanner: false,
       title: 'Intelligent ERP',
       theme: ThemeData(
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: Colors.black,
+        canvasColor: Colors.black,
+        cardColor: const Color(0xFF1E293B),
+        dialogBackgroundColor: const Color(0xFF0F172A),
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blue,
+          seedColor: const Color(0xFF38BDF8),
+          brightness: Brightness.dark,
+          surface: Colors.black,
+        ),
+        pageTransitionsTheme: const PageTransitionsTheme(
+          builders: {
+            TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
+            TargetPlatform.iOS: FadeUpwardsPageTransitionsBuilder(),
+            TargetPlatform.macOS: FadeUpwardsPageTransitionsBuilder(),
+            TargetPlatform.linux: FadeUpwardsPageTransitionsBuilder(),
+            TargetPlatform.windows: FadeUpwardsPageTransitionsBuilder(),
+          },
         ),
         useMaterial3: true,
       ),
+      darkTheme: ThemeData(
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: Colors.black,
+        canvasColor: Colors.black,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF38BDF8),
+          brightness: Brightness.dark,
+          surface: Colors.black,
+        ),
+        useMaterial3: true,
+      ),
+      themeMode: ThemeMode.dark,
       home: const AuthGate(),
     );
   }
@@ -2205,8 +2233,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
             final cached = HitamScraperService().getProfileFor(activeRoll);
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (context) => StudentProfileScreen(
+              SmoothPageRoute(
+                child: StudentProfileScreen(
                   initialProfile: cached,
                 ),
               ),
@@ -2306,8 +2334,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (context) => AttendanceDetailsScreen(
+          SmoothPageRoute(
+            child: AttendanceDetailsScreen(
               report: HitamScraperService().latestAttendanceReport ?? widget.initialReport,
             ),
           ),
@@ -2463,8 +2491,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (context) => const StudentBacklogsScreen(),
+          SmoothPageRoute(
+            child: const StudentBacklogsScreen(),
           ),
         );
       },
@@ -2479,8 +2507,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (context) => const StudentFeeDetailsScreen(),
+          SmoothPageRoute(
+            child: const StudentFeeDetailsScreen(),
           ),
         );
       },
@@ -2495,8 +2523,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (context) => const StudentTimeTableScreen(),
+          SmoothPageRoute(
+            child: const StudentTimeTableScreen(),
           ),
         );
       },
@@ -2511,8 +2539,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (context) => const StudentMarksScreen(),
+          SmoothPageRoute(
+            child: const StudentMarksScreen(),
           ),
         );
       },
@@ -2533,8 +2561,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
         final cached = HitamScraperService().getProfileFor(activeRoll);
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (context) => StudentProfileScreen(
+          SmoothPageRoute(
+            child: StudentProfileScreen(
               initialProfile: cached,
             ),
           ),
@@ -2551,8 +2579,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (context) => const StudentAcademicRegisterScreen(),
+          SmoothPageRoute(
+            child: const StudentAcademicRegisterScreen(),
           ),
         );
       },
@@ -2567,8 +2595,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (context) => const StudentSpfBandScreen(),
+          SmoothPageRoute(
+            child: const StudentSpfBandScreen(),
           ),
         );
       },
@@ -2621,8 +2649,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (context) => HitamExamScreen(
+          SmoothPageRoute(
+            child: HitamExamScreen(
               rollNo: rollNo,
               studentName: studentName,
               branch: department,
@@ -4258,8 +4286,8 @@ class _NotificationBellIconState extends State<NotificationBellIcon> {
             onPressed: () async {
               await Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => NotificationsScreen(
+                SmoothPageRoute(
+                  child: NotificationsScreen(
                     initialRole: effectiveRole,
                   ),
                 ),
