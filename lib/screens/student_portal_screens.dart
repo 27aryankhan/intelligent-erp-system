@@ -6,6 +6,7 @@ import '../services/hitam_auth_service.dart';
 import '../services/hitam_scraper_service.dart';
 import '../widgets/student_photo_widget.dart';
 import '../widgets/glass_components.dart';
+import '../widgets/cursor_ring_field.dart';
 
 // ============================================================================
 // 1. STUDENT BACKLOGS SCREEN
@@ -1304,143 +1305,196 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                   parent: AlwaysScrollableScrollPhysics(),
                 ),
                 children: [
-                  // Profile Header Hero with One UI Frosted Glass
-                  GlassContainer(
-                    borderRadius: 28,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-                    child: Column(
-                      children: [
-                        // Softened Glass Lens Floating Avatar Ring
-                        Container(
-                          padding: const EdgeInsets.all(3.5),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.22),
-                              width: 1.2,
-                            ),
-                            color: Colors.white.withValues(alpha: 0.05),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.35),
-                                blurRadius: 18,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: StudentPhotoWidget(
-                            photoUrl: p?.photoUrl,
-                            name: p?.name ?? '',
-                            rollNo: p?.rollNo,
-                            size: 96,
-                            enableZoom: true,
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.28),
-                              width: 1.0,
-                            ),
-                            backgroundColor: const Color(0xFF0F172A),
-                          ),
+                  // Profile Header Hero with Originkit Cursor Ring Field
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(28),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.16),
+                        width: 1.2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.45),
+                          blurRadius: 28,
+                          offset: const Offset(0, 8),
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          p?.name.isNotEmpty ?? false
-                              ? p!.name.toUpperCase()
-                              : 'STUDENT PROFILE',
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18.5,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.3,
-                            height: 1.2,
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(28),
+                      child: Stack(
+                        children: [
+                          // 1. Interactive Cursor Ring Field Animation
+                          const Positioned.fill(
+                            child: CursorRingField(
+                              backgroundColor: Color(0xFF04050A),
+                              particleColor: Colors.white,
+                              density: 300,
+                              dotSize: 120.0,
+                              speed: 6.0,
+                              cameraDistance: 160.0,
+                              ringRadius: 28.0,
+                              ringWidth: 9.0,
+                              ringPush: 50.0,
+                              turbulence: 100.0,
+                            ),
                           ),
-                        ),
-                        if (p?.rollNo != null && p!.rollNo.isNotEmpty) ...[
-                          const SizedBox(height: 10),
-                          GlassCapsulePill(
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6.5),
-                            borderRadius: 20,
-                            child: Text(
-                              p.rollNo,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.8,
+                          // 2. Subtle glassmorphism vignette for optimal text readability
+                          Positioned.fill(
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                gradient: RadialGradient(
+                                  center: Alignment.center,
+                                  radius: 0.95,
+                                  colors: [
+                                    const Color(0xFF04050A).withValues(alpha: 0.15),
+                                    const Color(0xFF04050A).withValues(alpha: 0.60),
+                                  ],
+                                ),
                               ),
+                            ),
+                          ),
+                          // 3. Profile Details
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                            child: Column(
+                              children: [
+                                // Softened Glass Lens Floating Avatar Ring
+                                Container(
+                                  padding: const EdgeInsets.all(3.5),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.white.withValues(alpha: 0.22),
+                                      width: 1.2,
+                                    ),
+                                    color: Colors.white.withValues(alpha: 0.05),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.35),
+                                        blurRadius: 18,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: StudentPhotoWidget(
+                                    photoUrl: p?.photoUrl,
+                                    name: p?.name ?? '',
+                                    rollNo: p?.rollNo,
+                                    size: 96,
+                                    enableZoom: true,
+                                    border: Border.all(
+                                      color: Colors.white.withValues(alpha: 0.28),
+                                      width: 1.0,
+                                    ),
+                                    backgroundColor: const Color(0xFF0F172A),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  p?.name.isNotEmpty ?? false
+                                      ? p!.name.toUpperCase()
+                                      : 'STUDENT PROFILE',
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18.5,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.3,
+                                    height: 1.2,
+                                  ),
+                                ),
+                                if (p?.rollNo != null && p!.rollNo.isNotEmpty) ...[
+                                  const SizedBox(height: 10),
+                                  GlassCapsulePill(
+                                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6.5),
+                                    borderRadius: 20,
+                                    child: Text(
+                                      p.rollNo,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 0.8,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 16),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    if (p?.cgpa != null && p!.cgpa.isNotEmpty)
+                                      GlassCapsulePill(
+                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                        borderRadius: 22,
+                                        child: RichText(
+                                          text: TextSpan(
+                                            children: [
+                                              TextSpan(
+                                                text: 'CGPA: ',
+                                                style: TextStyle(
+                                                  color: Colors.white.withValues(alpha: 0.65),
+                                                  fontSize: 12.5,
+                                                  fontWeight: FontWeight.w600,
+                                                  letterSpacing: 0.3,
+                                                ),
+                                              ),
+                                              TextSpan(
+                                                text: p.cgpa,
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 13.5,
+                                                  fontWeight: FontWeight.w800,
+                                                  letterSpacing: 0.3,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    if ((p?.cgpa.isNotEmpty ?? false) &&
+                                        (p?.credits.isNotEmpty ?? false))
+                                      const SizedBox(width: 12),
+                                    if (p?.credits.isNotEmpty ?? false)
+                                      GlassCapsulePill(
+                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                        borderRadius: 22,
+                                        child: RichText(
+                                          text: TextSpan(
+                                            children: [
+                                              TextSpan(
+                                                text: 'Credits: ',
+                                                style: TextStyle(
+                                                  color: Colors.white.withValues(alpha: 0.65),
+                                                  fontSize: 12.5,
+                                                  fontWeight: FontWeight.w600,
+                                                  letterSpacing: 0.3,
+                                                ),
+                                              ),
+                                              TextSpan(
+                                                text: p?.credits,
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 13.5,
+                                                  fontWeight: FontWeight.w800,
+                                                  letterSpacing: 0.3,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ],
                             ),
                           ),
                         ],
-                        const SizedBox(height: 16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            if (p?.cgpa != null && p!.cgpa.isNotEmpty)
-                              GlassCapsulePill(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                borderRadius: 22,
-                                child: RichText(
-                                  text: TextSpan(
-                                    children: [
-                                      TextSpan(
-                                        text: 'CGPA: ',
-                                        style: TextStyle(
-                                          color: Colors.white.withValues(alpha: 0.65),
-                                          fontSize: 12.5,
-                                          fontWeight: FontWeight.w600,
-                                          letterSpacing: 0.3,
-                                        ),
-                                      ),
-                                      TextSpan(
-                                        text: p.cgpa,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 13.5,
-                                          fontWeight: FontWeight.w800,
-                                          letterSpacing: 0.3,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            if ((p?.cgpa.isNotEmpty ?? false) &&
-                                (p?.credits.isNotEmpty ?? false))
-                              const SizedBox(width: 12),
-                            if (p?.credits.isNotEmpty ?? false)
-                              GlassCapsulePill(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                borderRadius: 22,
-                                child: RichText(
-                                  text: TextSpan(
-                                    children: [
-                                      TextSpan(
-                                        text: 'Credits: ',
-                                        style: TextStyle(
-                                          color: Colors.white.withValues(alpha: 0.65),
-                                          fontSize: 12.5,
-                                          fontWeight: FontWeight.w600,
-                                          letterSpacing: 0.3,
-                                        ),
-                                      ),
-                                      TextSpan(
-                                        text: p?.credits,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 13.5,
-                                          fontWeight: FontWeight.w800,
-                                          letterSpacing: 0.3,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                   const SizedBox(height: 20),

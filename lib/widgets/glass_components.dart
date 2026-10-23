@@ -39,6 +39,7 @@ class GlassScaffold extends StatelessWidget {
   final Widget body;
   final Widget? floatingActionButton;
   final Widget? bottomNavigationBar;
+  final Widget? background;
 
   const GlassScaffold({
     super.key,
@@ -46,6 +47,7 @@ class GlassScaffold extends StatelessWidget {
     required this.body,
     this.floatingActionButton,
     this.bottomNavigationBar,
+    this.background,
   });
 
   @override
@@ -58,11 +60,12 @@ class GlassScaffold extends StatelessWidget {
       bottomNavigationBar: bottomNavigationBar,
       body: Stack(
         children: [
-          const Positioned.fill(
+          Positioned.fill(
             child: RepaintBoundary(
-              child: CustomPaint(
-                painter: LuminousSilkAuroraPainter(),
-              ),
+              child: background ??
+                  const CustomPaint(
+                    painter: LuminousSilkAuroraPainter(),
+                  ),
             ),
           ),
           SafeArea(
