@@ -12,6 +12,7 @@ import 'services/hitam_auth_service.dart';
 import 'services/hitam_scraper_service.dart';
 import 'services/database_service.dart';
 import 'screens/student_portal_screens.dart';
+import 'screens/hitam_exam_screen.dart';
 import 'services/update_service.dart';
 import 'widgets/github_attendance_heatmap.dart';
 import 'widgets/student_photo_widget.dart';
@@ -87,8 +88,8 @@ class _IntelligentERPState extends State<IntelligentERP>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      // When user re-enters or switches back to app, silently sync attendance
-      NotificationService().syncAttendanceNow();
+      // When user re-enters or switches back to app, silently sync all student data
+      NotificationService().syncAllStudentDataNow();
     } else if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive ||
         state == AppLifecycleState.detached) {
@@ -167,11 +168,20 @@ class _AuthGateState extends State<AuthGate> {
           email: savedId,
         );
 
-        // Silently renew session cookies and profile in background
-        unawaited(authService.ensureAuthenticated());
+        // Pre-load persisted student profile from disk cache for instant 0ms entry
         if (savedRole == 'student') {
-          unawaited(HitamScraperService().fetchStudentProfile(savedId));
+          await HitamScraperService().loadCachedProfile(savedId);
         }
+
+        // Silently renew session cookies and profile in background
+        unawaited(() async {
+          try {
+            await authService.ensureAuthenticated();
+            if (savedRole == 'student') {
+              await HitamScraperService().fetchStudentProfile(savedId);
+            }
+          } catch (_) {}
+        }());
 
         if (!mounted) return;
 
@@ -276,6 +286,7 @@ class _LoginPageState extends State<LoginPage> {
   String? _errorMessage;
   AppUpdateInfo? _availableUpdate;
   bool _hasCheckedUpdate = false;
+  bool _obscurePassword = true;
 
   VideoPlayerController? _videoController;
   bool _isVideoInitialized = false;
@@ -416,9 +427,11 @@ class _LoginPageState extends State<LoginPage> {
           } catch (_) {}
         }
 
-        // Pre-fetch remaining modules (marks, fees & academic register) in background
+        // Pre-fetch remaining modules (marks, fees, timetable, backlogs & academic register) in background
         unawaited(scraper.fetchStudentMarks(activeRoll));
         unawaited(scraper.fetchStudentFees(activeRoll));
+        unawaited(scraper.fetchStudentTimeTable());
+        unawaited(scraper.fetchStudentBacklogs(activeRoll));
         unawaited(scraper.fetchStudentAcademicRegister(activeRoll));
 
         NotificationService().setUserSession(
@@ -817,41 +830,7 @@ class _LoginPageState extends State<LoginPage> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // Glowing Glassmorphic Emblem
-                            Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                gradient: const LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    Color(0xFF38BDF8),
-                                    Color(0xFF0284C7),
-                                  ],
-                                ),
-                                border: Border.all(
-                                  color: Colors.white.withOpacity(0.40),
-                                  width: 1.5,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFF0284C7)
-                                        .withOpacity(0.50),
-                                    blurRadius: 24,
-                                    spreadRadius: 2,
-                                    offset: const Offset(0, 6),
-                                  ),
-                                ],
-                              ),
-                              child: const Icon(
-                                Icons.school_rounded,
-                                size: 40,
-                                color: Colors.white,
-                              ),
-                            ),
 
-                            const SizedBox(height: 18),
 
                             Text(
                               'Intelligent ERP',
@@ -895,18 +874,19 @@ class _LoginPageState extends State<LoginPage> {
 
                             if (_errorMessage != null)
                               Container(
+                                width: double.infinity,
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 14, vertical: 12),
                                 margin: const EdgeInsets.only(bottom: 20),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF7F1D1D).withOpacity(0.45),
+                                  color: const Color(0xFF7F1D1D).withValues(alpha: 0.55),
                                   borderRadius: BorderRadius.circular(14),
                                   border: Border.all(
-                                      color: const Color(0xFFEF4444).withOpacity(0.8),
+                                      color: const Color(0xFFEF4444).withValues(alpha: 0.85),
                                       width: 1.2),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.red.withOpacity(0.18),
+                                      color: Colors.red.withValues(alpha: 0.22),
                                       blurRadius: 12,
                                       offset: const Offset(0, 4),
                                     ),
@@ -916,11 +896,13 @@ class _LoginPageState extends State<LoginPage> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     const Padding(
-                                      padding: EdgeInsets.only(top: 2),
-                                      child: Icon(Icons.warning_amber_rounded,
-                                          color: Color(0xFFFCA5A5), size: 22),
+                                      padding: EdgeInsets.only(top: 2, right: 10),
+                                      child: Icon(
+                                        Icons.warning_amber_rounded,
+                                        color: Color(0xFFFCA5A5),
+                                        size: 20,
+                                      ),
                                     ),
-                                    const SizedBox(width: 10),
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -988,7 +970,7 @@ class _LoginPageState extends State<LoginPage> {
                             // Frosted Glass Password field
                             TextField(
                               controller: _passwordController,
-                              obscureText: true,
+                              obscureText: _obscurePassword,
                               style: const TextStyle(
                                   color: Colors.white, fontWeight: FontWeight.w500),
                               cursorColor: const Color(0xFF38BDF8),
@@ -998,6 +980,20 @@ class _LoginPageState extends State<LoginPage> {
                                     color: Colors.white.withOpacity(0.80)),
                                 prefixIcon: const Icon(Icons.lock_outline,
                                     color: Color(0xFF38BDF8)),
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    _obscurePassword
+                                        ? Icons.visibility_outlined
+                                        : Icons.visibility_off_outlined,
+                                    color: Colors.white.withOpacity(0.65),
+                                    size: 20,
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      _obscurePassword = !_obscurePassword;
+                                    });
+                                  },
+                                ),
                                 filled: true,
                                 fillColor: Colors.black.withOpacity(0.22),
                                 border: OutlineInputBorder(
@@ -1255,6 +1251,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
   String? photoUrl;
 
   double attendance = 0.0;
+  StreamSubscription<StudentAttendanceReport>? _attendanceSubscription;
 
   @override
   void initState() {
@@ -1278,6 +1275,21 @@ class _StudentDashboardState extends State<StudentDashboard> {
       NotificationService().checkAndNotifyAttendance(rep);
       NotificationService().checkShortageWarning(rep);
     }
+
+    // Real-time listener: instantly reflect any background or live WebPros changes
+    _attendanceSubscription =
+        NotificationService().onAttendanceUpdated.listen((freshRep) {
+      if (!mounted) return;
+      setState(() {
+        studentName = freshRep.studentName;
+        department = freshRep.branch;
+        year = freshRep.semester;
+        attendance = freshRep.overallPercentage;
+        isLoading = false;
+        errorMessage = '';
+      });
+    });
+
     fetchStudentData();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await NotificationService().requestPermissions();
@@ -1289,21 +1301,33 @@ class _StudentDashboardState extends State<StudentDashboard> {
           await NotificationService().pushAttendanceSummaryNotification(rep);
           await NotificationService().checkShortageWarning(rep);
         }
+
+        // Background cache pre-warming for instant, smooth subscreen navigation
+        unawaited(() async {
+          try {
+            final scraper = HitamScraperService();
+            await Future.wait([
+              scraper.fetchStudentTimeTable(),
+              scraper.fetchStudentBacklogs(rollNo),
+              scraper.fetchStudentFees(rollNo),
+              scraper.fetchStudentMarks(rollNo),
+              scraper.fetchStudentSpfBands(),
+            ]);
+          } catch (_) {}
+        }());
       }
+      if (!mounted) return;
       UpdateService().promptUpdateIfAvailable(context, silent: true);
     });
   }
 
-  Future<void> fetchStudentData() async {
+  Future<void> fetchStudentData({bool forceLive = false}) async {
     final scraper = HitamScraperService();
     StudentAttendanceReport? report =
         widget.initialReport ?? scraper.latestAttendanceReport;
     final rollNo = widget.studentId ?? HitamAuthService().activeUserId;
 
-    if (report == null && rollNo != null && rollNo.isNotEmpty) {
-      report = await scraper.fetchStudentAttendanceReport(rollNo);
-    }
-
+    // 1. If cached report is available, show it immediately so there's zero UI freeze
     if (report != null && mounted) {
       setState(() {
         studentName = report!.studentName;
@@ -1313,20 +1337,47 @@ class _StudentDashboardState extends State<StudentDashboard> {
         isLoading = false;
         errorMessage = '';
       });
-      // Save freshest data to SharedPreferences cache
+    }
+
+    // 2. Fetch fresh real-time data directly from WebPros ERP without delay
+    if (rollNo != null && rollNo.isNotEmpty) {
       try {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('hitam_student_name', report!.studentName);
-        await prefs.setString('hitam_student_branch', report!.branch);
-        await prefs.setString('hitam_student_semester', report!.semester);
-        await prefs.setString('hitam_student_course', report!.course);
-        await prefs.setDouble('hitam_student_percentage', report!.overallPercentage);
-        await prefs.setInt('hitam_student_held', report!.totalHeld);
-        await prefs.setInt('hitam_student_attended', report!.totalAttended);
+        final liveReport = await scraper.fetchStudentAttendanceReport(rollNo);
+        if (liveReport != null && mounted) {
+          report = liveReport;
+          setState(() {
+            studentName = liveReport.studentName;
+            department = liveReport.branch;
+            year = liveReport.semester;
+            attendance = liveReport.overallPercentage;
+            isLoading = false;
+            errorMessage = '';
+          });
+          // Save freshest data to SharedPreferences cache
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString('hitam_student_name', liveReport.studentName);
+            await prefs.setString('hitam_student_branch', liveReport.branch);
+            await prefs.setString('hitam_student_semester', liveReport.semester);
+            await prefs.setString('hitam_student_course', liveReport.course);
+            await prefs.setDouble('hitam_student_percentage', liveReport.overallPercentage);
+            await prefs.setInt('hitam_student_held', liveReport.totalHeld);
+            await prefs.setInt('hitam_student_attended', liveReport.totalAttended);
+          } catch (_) {}
+          NotificationService().checkAndNotifyAttendance(liveReport);
+          NotificationService().checkShortageWarning(liveReport);
+          NotificationService().pushAttendanceSummaryNotification(liveReport);
+          return;
+        }
       } catch (_) {}
-      NotificationService().checkAndNotifyAttendance(report!);
-      NotificationService().checkShortageWarning(report!);
-      NotificationService().pushAttendanceSummaryNotification(report!);
+    }
+
+    if (report != null && mounted) {
+      setState(() {
+        isLoading = false;
+        errorMessage = '';
+      });
+      return;
     }
 
     try {
@@ -1391,13 +1442,25 @@ class _StudentDashboardState extends State<StudentDashboard> {
         .toUpperCase()
         .trim();
 
-    final matchingProf = HitamScraperService().getProfileFor(activeRoll);
+    var matchingProf = HitamScraperService().getProfileFor(activeRoll);
+    if (matchingProf == null && activeRoll.isNotEmpty) {
+      matchingProf = await HitamScraperService().loadCachedProfile(activeRoll);
+    }
     if (matchingProf?.photoUrl != null &&
         matchingProf!.photoUrl!.isNotEmpty &&
         !HitamScraperService.isBlacklistedPhoto(matchingProf!.photoUrl)) {
       if (mounted) {
         setState(() {
-          photoUrl = matchingProf.photoUrl;
+          photoUrl = matchingProf!.photoUrl;
+          if (studentName.isEmpty && matchingProf.name.isNotEmpty) {
+            studentName = matchingProf.name;
+          }
+          if (department.isEmpty && matchingProf.branch.isNotEmpty) {
+            department = matchingProf.branch;
+          }
+          if (year.isEmpty && matchingProf.semester.isNotEmpty) {
+            year = matchingProf.semester;
+          }
         });
       }
     } else {
@@ -1444,6 +1507,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
 
       if (rollNo.isNotEmpty) {
         final prof = (matchingProf != null &&
+                matchingProf.name.isNotEmpty &&
                 matchingProf.photoUrl != null &&
                 matchingProf.photoUrl!.isNotEmpty &&
                 !HitamScraperService.isBlacklistedPhoto(matchingProf.photoUrl))
@@ -1760,6 +1824,12 @@ class _StudentDashboardState extends State<StudentDashboard> {
   }
 
   @override
+  void dispose() {
+    _attendanceSubscription?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
@@ -1839,63 +1909,73 @@ class _StudentDashboardState extends State<StudentDashboard> {
                           ],
                         ),
                       )
-                    : SingleChildScrollView(
-                        physics: const BouncingScrollPhysics(
-                          parent: AlwaysScrollableScrollPhysics(),
-                        ),
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // 1. STUDENT PIXEL RUN GAME HERO CARD (Frosted Glass Container)
-                            _buildFrostedHeroCard(context),
+                    : RefreshIndicator(
+                        color: const Color(0xFF38BDF8),
+                        backgroundColor: const Color(0xFF1E293B),
+                        onRefresh: () => fetchStudentData(forceLive: true),
+                        child: SingleChildScrollView(
+                          physics: const BouncingScrollPhysics(
+                            parent: AlwaysScrollableScrollPhysics(),
+                          ),
+                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // 1. STUDENT PIXEL RUN GAME HERO CARD (Frosted Glass Container)
+                              _buildFrostedHeroCard(context),
 
-                            const SizedBox(height: 14),
+                              const SizedBox(height: 14),
 
-                            // 2. FEATURED BENTO HERO: ATTENDANCE (WIDE CARD)
-                            _buildAttendanceBentoCard(context),
+                              // 2. FEATURED BENTO HERO: ATTENDANCE (WIDE CARD)
+                              _buildAttendanceBentoCard(context),
 
-                            const SizedBox(height: 12),
+                              const SizedBox(height: 12),
 
-                            // 4. SECONDARY BENTO ROW: BACKLOGS & FEE DETAILS (2 COLUMNS)
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(child: _buildBacklogsBentoCard(context)),
-                                const SizedBox(width: 12),
-                                Expanded(child: _buildFeeBentoCard(context)),
-                              ],
-                            ),
+                              // 4. SECONDARY BENTO ROW: BACKLOGS & FEE DETAILS (2 COLUMNS)
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(child: _buildBacklogsBentoCard(context)),
+                                  const SizedBox(width: 12),
+                                  Expanded(child: _buildFeeBentoCard(context)),
+                                ],
+                              ),
 
-                            const SizedBox(height: 12),
+                              const SizedBox(height: 12),
 
-                            // 5. BENTO ROW: TIME TABLE & MARKS (2 COLUMNS)
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(child: _buildTimeTableBentoCard(context)),
-                                const SizedBox(width: 12),
-                                Expanded(child: _buildMarksBentoCard(context)),
-                              ],
-                            ),
+                              // 5. BENTO ROW: TIME TABLE & MARKS (2 COLUMNS)
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(child: _buildTimeTableBentoCard(context)),
+                                  const SizedBox(width: 12),
+                                  Expanded(child: _buildMarksBentoCard(context)),
+                                ],
+                              ),
 
-                            const SizedBox(height: 12),
+                              const SizedBox(height: 12),
 
-                            // 6. BENTO ROW: PROFILE & ACADEMIC REGISTER (2 COLUMNS)
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(child: _buildProfileBentoCard(context)),
-                                const SizedBox(width: 12),
-                                Expanded(child: _buildRegisterBentoCard(context)),
-                              ],
-                            ),
+                              // 6. BENTO ROW: PROFILE & ACADEMIC REGISTER (2 COLUMNS)
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(child: _buildProfileBentoCard(context)),
+                                  const SizedBox(width: 12),
+                                  Expanded(child: _buildRegisterBentoCard(context)),
+                                ],
+                              ),
 
-                            const SizedBox(height: 12),
+                              const SizedBox(height: 12),
 
-                            // 7. FEATURED BENTO FOOTER: SPF PERFORMANCE (WIDE CARD)
-                            _buildSpfBentoCard(context),
-                          ],
+                              // 7. FEATURED BENTO FOOTER: SPF PERFORMANCE (WIDE CARD)
+                              _buildSpfBentoCard(context),
+
+                              const SizedBox(height: 12),
+
+                              // 8. HITAM EXAM BENTO CARD (WIDE CARD)
+                              _buildHitamExamBentoCard(context),
+                            ],
+                          ),
                         ),
                       ),
           ),
@@ -2117,72 +2197,78 @@ class _StudentDashboardState extends State<StudentDashboard> {
         child: InkWell(
           borderRadius: BorderRadius.circular(28),
           onTap: () {
+            final activeRoll = (widget.studentId ??
+                    HitamAuthService().activeUserId ??
+                    '')
+                .toUpperCase()
+                .trim();
+            final cached = HitamScraperService().getProfileFor(activeRoll);
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => const StudentProfileScreen(),
+                builder: (context) => StudentProfileScreen(
+                  initialProfile: cached,
+                ),
               ),
             );
           },
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(2.5),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.40),
-                          width: 1.2,
+                Container(
+                  padding: const EdgeInsets.all(2.5),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.40),
+                      width: 1.2,
+                    ),
+                  ),
+                  child: _buildStudentAvatar(),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          studentName.isNotEmpty ? studentName : 'Student',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 17.5,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: -0.3,
+                          ),
                         ),
                       ),
-                      child: _buildStudentAvatar(),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      const SizedBox(height: 6),
+                      Row(
                         children: [
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              studentName.isNotEmpty ? studentName : 'Student',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 17.5,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: -0.3,
+                          _buildCapsulePill(
+                            (widget.studentId ?? HitamAuthService().activeUserId ?? '').toUpperCase(),
+                          ),
+                          if (department.isNotEmpty) ...[
+                            const SizedBox(width: 8),
+                            _buildCapsulePill(
+                              HitamScraperService.formatShortBranch(
+                                department,
+                                rollNo: widget.studentId ?? HitamAuthService().activeUserId,
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              _buildCapsulePill(
-                                (widget.studentId ?? HitamAuthService().activeUserId ?? '').toUpperCase(),
-                              ),
-                              if (department.isNotEmpty) ...[
-                                const SizedBox(width: 8),
-                                Flexible(
-                                  child: _buildCapsulePill(department),
-                                ),
-                              ],
-                            ],
-                          ),
+                          ],
                         ],
                       ),
-                    ),
-                  ],
+                      if (year.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        _buildCapsulePill(year),
+                      ],
+                    ],
+                  ),
                 ),
-                if (year.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  _buildCapsulePill(year),
-                ],
               ],
             ),
           ),
@@ -2198,6 +2284,20 @@ class _StudentDashboardState extends State<StudentDashboard> {
         : attendance;
     final isEligible = currentAttendance >= 75.0;
     final progressColor = isEligible ? const Color(0xFF10B981) : const Color(0xFFEF4444);
+
+    final String attendanceDisplay;
+    if (currentAttendance < 75.0) {
+      if (currentAttendance.toStringAsFixed(1) == '75.0') {
+        final f2 = currentAttendance.toStringAsFixed(2);
+        attendanceDisplay = (double.tryParse(f2) ?? 0.0) >= 75.0 ? '74.99%' : '$f2%';
+      } else {
+        attendanceDisplay = '${currentAttendance.toStringAsFixed(1)}%';
+      }
+    } else {
+      attendanceDisplay = currentAttendance.truncateToDouble() == currentAttendance
+          ? '${currentAttendance.toInt()}%'
+          : '${currentAttendance.toStringAsFixed(1)}%';
+    }
 
     return _buildGlassContainer(
       width: double.infinity,
@@ -2299,9 +2399,9 @@ class _StudentDashboardState extends State<StudentDashboard> {
                   ),
                 ),
                 Text(
-                  '${currentAttendance.toStringAsFixed(1)}%',
-                  style: const TextStyle(
-                    fontSize: 13.5,
+                  attendanceDisplay,
+                  style: TextStyle(
+                    fontSize: attendanceDisplay.length > 5 ? 12.0 : 13.5,
                     fontWeight: FontWeight.w800,
                     color: Colors.white,
                     letterSpacing: -0.4,
@@ -2425,10 +2525,18 @@ class _StudentDashboardState extends State<StudentDashboard> {
       title: 'Profile',
       subtitle: 'Personal bio-data & academic info',
       onTap: () {
+        final activeRoll = (widget.studentId ??
+                HitamAuthService().activeUserId ??
+                '')
+            .toUpperCase()
+            .trim();
+        final cached = HitamScraperService().getProfileFor(activeRoll);
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => const StudentProfileScreen(),
+            builder: (context) => StudentProfileScreen(
+              initialProfile: cached,
+            ),
           ),
         );
       },
@@ -2492,6 +2600,66 @@ class _StudentDashboardState extends State<StudentDashboard> {
       ),
     );
   }
+
+  Widget _buildHitamExamBentoCard(BuildContext context) {
+    final rollNo = (widget.studentId ??
+            HitamAuthService().activeUserId ??
+            '')
+        .toUpperCase()
+        .trim();
+
+    final activePhoto = (photoUrl != null &&
+            photoUrl!.isNotEmpty &&
+            !HitamScraperService.isBlacklistedPhoto(photoUrl))
+        ? photoUrl
+        : HitamScraperService().getProfileFor(rollNo)?.photoUrl;
+
+    return _buildGlassContainer(
+      width: double.infinity,
+      borderRadius: 26,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => HitamExamScreen(
+              rollNo: rollNo,
+              studentName: studentName,
+              branch: department,
+              semester: year,
+              photoUrl: activePhoto,
+            ),
+          ),
+        );
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            'HITAM Exam',
+            style: TextStyle(
+              fontSize: 15.5,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+              letterSpacing: -0.2,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Exam fees, hall tickets, marks & circulars',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.white.withValues(alpha: 0.76),
+              height: 1.25,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // ============================================================
@@ -2535,13 +2703,23 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
   int marginClasses = 0;
 
   List<Map<String, dynamic>> subjects = [];
+  StreamSubscription<StudentAttendanceReport>? _attendanceSubscription;
 
   @override
   void initState() {
     super.initState();
-    if (widget.report != null) {
-      _applyAttendanceReport(widget.report!);
+    final rep = widget.report ?? HitamScraperService().latestAttendanceReport;
+    if (rep != null) {
+      _applyAttendanceReport(rep);
     }
+    _attendanceSubscription =
+        NotificationService().onAttendanceUpdated.listen((freshRep) {
+      if (mounted) {
+        setState(() {
+          _applyAttendanceReport(freshRep);
+        });
+      }
+    });
     fetchAttendanceData();
     _prefetchAcademicRegister();
   }
@@ -2558,12 +2736,11 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
 
   void _applyAttendanceReport(StudentAttendanceReport rep) {
     final activeRoll = HitamAuthService().activeUserId ?? '';
-    final name = rep.studentName.trim().isNotEmpty &&
-            !rep.studentName.toLowerCase().contains('bhargavi')
+    final name = rep.studentName.trim().isNotEmpty
         ? rep.studentName.trim()
         : (HitamScraperService().latestProfile?.name ??
             (activeRoll.isNotEmpty ? activeRoll : 'Student'));
-    final roll = rep.rollNo.trim().isNotEmpty && rep.rollNo != '22K91A0501'
+    final roll = rep.rollNo.trim().isNotEmpty
         ? rep.rollNo.trim()
         : activeRoll;
 
@@ -2598,26 +2775,39 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
 
   Future<void> fetchAttendanceData() async {
     final scraper = HitamScraperService();
-    StudentAttendanceReport? rep = widget.report ?? scraper.latestAttendanceReport;
     final activeRoll = HitamAuthService().activeUserId;
 
-    if (rep == null && activeRoll != null && activeRoll.isNotEmpty) {
-      setState(() {
-        isLoading = true;
-        errorMessage = '';
-      });
-      rep = await scraper.fetchStudentAttendanceReport(activeRoll);
+    // 1. Always attempt live real-time fetch directly from WebPros ERP
+    if (activeRoll != null && activeRoll.isNotEmpty) {
+      if (subjects.isEmpty) {
+        setState(() {
+          isLoading = true;
+          errorMessage = '';
+        });
+      }
+      try {
+        final liveRep = await scraper.fetchStudentAttendanceReport(activeRoll);
+        if (liveRep != null && mounted) {
+          setState(() {
+            _applyAttendanceReport(liveRep);
+          });
+          _prefetchAcademicRegister();
+          return;
+        }
+      } catch (_) {}
     }
 
+    // 2. If already loaded or memory cached from scraper/widget, apply it
+    StudentAttendanceReport? rep = widget.report ?? scraper.latestAttendanceReport;
     if (rep != null && rep.subjects.isNotEmpty && mounted) {
       setState(() {
         _applyAttendanceReport(rep!);
       });
-      NotificationService().checkAndNotifyAttendance(rep!);
+      _prefetchAcademicRegister();
       return;
     }
 
-    // Try offline cached SQLite data
+    // 3. Fallback to offline cached SQLite data if offline
     if (activeRoll != null && activeRoll.isNotEmpty) {
       try {
         final cached = await DatabaseService().getCachedAttendance(activeRoll);
@@ -2644,207 +2834,19 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
             isLoading = false;
             errorMessage = '';
           });
+          _prefetchAcademicRegister();
           return;
         }
       } catch (_) {}
     }
 
-    setState(() {
-      isLoading = true;
-      errorMessage = '';
-    });
-
-    try {
-      final activeRoll = HitamAuthService().activeUserId ?? '';
-      final activeName = HitamScraperService().latestProfile?.name ??
-          HitamScraperService().latestAttendanceReport?.studentName ??
-          '';
-
-      final queryParams = <String, String>{};
-      if (activeRoll.isNotEmpty && activeRoll != 'Student') {
-        queryParams['rollNo'] = activeRoll;
-      }
-      if (activeName.isNotEmpty && activeName != 'Student') {
-        queryParams['name'] = activeName;
-      }
-
-      final uri = Uri.parse('${ApiConfig.baseUrl}/api/student/attendance')
-          .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
-
-      final response = await http.get(uri);
-
-      if (!mounted) return;
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-
-        final rep = HitamScraperService().latestAttendanceReport;
-        final prof = HitamScraperService().latestProfile;
-
-        // Resolve real student name without any hardcoded demo strings
-        String resolvedName = 'Student';
-        if (prof?.name != null &&
-            prof!.name.trim().isNotEmpty &&
-            !prof.name.toLowerCase().contains('bhargavi')) {
-          resolvedName = prof.name.trim();
-        } else if (rep?.studentName != null &&
-            rep!.studentName.trim().isNotEmpty &&
-            !rep.studentName.toLowerCase().contains('bhargavi')) {
-          resolvedName = rep.studentName.trim();
-        } else if (activeRoll.isNotEmpty &&
-            activeRoll != 'Student' &&
-            activeRoll != '22K91A0501') {
-          resolvedName = activeRoll;
-        } else if (data['studentName'] != null &&
-            data['studentName'].toString().trim().isNotEmpty &&
-            !data['studentName'].toString().toLowerCase().contains('bhargavi')) {
-          resolvedName = data['studentName'].toString().trim();
-        }
-
-        // Resolve real roll number
-        String resolvedRoll = '';
-        if (activeRoll.isNotEmpty &&
-            activeRoll != 'Student' &&
-            activeRoll != '22K91A0501' &&
-            activeRoll != 'STU001') {
-          resolvedRoll = activeRoll;
-        } else if (rep?.rollNo != null &&
-            rep!.rollNo.trim().isNotEmpty &&
-            rep.rollNo != '22K91A0501') {
-          resolvedRoll = rep.rollNo.trim();
-        } else if (data['studentId'] != null &&
-            data['studentId'].toString().trim().isNotEmpty &&
-            data['studentId'].toString() != '22K91A0501' &&
-            data['studentId'].toString() != 'STU001') {
-          resolvedRoll = data['studentId'].toString().trim();
-        }
-
-        // Resolve department/branch
-        String resolvedDept = '';
-        if (prof?.branch != null && prof!.branch.trim().isNotEmpty) {
-          resolvedDept = prof.branch.trim();
-        } else if (rep?.branch != null && rep!.branch.trim().isNotEmpty) {
-          resolvedDept = rep.branch.trim();
-        } else if (data['department'] != null &&
-            data['department'].toString().trim().isNotEmpty &&
-            data['department'] != 'CSE - 4th Year') {
-          resolvedDept = data['department'].toString().trim();
-        }
-
-        // Resolve semester
-        String resolvedSem = '';
-        if (prof?.semester != null && prof!.semester.trim().isNotEmpty) {
-          resolvedSem = prof.semester.trim();
-        } else if (rep?.semester != null && rep!.semester.trim().isNotEmpty) {
-          resolvedSem = rep.semester.trim();
-        } else if (data['semester'] != null &&
-            data['semester'].toString().trim().isNotEmpty &&
-            data['semester'] != 'Semester 7') {
-          resolvedSem = data['semester'].toString().trim();
-        }
-
-        setState(() {
-          studentName = resolvedName;
-          studentId = resolvedRoll;
-          department = resolvedDept;
-          semester = resolvedSem;
-
-          overallAttendance = (data['overallAttendance'] is num)
-              ? (data['overallAttendance'] as num).toDouble()
-              : double.tryParse(data['overallAttendance']?.toString() ?? '') ??
-                  (rep?.overallPercentage ?? 0.0);
-
-          totalClasses = (data['totalClasses'] is num)
-              ? (data['totalClasses'] as num).toInt()
-              : int.tryParse(data['totalClasses']?.toString() ?? '') ??
-                  (rep?.totalHeld ?? 0);
-
-          attendedClasses = (data['attendedClasses'] is num)
-              ? (data['attendedClasses'] as num).toInt()
-              : int.tryParse(data['attendedClasses']?.toString() ?? '') ??
-                  (rep?.totalAttended ?? 0);
-
-          marginClasses = (data['marginClasses'] is num)
-              ? (data['marginClasses'] as num).toInt()
-              : int.tryParse(data['marginClasses']?.toString() ?? '') ??
-                  (rep?.safeBunks ?? 0);
-
-          if (data['subjects'] is List && (data['subjects'] as List).isNotEmpty) {
-            subjects = List<Map<String, dynamic>>.from(
-              (data['subjects'] as List).map(
-                (s) => Map<String, dynamic>.from(s as Map),
-              ),
-            );
-          } else {
-            final rep = HitamScraperService().latestAttendanceReport;
-            subjects = rep?.subjects.map((s) => {
-              "subject": s.subjectName,
-              "code": s.subjectCode,
-              "faculty": "HITAM Faculty",
-              "attended": s.classesAttended,
-              "total": s.classesHeld,
-              "percentage": s.percentage,
-              "safe_bunks": s.safeBunks,
-              "classes_needed": s.classesNeeded,
-              "status": s.status,
-            }).toList() ?? [];
-          }
-
-          isLoading = false;
-          errorMessage = '';
-        });
-      } else {
-        setState(() {
-          errorMessage = 'Failed to load attendance details';
-          isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (!mounted) return;
-      final rep = HitamScraperService().latestAttendanceReport;
-      final prof = HitamScraperService().latestProfile;
-      final activeRoll = HitamAuthService().activeUserId ?? '';
-
+    // 4. If all else fails and nothing is displayed, show error
+    if (mounted) {
       setState(() {
-        studentName = (prof?.name != null &&
-                prof!.name.trim().isNotEmpty &&
-                !prof.name.toLowerCase().contains('bhargavi'))
-            ? prof.name.trim()
-            : (rep?.studentName != null &&
-                    rep!.studentName.trim().isNotEmpty &&
-                    !rep.studentName.toLowerCase().contains('bhargavi'))
-                ? rep.studentName.trim()
-                : (activeRoll.isNotEmpty && activeRoll != '22K91A0501'
-                    ? activeRoll
-                    : 'Student');
-        studentId = (activeRoll.isNotEmpty &&
-                activeRoll != 'Student' &&
-                activeRoll != '22K91A0501')
-            ? activeRoll
-            : (rep?.rollNo != null &&
-                    rep!.rollNo.trim().isNotEmpty &&
-                    rep.rollNo != '22K91A0501'
-                ? rep.rollNo.trim()
-                : '');
-        department = prof?.branch ?? rep?.branch ?? '';
-        semester = prof?.semester ?? rep?.semester ?? '';
-        overallAttendance = rep?.overallPercentage ?? 0.0;
-        totalClasses = rep?.totalHeld ?? 0;
-        attendedClasses = rep?.totalAttended ?? 0;
-        marginClasses = rep?.safeBunks ?? 0;
-        subjects = rep?.subjects.map((s) => {
-          "subject": s.subjectName,
-          "code": s.subjectCode,
-          "faculty": "HITAM Faculty",
-          "attended": s.classesAttended,
-          "total": s.classesHeld,
-          "percentage": s.percentage,
-          "safe_bunks": s.safeBunks,
-          "classes_needed": s.classesNeeded,
-          "status": s.status,
-        }).toList() ?? [];
         isLoading = false;
-        errorMessage = subjects.isEmpty ? 'Attendance data not available offline.' : '';
+        if (subjects.isEmpty) {
+          errorMessage = 'Unable to connect to WebPros ERP. Please pull down to retry.';
+        }
       });
     }
     _prefetchAcademicRegister();
@@ -3021,229 +3023,255 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
 
     showDialog(
       context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.70),
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             final int projAttended = attendedClasses + simulateAttend;
             final int projTotal = totalClasses + simulateAttend + simulateMiss;
             final double projPercent = projTotal > 0 ? (projAttended / projTotal) * 100 : overallAttendance;
+            final bool isProjectedSafe = projPercent >= 75.0;
 
             return Dialog(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
               insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 500),
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: SingleChildScrollView(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Expanded(
-                              child: Text(
-                                'Attendance Margin Calculator',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 16,
-                                  color: Color(0xFF0F172A),
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.close_rounded, size: 20),
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                              onPressed: () => Navigator.pop(ctx),
-                            ),
-                          ],
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                  child: Container(
+                    constraints: const BoxConstraints(maxWidth: 480),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0B0D13).withValues(alpha: 0.96),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.14),
+                        width: 1.0,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.75),
+                          blurRadius: 40,
+                          offset: const Offset(0, 18),
                         ),
-                        const Divider(height: 20),
-                        Text(
-                          'Project your future attendance by simulating upcoming attended vs. missed lectures:',
-                          style: TextStyle(fontSize: 12.5, color: Colors.grey.shade700, height: 1.35),
-                        ),
-                        const SizedBox(height: 14),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                          decoration: BoxDecoration(
-                            color: projPercent >= 75 ? const Color(0xFFECFDF5) : const Color(0xFFFEF2F2),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                              color: projPercent >= 75 ? const Color(0xFFA7F3D0) : const Color(0xFFFECACA),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            crossAxisAlignment: CrossAxisAlignment.center,
+                      ],
+                    ),
+                    padding: const EdgeInsets.all(22.0),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
                             children: [
                               const Expanded(
                                 child: Text(
-                                  'Projected Attendance:',
-                                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                                  'Attendance Margin Calculator',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 16.5,
+                                    color: Colors.white,
+                                    letterSpacing: -0.2,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              Text(
-                                '${projPercent.toStringAsFixed(1)}%',
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w800,
-                                  color: projPercent >= 75 ? const Color(0xFF065F46) : const Color(0xFF991B1B),
+                              IconButton(
+                                icon: Container(
+                                  padding: const EdgeInsets.all(5),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.06),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(Icons.close_rounded, size: 16, color: Colors.white.withValues(alpha: 0.75)),
                                 ),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                onPressed: () => Navigator.pop(ctx),
                               ),
                             ],
                           ),
-                        ),
-                        const SizedBox(height: 14),
-                        // Helper Stepper Row
-                        Builder(
-                          builder: (context) {
-                            Widget buildStepper({
-                              required String title,
-                              required String subtitle,
-                              required int value,
-                              required VoidCallback? onDecrement,
-                              required VoidCallback onIncrement,
-                              required Color accentColor,
-                            }) {
-                              return Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF8FAFC),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            title,
-                                            style: const TextStyle(
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w600,
-                                              color: Color(0xFF1E293B),
-                                            ),
-                                          ),
-                                          const SizedBox(height: 1),
-                                          Text(
-                                            subtitle,
-                                            style: const TextStyle(
-                                              fontSize: 11,
-                                              color: Color(0xFF64748B),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(color: const Color(0xFFCBD5E1)),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          InkWell(
-                                            onTap: onDecrement,
-                                            borderRadius: const BorderRadius.horizontal(left: Radius.circular(7)),
-                                            child: Padding(
-                                              padding: const EdgeInsets.all(6.0),
-                                              child: Icon(
-                                                Icons.remove_rounded,
-                                                size: 18,
-                                                color: onDecrement != null
-                                                    ? const Color(0xFF334155)
-                                                    : const Color(0xFFCBD5E1),
-                                              ),
-                                            ),
-                                          ),
-                                          Container(
-                                            constraints: const BoxConstraints(minWidth: 28),
-                                            alignment: Alignment.center,
-                                            padding: const EdgeInsets.symmetric(horizontal: 2),
-                                            child: Text(
-                                              '$value',
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w800,
-                                                color: accentColor,
-                                              ),
-                                            ),
-                                          ),
-                                          InkWell(
-                                            onTap: onIncrement,
-                                            borderRadius: const BorderRadius.horizontal(right: Radius.circular(7)),
-                                            child: const Padding(
-                                              padding: EdgeInsets.all(6.0),
-                                              child: Icon(
-                                                Icons.add_rounded,
-                                                size: 18,
-                                                color: Color(0xFF334155),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }
-
-                            return Column(
+                          const SizedBox(height: 14),
+                          Text(
+                            'Project your future attendance by simulating upcoming attended vs. missed lectures:',
+                            style: TextStyle(fontSize: 12.5, color: Colors.white.withValues(alpha: 0.70), height: 1.4),
+                          ),
+                          const SizedBox(height: 14),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            decoration: BoxDecoration(
+                              color: isProjectedSafe
+                                  ? const Color(0xFF064E3B).withValues(alpha: 0.35)
+                                  : const Color(0xFF7F1D1D).withValues(alpha: 0.35),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: isProjectedSafe
+                                    ? const Color(0xFF10B981).withValues(alpha: 0.45)
+                                    : const Color(0xFFEF4444).withValues(alpha: 0.45),
+                                width: 1.2,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                buildStepper(
-                                  title: 'Upcoming Attended',
-                                  subtitle: 'Lectures you plan to attend',
-                                  value: simulateAttend,
-                                  onDecrement: simulateAttend > 0
-                                      ? () => setDialogState(() => simulateAttend--)
-                                      : null,
-                                  onIncrement: () => setDialogState(() => simulateAttend++),
-                                  accentColor: const Color(0xFF059669),
+                                const Expanded(
+                                  child: Text(
+                                    'Projected Attendance',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 14,
+                                      color: Colors.white,
+                                    ),
+                                  ),
                                 ),
-                                const SizedBox(height: 10),
-                                buildStepper(
-                                  title: 'Upcoming Missed',
-                                  subtitle: 'Lectures you plan to skip',
-                                  value: simulateMiss,
-                                  onDecrement: simulateMiss > 0
-                                      ? () => setDialogState(() => simulateMiss--)
-                                      : null,
-                                  onIncrement: () => setDialogState(() => simulateMiss++),
-                                  accentColor: const Color(0xFFDC2626),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '${projPercent.toStringAsFixed(1)}%',
+                                  style: TextStyle(
+                                    fontSize: 26,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: -0.5,
+                                    color: isProjectedSafe
+                                        ? const Color(0xFF34D399)
+                                        : const Color(0xFFF87171),
+                                  ),
                                 ),
                               ],
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 14),
-                        const Divider(height: 1),
-                        const SizedBox(height: 12),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF0F172A),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                             ),
-                            onPressed: () => Navigator.pop(ctx),
-                            child: const Text('Close', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 14),
+                          // Helper Stepper Row
+                          Builder(
+                            builder: (context) {
+                              Widget buildStepper({
+                                required String title,
+                                required String subtitle,
+                                required int value,
+                                required VoidCallback? onDecrement,
+                                required VoidCallback onIncrement,
+                                required Color accentColor,
+                              }) {
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.04),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              title,
+                                              style: const TextStyle(
+                                                fontSize: 13.5,
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              subtitle,
+                                              style: const TextStyle(
+                                                fontSize: 11.5,
+                                                color: Color(0xFF94A3B8),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withValues(alpha: 0.06),
+                                          borderRadius: BorderRadius.circular(10),
+                                          border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            InkWell(
+                                              onTap: onDecrement,
+                                              borderRadius: const BorderRadius.horizontal(left: Radius.circular(9)),
+                                              child: Padding(
+                                                padding: const EdgeInsets.all(7.0),
+                                                child: Icon(
+                                                  Icons.remove_rounded,
+                                                  size: 18,
+                                                  color: onDecrement != null
+                                                      ? Colors.white
+                                                      : Colors.white.withValues(alpha: 0.22),
+                                                ),
+                                              ),
+                                            ),
+                                            Container(
+                                              constraints: const BoxConstraints(minWidth: 34),
+                                              alignment: Alignment.center,
+                                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                                              child: Text(
+                                                '$value',
+                                                style: TextStyle(
+                                                  fontSize: 14.5,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: accentColor,
+                                                ),
+                                              ),
+                                            ),
+                                            InkWell(
+                                              onTap: onIncrement,
+                                              borderRadius: const BorderRadius.horizontal(right: Radius.circular(9)),
+                                              child: const Padding(
+                                                padding: EdgeInsets.all(7.0),
+                                                child: Icon(
+                                                  Icons.add_rounded,
+                                                  size: 18,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }
+
+                              return Column(
+                                children: [
+                                  buildStepper(
+                                    title: 'Upcoming Attended',
+                                    subtitle: 'Lectures you plan to attend',
+                                    value: simulateAttend,
+                                    onDecrement: simulateAttend > 0
+                                        ? () => setDialogState(() => simulateAttend--)
+                                        : null,
+                                    onIncrement: () => setDialogState(() => simulateAttend++),
+                                    accentColor: const Color(0xFF34D399),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  buildStepper(
+                                    title: 'Upcoming Missed',
+                                    subtitle: 'Lectures you plan to skip',
+                                    value: simulateMiss,
+                                    onDecrement: simulateMiss > 0
+                                        ? () => setDialogState(() => simulateMiss--)
+                                        : null,
+                                    onIncrement: () => setDialogState(() => simulateMiss++),
+                                    accentColor: const Color(0xFFF87171),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -3262,231 +3290,234 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
     final issuedDate = '${now.day} ${months[now.month - 1]} ${now.year}';
-    final academicYear = now.month >= 6
-        ? '${now.year}-${now.year + 1}'
-        : '${now.year - 1}-${now.year}';
     final isEligible = overallAttendance >= 75.0;
-    final eligibilityStatus = isEligible
-        ? 'EXAM ELIGIBLE'
-        : (overallAttendance >= 65.0 ? 'CONDONATION' : 'DETAINED / CRITICAL');
 
     showDialog(
       context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.70),
       builder: (ctx) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        clipBehavior: Clip.antiAlias,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: 550,
-            maxHeight: MediaQuery.sizeOf(ctx).height * 0.82,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'HITAM HYDERABAD',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15.5,
-                              letterSpacing: 0.4,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          SizedBox(height: 2),
-                          Text(
-                            'Official Attendance Transcript',
-                            style: TextStyle(fontSize: 12, color: Colors.grey),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close, size: 22),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      splashRadius: 20,
-                      onPressed: () => Navigator.pop(ctx),
-                    ),
-                  ],
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+            child: Container(
+              constraints: BoxConstraints(
+                maxWidth: 520,
+                maxHeight: MediaQuery.sizeOf(ctx).height * 0.84,
+              ),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0B0D13).withValues(alpha: 0.96),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.14),
+                  width: 1.0,
                 ),
-                const Divider(height: 18),
-                Wrap(
-                  alignment: WrapAlignment.spaceBetween,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 8,
-                  runSpacing: 4,
-                  children: [
-                    Text(
-                      'Doc Ref: HITAM/ATT/${now.year}/${studentId.trim().isNotEmpty ? studentId.trim() : "RECORD"}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade800,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      'Issued: $issuedDate',
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(8),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.75),
+                    blurRadius: 40,
+                    offset: const Offset(0, 18),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                ],
+              ),
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        studentName,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13.5,
+                      const Expanded(
+                        child: Text(
+                          'HITAM HYDERABAD',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 16,
+                            letterSpacing: 0.4,
+                            color: Colors.white,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      const SizedBox(height: 3),
-                      Text(
-                        'Roll No: $studentId | Department: $department',
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        'Semester: $semester | Academic Year: $academicYear',
-                        style: const TextStyle(fontSize: 12),
+                      IconButton(
+                        icon: Container(
+                          padding: const EdgeInsets.all(5),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.06),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.close_rounded, size: 16, color: Colors.white.withValues(alpha: 0.75)),
+                        ),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                        onPressed: () => Navigator.pop(ctx),
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'Subject-wise Verified Records:',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                ),
-                const SizedBox(height: 6),
-                Flexible(
-                  child: Scrollbar(
-                    thumbVisibility: subjects.length > 5,
-                    child: ListView.separated(
-                      shrinkWrap: true,
-                      padding: const EdgeInsets.only(right: 6, top: 2, bottom: 4),
-                      itemCount: subjects.length,
-                      separatorBuilder: (context, index) =>
-                          const Divider(height: 8, thickness: 0.5),
-                      itemBuilder: (context, idx) {
-                        final s = subjects[idx];
-                        final rawSubj = (s['subject'] ?? '').toString().trim();
-                        final rawCode = (s['code'] ?? '').toString().trim();
-                        final displayTitle = (rawCode.isNotEmpty &&
-                                rawCode.toUpperCase() != rawSubj.toUpperCase() &&
-                                rawCode != 'CS' &&
-                                !rawSubj.toUpperCase().contains(rawCode.toUpperCase()))
-                            ? '$rawSubj ($rawCode)'
-                            : rawSubj;
-                        final pct = (s['percentage'] as num?)?.toDouble() ?? 0.0;
-                        final isSafe = pct >= 75.0;
-
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 2.5),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  displayTitle,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                '${s['attended']} / ${s['total']} (${s['percentage'] is num ? (s['percentage'] as num).toStringAsFixed(2) : s['percentage']}%)',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12.5,
-                                  color: isSafe
-                                      ? Colors.green.shade800
-                                      : (pct >= 65
-                                          ? Colors.orange.shade800
-                                          : Colors.red.shade800),
-                                ),
-                              ),
-                            ],
+                  const SizedBox(height: 12),
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                        ),
+                        child: Text(
+                          'Doc Ref: HITAM/ATT/${now.year}/${studentId.trim().isNotEmpty ? studentId.trim() : "RECORD"}',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFFCBD5E1),
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.2,
                           ),
-                        );
-                      },
+                        ),
+                      ),
+                      Text(
+                        'Issued: $issuedDate',
+                        style: TextStyle(fontSize: 11.5, color: Colors.white.withValues(alpha: 0.55)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  const Text(
+                    'Subject-wise Verified Records:',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13.5,
+                      color: Colors.white,
                     ),
                   ),
-                ),
-                const Divider(height: 18),
-                Wrap(
-                  alignment: WrapAlignment.spaceBetween,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 8,
-                  runSpacing: 4,
-                  children: [
-                    const Text(
-                      'Aggregate Attendance:',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13.5,
+                  const SizedBox(height: 8),
+                  Flexible(
+                    child: Scrollbar(
+                      thumbVisibility: subjects.length > 5,
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        padding: const EdgeInsets.only(right: 6, top: 2, bottom: 4),
+                        itemCount: subjects.length,
+                        separatorBuilder: (context, index) => const SizedBox(height: 2),
+                        itemBuilder: (context, idx) {
+                          final s = subjects[idx];
+                          final rawSubj = (s['subject'] ?? '').toString().trim();
+                          final rawCode = (s['code'] ?? '').toString().trim();
+                          final displayTitle = (rawCode.isNotEmpty &&
+                                  rawCode.toUpperCase() != rawSubj.toUpperCase() &&
+                                  rawCode != 'CS' &&
+                                  !rawSubj.toUpperCase().contains(rawCode.toUpperCase()))
+                              ? '$rawSubj ($rawCode)'
+                              : rawSubj;
+                          final pct = (s['percentage'] as num?)?.toDouble() ?? 0.0;
+                          final isSafe = pct >= 75.0;
+
+                          return Container(
+                            margin: const EdgeInsets.symmetric(vertical: 2.0),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.025),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    displayTitle,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white.withValues(alpha: 0.92),
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '${s['attended']} / ${s['total']}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.white.withValues(alpha: 0.55),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  '${s['percentage'] is num ? (s['percentage'] as num).toStringAsFixed(2) : s['percentage']}%',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 12.5,
+                                    color: isSafe
+                                        ? const Color(0xFF34D399)
+                                        : (pct >= 65 ? const Color(0xFFFBBF24) : const Color(0xFFF87171)),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
                     ),
-                    Text(
-                      '${overallAttendance.toStringAsFixed(2)}% ($eligibilityStatus)',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: isEligible
-                            ? Colors.green.shade800
-                            : (overallAttendance >= 65.0
-                                ? Colors.orange.shade800
-                                : Colors.red.shade800),
-                        fontSize: 13.5,
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                    decoration: BoxDecoration(
+                      color: (isEligible
+                              ? const Color(0xFF064E3B)
+                              : (overallAttendance >= 65.0 ? const Color(0xFF78350F) : const Color(0xFF7F1D1D)))
+                          .withValues(alpha: 0.35),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: (isEligible
+                                ? const Color(0xFF10B981)
+                                : (overallAttendance >= 65.0 ? const Color(0xFFF59E0B) : const Color(0xFFEF4444)))
+                            .withValues(alpha: 0.45),
+                        width: 1.2,
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue.shade700,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 10,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'Aggregate Attendance',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                              color: Colors.white,
+                            ),
+                          ),
                         ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${overallAttendance.toStringAsFixed(2)}%',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.5,
+                            color: isEligible
+                                ? const Color(0xFF34D399)
+                                : (overallAttendance >= 65.0
+                                    ? const Color(0xFFFBBF24)
+                                    : const Color(0xFFF87171)),
+                          ),
                         ),
-                      ),
-                      onPressed: () => Navigator.pop(ctx),
-                      child: const Text(
-                        'Close',
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
+                      ],
                     ),
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -3495,13 +3526,21 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
   }
 
   Widget _buildStudentHeroCard() {
-    final bool isEligible = overallAttendance >= 75;
+    final bool isEligible = overallAttendance >= 75.0;
     return GlassContainer(
       borderRadius: 28,
       padding: const EdgeInsets.all(18.0),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final bool isNarrow = constraints.maxWidth < 600;
+
+          final statusBadge = GlassStatusPill(
+            text: isEligible
+                ? 'Exam Eligible (${overallAttendance.toStringAsFixed(2)}%)'
+                : 'Shortage (${overallAttendance.toStringAsFixed(2)}%)',
+            status: isEligible ? GlassPillStatus.safe : GlassPillStatus.critical,
+            textColor: Colors.white,
+          );
 
           final studentInfo = Row(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -3545,38 +3584,29 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
                       children: [
                         if (studentId.isNotEmpty &&
                             studentId != 'Student' &&
-                            studentId != '22K91A0501' &&
                             studentId != 'STU001')
                           GlassCapsulePill(label: 'Roll: $studentId', textColor: Colors.white),
                         if (department.isNotEmpty)
-                          GlassCapsulePill(label: department, textColor: Colors.white),
+                          GlassCapsulePill(
+                            label: HitamScraperService.formatShortBranch(department, rollNo: studentId),
+                            textColor: Colors.white,
+                          ),
                         if (semester.isNotEmpty)
                           GlassCapsulePill(label: semester, textColor: Colors.white),
                       ],
                     ),
+                    if (isNarrow) ...[
+                      const SizedBox(height: 8),
+                      statusBadge,
+                    ],
                   ],
                 ),
               ),
             ],
           );
 
-          final statusBadge = GlassStatusPill(
-            text: isEligible
-                ? 'Exam Eligible (${overallAttendance.toStringAsFixed(2)}%)'
-                : 'Shortage (${overallAttendance.toStringAsFixed(2)}%)',
-            status: isEligible ? GlassPillStatus.safe : GlassPillStatus.critical,
-            textColor: Colors.white,
-          );
-
           if (isNarrow) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                studentInfo,
-                const SizedBox(height: 14),
-                statusBadge,
-              ],
-            );
+            return studentInfo;
           } else {
             return Row(
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -3734,7 +3764,7 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
                 '${overallAttendance.toStringAsFixed(2)}% (Target: 75%)',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: overallAttendance >= 75
+                  color: (overallAttendance >= 75.0)
                       ? const Color(0xFF6EE7B7)
                       : const Color(0xFFFCA5A5),
                   fontSize: 13.5,
@@ -3750,7 +3780,7 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
               minHeight: 10,
               backgroundColor: Colors.white.withValues(alpha: 0.10),
               valueColor: AlwaysStoppedAnimation<Color>(
-                overallAttendance >= 75
+                (overallAttendance >= 75.0)
                     ? const Color(0xFF10B981)
                     : const Color(0xFFEF4444),
               ),
@@ -3910,9 +3940,7 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
   Widget _buildActionBar() {
     Widget buildBtn({
       required VoidCallback onPressed,
-      required IconData icon,
       required String label,
-      required Color accentColor,
     }) {
       return Material(
         color: Colors.transparent,
@@ -3933,23 +3961,15 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, size: 18, color: accentColor),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    label,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                    ),
-                  ),
-                ),
-              ],
+            alignment: Alignment.center,
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 13.5,
+              ),
             ),
           ),
         ),
@@ -3961,18 +3981,14 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
         Expanded(
           child: buildBtn(
             onPressed: () => _showMarginCalculator(context),
-            icon: Icons.calculate_outlined,
             label: 'Margin Calc',
-            accentColor: const Color(0xFF38BDF8),
           ),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: buildBtn(
             onPressed: () => _showTranscriptDialog(context),
-            icon: Icons.receipt_long,
             label: 'Transcript',
-            accentColor: const Color(0xFF34D399),
           ),
         ),
       ],
@@ -3985,7 +4001,7 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: const [
-          Icon(Icons.info_outline, size: 24, color: Color(0xFF38BDF8)),
+          Icon(Icons.info_outline, size: 24, color: Color(0xFF94A3B8)),
           SizedBox(width: 14),
           Expanded(
             child: Column(
@@ -4016,6 +4032,12 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
         ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _attendanceSubscription?.cancel();
+    super.dispose();
   }
 
   @override
@@ -4079,37 +4101,44 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
               : Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 1080),
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      padding: EdgeInsets.symmetric(
-                        horizontal: horizontalPadding,
-                        vertical: 20,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildStudentHeroCard(),
-                          const SizedBox(height: 20),
-                          GithubAttendanceHeatmap(
-                            academicRegister: HitamScraperService()
-                                .latestAcademicRegister,
-                            overallAttendance: overallAttendance,
-                            totalClasses: totalClasses,
-                            attendedClasses: attendedClasses,
-                            subjects: subjects,
-                          ),
-                          const SizedBox(height: 20),
-                          _buildKpiSection(),
-                          const SizedBox(height: 20),
-                          _buildOverallProgressCard(),
-                          const SizedBox(height: 24),
-                          _buildActionBar(),
-                          const SizedBox(height: 24),
-                          _buildSubjectGrid(),
-                          const SizedBox(height: 28),
-                          _buildRegulationsCard(),
-                          const SizedBox(height: 48),
-                        ],
+                    child: RefreshIndicator(
+                      color: const Color(0xFF10B981),
+                      backgroundColor: const Color(0xFF1E293B),
+                      onRefresh: fetchAttendanceData,
+                      child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(
+                          parent: BouncingScrollPhysics(),
+                        ),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: horizontalPadding,
+                          vertical: 20,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildStudentHeroCard(),
+                            const SizedBox(height: 20),
+                            GithubAttendanceHeatmap(
+                              academicRegister: HitamScraperService()
+                                  .latestAcademicRegister,
+                              overallAttendance: overallAttendance,
+                              totalClasses: totalClasses,
+                              attendedClasses: attendedClasses,
+                              subjects: subjects,
+                            ),
+                            const SizedBox(height: 20),
+                            _buildKpiSection(),
+                            const SizedBox(height: 20),
+                            _buildOverallProgressCard(),
+                            const SizedBox(height: 24),
+                            _buildActionBar(),
+                            const SizedBox(height: 24),
+                            _buildSubjectGrid(),
+                            const SizedBox(height: 28),
+                            _buildRegulationsCard(),
+                            const SizedBox(height: 48),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -4440,6 +4469,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           final int needed = report.classesNeeded > 0
               ? report.classesNeeded
               : (((0.75 * held) - attended) / 0.25).ceil().clamp(1, 999);
+          final pctDisplay = (pct < 75.0 && pct.toStringAsFixed(1) == '75.0')
+              ? ((double.tryParse(pct.toStringAsFixed(2)) ?? 0.0) >= 75.0 ? '74.99' : pct.toStringAsFixed(2))
+              : pct.toStringAsFixed(1);
 
           alerts.add({
             'id': 'notif_shortage_${roll}_$held',
@@ -4447,8 +4479,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             'targetRole': 'student',
             'senderRole': 'admin',
             'senderName': 'HITAM Academic Cell',
-            'title': 'Attendance Shortage: ${pct.toStringAsFixed(1)}%',
-            'body': 'Your aggregate attendance is ${pct.toStringAsFixed(1)}% ($attended / $held classes conducted), which is below the mandatory 75% cutoff.\n\n'
+            'title': 'Attendance Shortage: $pctDisplay%',
+            'body': 'Your aggregate attendance is $pctDisplay% ($attended / $held classes conducted), which is below the mandatory 75% cutoff.\n\n'
                 'You must attend the next $needed consecutive class(es) without absence to restore your semester examination clearance.',
             'type': 'attendance',
             'targetScreen': 'attendance',
@@ -4494,14 +4526,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       } else if (activeRole == 'parent') {
         final name = studentName.isNotEmpty ? studentName : roll;
         if (pct < 75.0) {
+          final pctDisplay = (pct < 75.0 && pct.toStringAsFixed(1) == '75.0')
+              ? ((double.tryParse(pct.toStringAsFixed(2)) ?? 0.0) >= 75.0 ? '74.99' : pct.toStringAsFixed(2))
+              : pct.toStringAsFixed(1);
           alerts.add({
             'id': 'notif_parent_shortage_${roll}_$held',
             'userId': roll,
             'targetRole': 'parent',
             'senderRole': 'admin',
             'senderName': 'HITAM Administration',
-            'title': 'Ward Attendance Shortage Alert: ${pct.toStringAsFixed(1)}%',
-            'body': 'Your ward ($name) currently has an attendance of ${pct.toStringAsFixed(1)}% ($attended/$held classes), which is below the mandatory 75% cutoff. Please advise your ward to attend all upcoming classes.',
+            'title': 'Ward Attendance Shortage Alert: $pctDisplay%',
+            'body': 'Your ward ($name) currently has an attendance of $pctDisplay% ($attended/$held classes), which is below the mandatory 75% cutoff. Please advise your ward to attend all upcoming classes.',
             'type': 'attendance',
             'targetScreen': 'attendance',
             'priority': 'urgent',
@@ -5303,146 +5338,16 @@ class _StudentResultsScreenState extends State<StudentResultsScreen> {
 
   // FALLBACK DATA GENERATOR
   List<Map<String, dynamic>> _getFallbackSemesters() {
-    return [
-      {
-        'semester': 'Semester 6',
-        'gpa': 8.65,
-        'cgpa': 8.42,
-        'academicYear': '2025-2026',
-        'subjects': [
-          {
-            'code': 'CS601',
-            'name': 'Data Structures & Algorithms',
-            'grade': 'A+',
-            'credits': 4,
-            'status': 'Pass',
-          },
-          {
-            'code': 'CS602',
-            'name': 'Machine Learning & Neural Nets',
-            'grade': 'A',
-            'credits': 4,
-            'status': 'Pass',
-          },
-          {
-            'code': 'CS603',
-            'name': 'Computer Networks & Security',
-            'grade': 'A',
-            'credits': 3,
-            'status': 'Pass',
-          },
-          {
-            'code': 'CS604',
-            'name': 'Software Engineering & Agile',
-            'grade': 'A+',
-            'credits': 3,
-            'status': 'Pass',
-          },
-          {
-            'code': 'CS605',
-            'name': 'Cloud Computing Laboratory',
-            'grade': 'O',
-            'credits': 2,
-            'status': 'Pass',
-          },
-        ],
-      },
-      {
-        'semester': 'Semester 5',
-        'gpa': 8.40,
-        'cgpa': 8.38,
-        'academicYear': '2025-2026',
-        'subjects': [
-          {
-            'code': 'CS501',
-            'name': 'Design & Analysis of Algorithms',
-            'grade': 'A+',
-            'credits': 4,
-            'status': 'Pass',
-          },
-          {
-            'code': 'CS502',
-            'name': 'Database Management Systems',
-            'grade': 'O',
-            'credits': 4,
-            'status': 'Pass',
-          },
-          {
-            'code': 'CS503',
-            'name': 'Operating Systems Architecture',
-            'grade': 'A',
-            'credits': 3,
-            'status': 'Pass',
-          },
-          {
-            'code': 'CS504',
-            'name': 'Formal Languages & Automata',
-            'grade': 'B+',
-            'credits': 3,
-            'status': 'Pass',
-          },
-          {
-            'code': 'CS505',
-            'name': 'DBMS & OS Virtual Laboratory',
-            'grade': 'O',
-            'credits': 2,
-            'status': 'Pass',
-          },
-        ],
-      },
-      {
-        'semester': 'Semester 4',
-        'gpa': 8.50,
-        'cgpa': 8.36,
-        'academicYear': '2024-2025',
-        'subjects': [
-          {
-            'code': 'CS401',
-            'name': 'Computer Organization & Arch',
-            'grade': 'A',
-            'credits': 4,
-            'status': 'Pass',
-          },
-          {
-            'code': 'CS402',
-            'name': 'Java & Object Oriented Systems',
-            'grade': 'O',
-            'credits': 4,
-            'status': 'Pass',
-          },
-          {
-            'code': 'CS403',
-            'name': 'Discrete Mathematical Structures',
-            'grade': 'A+',
-            'credits': 3,
-            'status': 'Pass',
-          },
-          {
-            'code': 'CS404',
-            'name': 'Environmental Science & Ethics',
-            'grade': 'A',
-            'credits': 2,
-            'status': 'Pass',
-          },
-          {
-            'code': 'CS405',
-            'name': 'Java Programming Laboratory',
-            'grade': 'O',
-            'credits': 2,
-            'status': 'Pass',
-          },
-        ],
-      },
-    ];
+    return [];
   }
 
   void _loadFallbackResults() {
     setState(() {
-      _semestersList = _getFallbackSemesters();
+      _semestersList = [];
       _selectedSemesterIndex = 0;
       _isLoading = false;
-      _errorMessage = '';
-      _isOfflineFallback = true;
+      _errorMessage = 'No semester grade records available yet.';
+      _isOfflineFallback = false;
     });
   }
 
@@ -5554,21 +5459,8 @@ class _StudentResultsScreenState extends State<StudentResultsScreen> {
           }
           if (decoded['studentName'] != null) {
             final incoming = decoded['studentName'].toString().trim();
-            if (incoming.isNotEmpty && !incoming.toLowerCase().contains('bhargavi')) {
+            if (incoming.isNotEmpty) {
               _studentName = incoming;
-            }
-          }
-        }
-
-        // If backend returned only 1 semester, augment with past historical records
-        if (parsedList.isNotEmpty && parsedList.length < 3) {
-          final fallback = _getFallbackSemesters();
-          for (var fb in fallback) {
-            final exists = parsedList.any((p) =>
-                (p['semester'] ?? '').toString().toLowerCase().trim() ==
-                (fb['semester'] ?? '').toString().toLowerCase().trim());
-            if (!exists) {
-              parsedList.add(fb);
             }
           }
         }
@@ -5585,11 +5477,9 @@ class _StudentResultsScreenState extends State<StudentResultsScreen> {
         }
       }
 
-      // If response not 200 or empty, load resilient fallback
       _loadFallbackResults();
     } catch (e) {
       debugPrint('StudentResults fetch exception: $e');
-      // Resilient fallback: screen remains functional and accessible
       _loadFallbackResults();
     }
   }
@@ -13601,7 +13491,7 @@ class _ParentFeeDetailsScreenState
         status = pendingFee > 0 ? 'Pending (${report.balanceText})' : 'Paid';
         dueDate = 'Academic Year 2025-2026';
         breakdown = report.items.map((item) => {
-          "feeType": item.feeName,
+          "feeType": item.academicYear.isNotEmpty ? '${item.academicYear} - ${item.feeName}' : item.feeName,
           "totalAmount": item.payable.round(),
           "paidAmount": item.paid.round(),
           "dueAmount": item.due.round(),

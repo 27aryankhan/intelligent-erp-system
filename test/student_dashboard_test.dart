@@ -38,7 +38,7 @@ void main() {
 
     // Verify Bento Cards
     expect(find.text('Attendance'), findsOneWidget);
-    expect(find.text('85.0%'), findsOneWidget);
+    expect(find.text('85%'), findsOneWidget);
     expect(find.text('Backlogs'), findsOneWidget);
     expect(find.text('Fee Details'), findsOneWidget);
     expect(find.text('Time table'), findsOneWidget);

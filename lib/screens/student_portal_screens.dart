@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/hitam_auth_service.dart';
 import '../services/hitam_scraper_service.dart';
@@ -24,14 +25,18 @@ class _StudentBacklogsScreenState extends State<StudentBacklogsScreen> {
   @override
   void initState() {
     super.initState();
+    _report = HitamScraperService().latestBacklogs;
+    _isLoading = _report == null;
     _loadBacklogs();
   }
 
   Future<void> _loadBacklogs() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+    if (_report == null) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
 
     try {
       final rollNo = HitamAuthService().activeUserId ?? '';
@@ -39,14 +44,16 @@ class _StudentBacklogsScreenState extends State<StudentBacklogsScreen> {
       final report = await scraper.fetchStudentBacklogs(rollNo);
       if (mounted) {
         setState(() {
-          _report = report ?? scraper.latestBacklogs;
+          _report = report ?? scraper.latestBacklogs ?? _report;
           _isLoading = false;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'Failed to load backlogs. Please pull to refresh.';
+          if (_report == null) {
+            _errorMessage = 'Failed to load backlogs. Please pull to refresh.';
+          }
           _isLoading = false;
         });
       }
@@ -111,6 +118,7 @@ class _StudentBacklogsScreenState extends State<StudentBacklogsScreen> {
                     ),
                   )
                 : ListView(
+                    cacheExtent: 500,
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
                     physics: const BouncingScrollPhysics(
                       parent: AlwaysScrollableScrollPhysics(),
@@ -219,6 +227,91 @@ class _StudentBacklogsScreenState extends State<StudentBacklogsScreen> {
 }
 
 // ============================================================================
+// YEAR PILL TAB (Tactile Liquid Glass Segment Pill with Smooth Crossfade)
+// ============================================================================
+class _YearPillTab extends StatefulWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _YearPillTab({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  State<_YearPillTab> createState() => _YearPillTabState();
+}
+
+class _YearPillTabState extends State<_YearPillTab> {
+  bool _isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => setState(() => _isPressed = true),
+      onTapUp: (_) => setState(() => _isPressed = false),
+      onTapCancel: () => setState(() => _isPressed = false),
+      onTap: () {
+        HapticFeedback.selectionClick();
+        widget.onTap();
+      },
+      child: AnimatedScale(
+        scale: _isPressed ? 0.95 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOutCubic,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Inactive subtle liquid glass pill
+            AnimatedOpacity(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutCubic,
+              opacity: widget.isSelected ? 0.0 : 1.0,
+              child: LiquidGlassPill(
+                borderRadius: 22,
+                isSelected: false,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8.5),
+                child: Text(
+                  widget.label,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: Colors.white.withValues(alpha: 0.70),
+                  ),
+                ),
+              ),
+            ),
+            // Active luminous liquid glass pill
+            AnimatedOpacity(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutCubic,
+              opacity: widget.isSelected ? 1.0 : 0.0,
+              child: LiquidGlassPill(
+                borderRadius: 22,
+                isSelected: true,
+                accentColor: const Color(0xFF10B981),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8.5),
+                child: Text(
+                  widget.label,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================================
 // 2. STUDENT FEE DETAILS SCREEN
 // ============================================================================
 class StudentFeeDetailsScreen extends StatefulWidget {
@@ -232,18 +325,23 @@ class _StudentFeeDetailsScreenState extends State<StudentFeeDetailsScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   StudentFeeReport? _feeReport;
+  String? _selectedYear;
 
   @override
   void initState() {
     super.initState();
+    _feeReport = HitamScraperService().latestFeeReport;
+    _isLoading = _feeReport == null;
     _loadFees();
   }
 
   Future<void> _loadFees() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+    if (_feeReport == null) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
 
     try {
       final rollNo = HitamAuthService().activeUserId ?? '';
@@ -251,14 +349,16 @@ class _StudentFeeDetailsScreenState extends State<StudentFeeDetailsScreen> {
       final report = await scraper.fetchStudentFees(rollNo);
       if (mounted) {
         setState(() {
-          _feeReport = report ?? scraper.latestFeeReport;
+          _feeReport = report ?? scraper.latestFeeReport ?? _feeReport;
           _isLoading = false;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'Failed to load fee details.';
+          if (_feeReport == null) {
+            _errorMessage = 'Failed to load fee details.';
+          }
           _isLoading = false;
         });
       }
@@ -284,6 +384,22 @@ class _StudentFeeDetailsScreenState extends State<StudentFeeDetailsScreen> {
     final totalPaid = report?.totalPaid ?? 0.0;
     final totalDue = report?.totalDue ?? 0.0;
     final items = report?.items ?? [];
+
+    final availableYears = <String>[
+      ...{
+        for (var i in items)
+          if (i.academicYear.isNotEmpty) i.academicYear
+      }
+    ];
+
+    if ((_selectedYear == null || !availableYears.contains(_selectedYear)) &&
+        availableYears.isNotEmpty) {
+      _selectedYear = availableYears.first;
+    }
+
+    final filteredItems = _selectedYear != null
+        ? items.where((it) => it.academicYear == _selectedYear).toList()
+        : items;
 
     return GlassScaffold(
       appBar: FrostedGlassAppBar(
@@ -333,6 +449,7 @@ class _StudentFeeDetailsScreenState extends State<StudentFeeDetailsScreen> {
                     ),
                   )
                 : ListView(
+                    cacheExtent: 500,
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
                     physics: const BouncingScrollPhysics(
                       parent: AlwaysScrollableScrollPhysics(),
@@ -377,209 +494,259 @@ class _StudentFeeDetailsScreenState extends State<StudentFeeDetailsScreen> {
                                 ),
                               ),
                             ],
-                            const SizedBox(height: 20),
-                            GlassSubCard(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 14),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        const Text(
-                                          'Total Payable',
-                                          style: TextStyle(
-                                            color: Colors.white60,
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w500,
-                                          ),
+                            const SizedBox(height: 18),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Total Payable',
+                                        style: TextStyle(
+                                          color: Colors.white.withValues(alpha: 0.60),
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.w500,
                                         ),
-                                        const SizedBox(height: 3),
-                                        Text(
-                                          '₹${_formatCurrency(totalPayable)}',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 16,
-                                          ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '₹${_formatCurrency(totalPayable)}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 16.5,
+                                          letterSpacing: -0.2,
                                         ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
                                   ),
-                                  Container(
-                                    width: 1,
-                                    height: 32,
-                                    color: Colors.white.withOpacity(0.12),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        const Text(
-                                          'Total Paid',
-                                          style: TextStyle(
-                                            color: Colors.white60,
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w500,
-                                          ),
+                                ),
+                                Container(
+                                  width: 1,
+                                  height: 32,
+                                  color: Colors.white.withValues(alpha: 0.12),
+                                ),
+                                const SizedBox(width: 18),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Total Paid',
+                                        style: TextStyle(
+                                          color: Colors.white.withValues(alpha: 0.60),
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.w500,
                                         ),
-                                        const SizedBox(height: 3),
-                                        Text(
-                                          '₹${_formatCurrency(totalPaid)}',
-                                          style: const TextStyle(
-                                            color: Color(0xFF34D399),
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 16,
-                                          ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '₹${_formatCurrency(totalPaid)}',
+                                        style: const TextStyle(
+                                          color: Color(0xFF34D399),
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 16.5,
+                                          letterSpacing: -0.2,
                                         ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      if (availableYears.length > 1) ...[
+                        const SizedBox(height: 18),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
+                          child: Row(
+                            children: availableYears.map((year) {
+                              final isSelected = year == _selectedYear;
+                              return Padding(
+                                padding: EdgeInsets.only(
+                                  right: year == availableYears.last ? 0 : 8,
+                                ),
+                                child: _YearPillTab(
+                                  label: year,
+                                  isSelected: isSelected,
+                                  onTap: () {
+                                    if (_selectedYear != year) {
+                                      setState(() {
+                                        _selectedYear = year;
+                                      });
+                                    }
+                                  },
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 20),
 
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                        child: Text(
-                          'ITEMIZED FEE BREAKDOWN',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.6,
-                            color: Colors.white60,
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 220),
+                        switchInCurve: Curves.easeOutCubic,
+                        switchOutCurve: Curves.easeInCubic,
+                        layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
+                          return Stack(
+                            alignment: Alignment.topCenter,
+                            children: <Widget>[
+                              ...previousChildren,
+                              ?currentChild,
+                            ],
+                          );
+                        },
+                        transitionBuilder: (Widget child, Animation<double> animation) {
+                          final isNewChild = (child.key == ValueKey<String>(_selectedYear ?? 'default'));
+                          return FadeTransition(
+                            opacity: CurvedAnimation(
+                              parent: animation,
+                              curve: isNewChild ? Curves.easeOutCubic : Curves.easeInCubic,
+                            ),
+                            child: SlideTransition(
+                              position: Tween<Offset>(
+                                begin: isNewChild ? const Offset(0, 0.02) : Offset.zero,
+                                end: Offset.zero,
+                              ).animate(CurvedAnimation(
+                                parent: animation,
+                                curve: Curves.easeOutCubic,
+                              )),
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: KeyedSubtree(
+                          key: ValueKey<String>(_selectedYear ?? 'default'),
+                          child: Column(
+                            children: filteredItems.isEmpty
+                                ? [
+                                    GlassContainer(
+                                      padding: const EdgeInsets.all(32),
+                                      alignment: Alignment.center,
+                                      child: const Text(
+                                        'No fee records available.',
+                                        style: TextStyle(color: Colors.white60),
+                                      ),
+                                    ),
+                                  ]
+                                : filteredItems.map((item) {
+                                    return GlassContainer(
+                                      margin: const EdgeInsets.only(bottom: 12),
+                                      padding: const EdgeInsets.all(16),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              GlassCapsulePill(
+                                                label: item.slNo.replaceAll('#', '').trim(),
+                                                textColor: Colors.white70,
+                                              ),
+                                              const SizedBox(width: 10),
+                                              Expanded(
+                                                child: Text(
+                                                  item.feeName,
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.w700,
+                                                    fontSize: 15,
+                                                    color: Colors.white,
+                                                  ),
+                                                ),
+                                              ),
+                                              GlassStatusPill(
+                                                label: item.due > 0
+                                                    ? 'Due: ₹${_formatCurrency(item.due)}'
+                                                    : 'Fully Paid',
+                                                isSuccess: item.due <= 0,
+                                                isWarning: item.due > 0,
+                                              ),
+                                            ],
+                                          ),
+                                          Divider(
+                                              height: 20,
+                                              color: Colors.white.withOpacity(0.08)),
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  const Text(
+                                                    'Payable',
+                                                    style: TextStyle(
+                                                        fontSize: 11,
+                                                        color: Colors.white60),
+                                                  ),
+                                                  const SizedBox(height: 2),
+                                                  Text(
+                                                    '₹${_formatCurrency(item.payable)}',
+                                                    style: const TextStyle(
+                                                        fontWeight: FontWeight.w600,
+                                                        fontSize: 14,
+                                                        color: Colors.white),
+                                                  ),
+                                                ],
+                                              ),
+                                              Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  const Text(
+                                                    'Paid',
+                                                    style: TextStyle(
+                                                        fontSize: 11,
+                                                        color: Colors.white60),
+                                                  ),
+                                                  const SizedBox(height: 2),
+                                                  Text(
+                                                    '₹${_formatCurrency(item.paid)}',
+                                                    style: const TextStyle(
+                                                      fontWeight: FontWeight.w700,
+                                                      fontSize: 14,
+                                                      color: Color(0xFF34D399),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  const Text(
+                                                    'Due',
+                                                    style: TextStyle(
+                                                        fontSize: 11,
+                                                        color: Colors.white60),
+                                                  ),
+                                                  const SizedBox(height: 2),
+                                                  Text(
+                                                    '₹${_formatCurrency(item.due)}',
+                                                    style: TextStyle(
+                                                      fontWeight: FontWeight.w700,
+                                                      fontSize: 14,
+                                                      color: item.due > 0
+                                                          ? const Color(0xFFF87171)
+                                                          : Colors.white38,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }).toList(),
                           ),
                         ),
                       ),
-
-                      if (items.isEmpty)
-                        GlassContainer(
-                          padding: const EdgeInsets.all(32),
-                          alignment: Alignment.center,
-                          child: const Text(
-                            'No fee records available.',
-                            style: TextStyle(color: Colors.white60),
-                          ),
-                        )
-                      else
-                        ...items.map((item) {
-                          return GlassContainer(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    GlassCapsulePill(
-                                      label: '#${item.slNo}',
-                                      textColor: Colors.white70,
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Text(
-                                        item.feeName,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 15,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                    GlassStatusPill(
-                                      label: item.due > 0
-                                          ? 'Due: ₹${_formatCurrency(item.due)}'
-                                          : 'Fully Paid',
-                                      isSuccess: item.due <= 0,
-                                      isWarning: item.due > 0,
-                                    ),
-                                  ],
-                                ),
-                                Divider(
-                                    height: 20,
-                                    color: Colors.white.withOpacity(0.08)),
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        const Text(
-                                          'Payable',
-                                          style: TextStyle(
-                                              fontSize: 11,
-                                              color: Colors.white60),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          '₹${_formatCurrency(item.payable)}',
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 14,
-                                              color: Colors.white),
-                                        ),
-                                      ],
-                                    ),
-                                    Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        const Text(
-                                          'Paid',
-                                          style: TextStyle(
-                                              fontSize: 11,
-                                              color: Colors.white60),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          '₹${_formatCurrency(item.paid)}',
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 14,
-                                            color: Color(0xFF34D399),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        const Text(
-                                          'Due',
-                                          style: TextStyle(
-                                              fontSize: 11,
-                                              color: Colors.white60),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          '₹${_formatCurrency(item.due)}',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 14,
-                                            color: item.due > 0
-                                                ? const Color(0xFFF87171)
-                                                : Colors.white38,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          );
-                        }),
                     ],
                   ),
       ),
@@ -608,6 +775,8 @@ class _StudentMarksScreenState extends State<StudentMarksScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _marksReport = HitamScraperService().latestMarksReport;
+    _isLoading = _marksReport == null;
     _loadMarks();
   }
 
@@ -618,10 +787,12 @@ class _StudentMarksScreenState extends State<StudentMarksScreen>
   }
 
   Future<void> _loadMarks() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+    if (_marksReport == null) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
 
     try {
       final rollNo = HitamAuthService().activeUserId ?? '';
@@ -629,14 +800,16 @@ class _StudentMarksScreenState extends State<StudentMarksScreen>
       final report = await scraper.fetchStudentMarks(rollNo);
       if (mounted) {
         setState(() {
-          _marksReport = report ?? scraper.latestMarksReport;
+          _marksReport = report ?? scraper.latestMarksReport ?? _marksReport;
           _isLoading = false;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'Failed to load marks report.';
+          if (_marksReport == null) {
+            _errorMessage = 'Failed to load marks report.';
+          }
           _isLoading = false;
         });
       }
@@ -701,6 +874,7 @@ class _StudentMarksScreenState extends State<StudentMarksScreen>
                           ),
                         )
                       : ListView.builder(
+                          cacheExtent: 500,
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 20),
                           itemCount: cieList.length,
@@ -773,6 +947,7 @@ class _StudentMarksScreenState extends State<StudentMarksScreen>
                           ),
                         )
                       : ListView.builder(
+                          cacheExtent: 500,
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 20),
                           itemCount: sgpaList.length,
@@ -860,7 +1035,8 @@ class _StudentMarksScreenState extends State<StudentMarksScreen>
 // 4. STUDENT PROFILE SCREEN
 // ============================================================================
 class StudentProfileScreen extends StatefulWidget {
-  const StudentProfileScreen({super.key});
+  final StudentProfileDetails? initialProfile;
+  const StudentProfileScreen({super.key, this.initialProfile});
 
   @override
   State<StudentProfileScreen> createState() => _StudentProfileScreenState();
@@ -874,86 +1050,113 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
   @override
   void initState() {
     super.initState();
+    final rollNo = (HitamAuthService().activeUserId ?? '').toUpperCase().trim();
+    final scraper = HitamScraperService();
+    final initial = widget.initialProfile ?? scraper.getProfileFor(rollNo);
+    if (initial != null && initial.name.trim().isNotEmpty) {
+      _profile = initial;
+      _isLoading = false;
+    }
     _loadProfile();
   }
 
   Future<void> _loadProfile() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+    final rollNo = (HitamAuthService().activeUserId ?? '').toUpperCase().trim();
+    final scraper = HitamScraperService();
+
+    // Fast-path: Check persistent disk cache if _profile is still null or empty
+    if (_profile == null || _profile!.name.trim().isEmpty) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+      final diskCached = await scraper.loadCachedProfile(rollNo);
+      if (diskCached != null && diskCached.name.trim().isNotEmpty && mounted) {
+        setState(() {
+          _profile = diskCached;
+          _isLoading = false;
+        });
+      }
+    }
 
     try {
-      final rollNo = (HitamAuthService().activeUserId ?? '').toUpperCase().trim();
-      final scraper = HitamScraperService();
       final p = await scraper.fetchStudentProfile(rollNo);
       if (mounted) {
-        final loaded = (p != null && p.rollNo.toUpperCase().trim() == rollNo)
+        final loaded = (p != null && p.rollNo.toUpperCase().trim() == rollNo && p.name.trim().isNotEmpty)
             ? p
-            : scraper.getProfileFor(rollNo);
-        if (loaded != null && (loaded.photoUrl == null || loaded.photoUrl!.isEmpty)) {
-          try {
-            final prefs = await SharedPreferences.getInstance();
-            final cachedPhoto =
-                prefs.getString('hitam_student_photo_url_$rollNo');
-            if (cachedPhoto != null &&
-                cachedPhoto.isNotEmpty &&
-                !HitamScraperService.isBlacklistedPhoto(cachedPhoto)) {
-              _profile = StudentProfileDetails(
-                rollNo: loaded.rollNo,
-                name: loaded.name,
-                admissionNo: loaded.admissionNo,
-                course: loaded.course,
-                branch: loaded.branch,
-                semester: loaded.semester,
-                gender: loaded.gender,
-                dob: loaded.dob,
-                nationality: loaded.nationality,
-                religion: loaded.religion,
-                entranceType: loaded.entranceType,
-                rank: loaded.rank,
-                seatType: loaded.seatType,
-                caste: loaded.caste,
-                lastStudied: loaded.lastStudied,
-                joiningDate: loaded.joiningDate,
-                mobile: loaded.mobile,
-                email: loaded.email,
-                aadharNo: loaded.aadharNo,
-                guardianName: loaded.guardianName,
-                guardianMobile: loaded.guardianMobile,
-                fatherName: loaded.fatherName,
-                fatherMobile: loaded.fatherMobile,
-                fatherOccupation: loaded.fatherOccupation,
-                motherName: loaded.motherName,
-                motherMobile: loaded.motherMobile,
-                motherOccupation: loaded.motherOccupation,
-                annualIncome: loaded.annualIncome,
-                cgpa: loaded.cgpa,
-                credits: loaded.credits,
-                percentage: loaded.percentage,
-                photoUrl: cachedPhoto,
-                extraDetails: loaded.extraDetails,
-                spfBands: loaded.spfBands,
-              );
-            } else {
-              if (cachedPhoto != null && HitamScraperService.isBlacklistedPhoto(cachedPhoto)) {
-                prefs.remove('hitam_student_photo_url_$rollNo');
+            : scraper.getProfileFor(rollNo) ?? await scraper.loadCachedProfile(rollNo);
+
+        if (loaded != null && loaded.name.trim().isNotEmpty) {
+          var finalProfile = loaded;
+          if (finalProfile.photoUrl == null || finalProfile.photoUrl!.isEmpty) {
+            try {
+              final prefs = await SharedPreferences.getInstance();
+              final cachedPhoto =
+                  prefs.getString('hitam_student_photo_url_$rollNo');
+              if (cachedPhoto != null &&
+                  cachedPhoto.isNotEmpty &&
+                  !HitamScraperService.isBlacklistedPhoto(cachedPhoto)) {
+                finalProfile = StudentProfileDetails(
+                  rollNo: loaded.rollNo,
+                  name: loaded.name,
+                  admissionNo: loaded.admissionNo,
+                  course: loaded.course,
+                  branch: loaded.branch,
+                  semester: loaded.semester,
+                  gender: loaded.gender,
+                  dob: loaded.dob,
+                  nationality: loaded.nationality,
+                  religion: loaded.religion,
+                  entranceType: loaded.entranceType,
+                  rank: loaded.rank,
+                  seatType: loaded.seatType,
+                  caste: loaded.caste,
+                  lastStudied: loaded.lastStudied,
+                  joiningDate: loaded.joiningDate,
+                  mobile: loaded.mobile,
+                  email: loaded.email,
+                  aadharNo: loaded.aadharNo,
+                  guardianName: loaded.guardianName,
+                  guardianMobile: loaded.guardianMobile,
+                  fatherName: loaded.fatherName,
+                  fatherMobile: loaded.fatherMobile,
+                  fatherOccupation: loaded.fatherOccupation,
+                  motherName: loaded.motherName,
+                  motherMobile: loaded.motherMobile,
+                  motherOccupation: loaded.motherOccupation,
+                  annualIncome: loaded.annualIncome,
+                  cgpa: loaded.cgpa,
+                  credits: loaded.credits,
+                  percentage: loaded.percentage,
+                  photoUrl: cachedPhoto,
+                  extraDetails: loaded.extraDetails,
+                  spfBands: loaded.spfBands,
+                );
               }
-              _profile = loaded;
-            }
-          } catch (_) {
-            _profile = loaded;
+            } catch (_) {}
           }
+          setState(() {
+            _profile = finalProfile;
+            _isLoading = false;
+            _errorMessage = null;
+          });
+        } else if (_profile == null) {
+          setState(() {
+            _errorMessage = 'Unable to load profile. Please check your network and retry.';
+            _isLoading = false;
+          });
         } else {
-          _profile = loaded;
+          setState(() {
+            _isLoading = false;
+          });
         }
-        _isLoading = false;
-        setState(() {});
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'Failed to load profile.';
+          if (_profile == null) {
+            _errorMessage = 'Failed to load profile. Please tap to retry.';
+          }
           _isLoading = false;
         });
       }
@@ -988,7 +1191,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
             flex: 6,
             child: Text(
               value,
-              textAlign: TextAlign.end,
+              textAlign: TextAlign.start,
               style: const TextStyle(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w600,
@@ -1049,9 +1252,53 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
       body: RefreshIndicator(
         onRefresh: _loadProfile,
         color: const Color(0xFF10B981),
-        child: _isLoading
-            ? const Center(child: CircularProgressIndicator(color: Color(0xFF10B981)))
-            : ListView(
+        child: _buildBody(p),
+      ),
+    );
+  }
+
+  Widget _buildBody(StudentProfileDetails? p) {
+    if (_isLoading && _profile == null) {
+      return const Center(child: CircularProgressIndicator(color: Color(0xFF10B981)));
+    }
+    if (_profile == null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.info_outline_rounded,
+                  size: 48,
+                  color: Colors.white.withValues(alpha: 0.5)),
+              const SizedBox(height: 16),
+              Text(
+                _errorMessage ?? 'Unable to load profile data',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.7),
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF10B981),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: _loadProfile,
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    return ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
                 physics: const BouncingScrollPhysics(
                   parent: AlwaysScrollableScrollPhysics(),
@@ -1198,7 +1445,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Academic Details with intentional subtle green accent border
+                  // Academic Details
                   _buildCardSection(
                     'ACADEMIC PROGRAM',
                     [
@@ -1210,7 +1457,6 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                       _buildInfoRow('Seat Type', p?.seatType ?? '', Icons.airline_seat_recline_normal_outlined),
                       _buildInfoRow('Joining Date', p?.joiningDate ?? '', Icons.event_available_outlined),
                     ],
-                    borderColor: const Color(0xFF10B981).withValues(alpha: 0.22),
                   ),
 
                   // Personal Information
@@ -1240,9 +1486,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                     _buildInfoRow('Mother Occupation', p?.motherOccupation ?? '', Icons.work_outline),
                   ]),
                 ],
-              ),
-      ),
-    );
+              );
   }
 }
 
@@ -1272,28 +1516,34 @@ class _StudentTimeTableScreenState extends State<StudentTimeTableScreen> {
     if (weekday >= 1 && weekday <= 6) {
       _selectedDay = _days[weekday - 1];
     }
+    _ttReport = HitamScraperService().latestTimeTable;
+    _isLoading = _ttReport == null;
     _loadTimeTable();
   }
 
   Future<void> _loadTimeTable() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+    if (_ttReport == null) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
 
     try {
       final scraper = HitamScraperService();
       final report = await scraper.fetchStudentTimeTable();
       if (mounted) {
         setState(() {
-          _ttReport = report ?? scraper.latestTimeTable;
+          _ttReport = report ?? scraper.latestTimeTable ?? _ttReport;
           _isLoading = false;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'Failed to load timetable.';
+          if (_ttReport == null) {
+            _errorMessage = 'Failed to load timetable.';
+          }
           _isLoading = false;
         });
       }
@@ -1433,6 +1683,7 @@ class _StudentTimeTableScreenState extends State<StudentTimeTableScreen> {
         child: _isLoading
             ? const Center(child: CircularProgressIndicator(color: Color(0xFF10B981)))
             : ListView(
+                cacheExtent: 500,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
                 physics: const BouncingScrollPhysics(
                   parent: AlwaysScrollableScrollPhysics(),
@@ -1685,14 +1936,18 @@ class _StudentAcademicRegisterScreenState
   @override
   void initState() {
     super.initState();
+    _report = HitamScraperService().latestAcademicRegister;
+    _isLoading = _report == null;
     _loadAcademicRegister();
   }
 
   Future<void> _loadAcademicRegister() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+    if (_report == null) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
 
     try {
       final rollNo =
@@ -1762,7 +2017,9 @@ class _StudentAcademicRegisterScreenState
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'Failed to load Academic Register.';
+          if (_report == null) {
+            _errorMessage = 'Failed to load Academic Register.';
+          }
           _isLoading = false;
         });
       }
@@ -2114,7 +2371,7 @@ class _StudentAcademicRegisterScreenState
                                       const SizedBox(height: 2),
                                       Text(
                                         branch.isNotEmpty
-                                            ? 'Roll: $rollNo • $branch'
+                                            ? 'Roll: $rollNo • ${HitamScraperService.formatShortBranch(branch, rollNo: rollNo)}'
                                             : 'Roll: $rollNo',
                                         style: TextStyle(
                                           fontSize: 12,
@@ -2171,8 +2428,10 @@ class _StudentAcademicRegisterScreenState
                                 Expanded(
                                   child: _buildMetricTile(
                                     title: 'Overall Attendance',
-                                    value:
-                                        '${overallRegPct.toStringAsFixed(1)}%',
+                                    value: (overallRegPct < 75.0 &&
+                                            overallRegPct.toStringAsFixed(1) == '75.0')
+                                        ? '${((double.tryParse(overallRegPct.toStringAsFixed(2)) ?? 0.0) >= 75.0 ? 74.99 : overallRegPct).toStringAsFixed(2)}%'
+                                        : '${overallRegPct.toStringAsFixed(1)}%',
                                     subtitle:
                                         '$totalAttendedAll / $totalHeldAll slots',
                                     color: _getPercentageColor(
@@ -2356,7 +2615,13 @@ class _StudentAcademicRegisterScreenState
                                     alignment: Alignment.center,
                                     child: Text(
                                       held > 0
-                                          ? '${item.percentage.toStringAsFixed(0)}%'
+                                          ? (item.percentage < 75.0
+                                              ? (item.percentage >= 74.0
+                                                  ? ((double.tryParse(item.percentage.toStringAsFixed(1)) ?? 0.0) >= 75.0
+                                                      ? '${item.percentage.toStringAsFixed(2)}%'
+                                                      : '${item.percentage.toStringAsFixed(1)}%')
+                                                  : '${item.percentage.toStringAsFixed(0)}%')
+                                              : '${item.percentage.toStringAsFixed(0)}%')
                                           : '0%',
                                       style: const TextStyle(
                                         color: Colors.white,
@@ -2679,28 +2944,34 @@ class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
   @override
   void initState() {
     super.initState();
+    _spfBands = HitamScraperService().latestSpfBands ?? [];
+    _isLoading = _spfBands.isEmpty;
     _loadSpfBands();
   }
 
   Future<void> _loadSpfBands() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+    if (_spfBands.isEmpty) {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
+    }
 
     try {
       final scraper = HitamScraperService();
       final bands = await scraper.fetchStudentSpfBands();
       if (mounted) {
         setState(() {
-          _spfBands = bands;
+          _spfBands = bands.isNotEmpty ? bands : _spfBands;
           _isLoading = false;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'Failed to load SPF Band performance records.';
+          if (_spfBands.isEmpty) {
+            _errorMessage = 'Failed to load SPF Band performance records.';
+          }
           _isLoading = false;
         });
       }
@@ -2842,6 +3113,7 @@ class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
                         child: ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 760),
                           child: ListView(
+                            cacheExtent: 500,
                             padding: const EdgeInsets.symmetric(
                               horizontal: 16,
                               vertical: 20,

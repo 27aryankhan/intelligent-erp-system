@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html_parser;
@@ -116,6 +117,7 @@ class StudentMarksReport {
 class FeeItem {
   final String slNo;
   final String feeName;
+  final String academicYear;
   final double payable;
   final double paid;
   final double due;
@@ -123,6 +125,7 @@ class FeeItem {
   FeeItem({
     required this.slNo,
     required this.feeName,
+    this.academicYear = '',
     required this.payable,
     required this.paid,
     required this.due,
@@ -131,6 +134,7 @@ class FeeItem {
   Map<String, dynamic> toMap() => {
         'sl_no': slNo,
         'fee_name': feeName,
+        'academic_year': academicYear,
         'payable': payable,
         'paid': paid,
         'due': due,
@@ -296,6 +300,90 @@ class StudentProfileDetails {
     required this.extraDetails,
     this.spfBands = const [],
   });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'rollNo': rollNo,
+      'name': name,
+      'admissionNo': admissionNo,
+      'course': course,
+      'branch': branch,
+      'semester': semester,
+      'gender': gender,
+      'dob': dob,
+      'nationality': nationality,
+      'religion': religion,
+      'entranceType': entranceType,
+      'rank': rank,
+      'seatType': seatType,
+      'caste': caste,
+      'lastStudied': lastStudied,
+      'joiningDate': joiningDate,
+      'mobile': mobile,
+      'email': email,
+      'aadharNo': aadharNo,
+      'guardianName': guardianName,
+      'guardianMobile': guardianMobile,
+      'fatherName': fatherName,
+      'fatherMobile': fatherMobile,
+      'fatherOccupation': fatherOccupation,
+      'motherName': motherName,
+      'motherMobile': motherMobile,
+      'motherOccupation': motherOccupation,
+      'annualIncome': annualIncome,
+      'cgpa': cgpa,
+      'credits': credits,
+      'percentage': percentage,
+      'photoUrl': photoUrl,
+      'extraDetails': extraDetails,
+      'spfBands': spfBands.map((e) => e.toJson()).toList(),
+    };
+  }
+
+  factory StudentProfileDetails.fromJson(Map<String, dynamic> json) {
+    return StudentProfileDetails(
+      rollNo: json['rollNo'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      admissionNo: json['admissionNo'] as String? ?? '',
+      course: json['course'] as String? ?? '',
+      branch: json['branch'] as String? ?? '',
+      semester: json['semester'] as String? ?? '',
+      gender: json['gender'] as String? ?? '',
+      dob: json['dob'] as String? ?? '',
+      nationality: json['nationality'] as String? ?? '',
+      religion: json['religion'] as String? ?? '',
+      entranceType: json['entranceType'] as String? ?? '',
+      rank: json['rank'] as String? ?? '',
+      seatType: json['seatType'] as String? ?? '',
+      caste: json['caste'] as String? ?? '',
+      lastStudied: json['lastStudied'] as String? ?? '',
+      joiningDate: json['joiningDate'] as String? ?? '',
+      mobile: json['mobile'] as String? ?? '',
+      email: json['email'] as String? ?? '',
+      aadharNo: json['aadharNo'] as String? ?? '',
+      guardianName: json['guardianName'] as String? ?? '',
+      guardianMobile: json['guardianMobile'] as String? ?? '',
+      fatherName: json['fatherName'] as String? ?? '',
+      fatherMobile: json['fatherMobile'] as String? ?? '',
+      fatherOccupation: json['fatherOccupation'] as String? ?? '',
+      motherName: json['motherName'] as String? ?? '',
+      motherMobile: json['motherMobile'] as String? ?? '',
+      motherOccupation: json['motherOccupation'] as String? ?? '',
+      annualIncome: json['annualIncome'] as String? ?? '',
+      cgpa: json['cgpa'] as String? ?? '',
+      credits: json['credits'] as String? ?? '',
+      percentage: json['percentage'] as String? ?? '',
+      photoUrl: json['photoUrl'] as String?,
+      extraDetails: (json['extraDetails'] as Map<String, dynamic>?)?.map(
+            (k, v) => MapEntry(k, v.toString()),
+          ) ??
+          {},
+      spfBands: (json['spfBands'] as List<dynamic>?)
+              ?.map((e) => SpfBandEntry.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+    );
+  }
 }
 
 class SpfBandEntry {
@@ -308,6 +396,22 @@ class SpfBandEntry {
     required this.cycle,
     required this.band,
   });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'semester': semester,
+      'cycle': cycle,
+      'band': band,
+    };
+  }
+
+  factory SpfBandEntry.fromJson(Map<String, dynamic> json) {
+    return SpfBandEntry(
+      semester: json['semester'] as String? ?? '',
+      cycle: json['cycle'] as String? ?? '',
+      band: json['band'] as String? ?? '',
+    );
+  }
 }
 
 // 6. TIME TABLE MODELS
@@ -395,6 +499,7 @@ class HitamScraperService {
   HitamScraperService._internal() : authService = HitamAuthService();
 
   HitamAuthService authService;
+  final http.Client _client = http.Client();
 
   StudentAttendanceReport? latestAttendanceReport;
   StudentMarksReport? latestMarksReport;
@@ -417,14 +522,45 @@ class HitamScraperService {
     latestSpfBands = null;
   }
 
-  /// Returns cached student profile details strictly if it matches the requested roll number
+  /// Returns cached student profile details strictly if it matches the requested roll number and has valid data
   StudentProfileDetails? getProfileFor(String rollNo) {
     final r = rollNo.toUpperCase().trim();
     if (r.isEmpty) return null;
     if (latestProfile != null &&
-        latestProfile!.rollNo.toUpperCase().trim() == r) {
+        latestProfile!.rollNo.toUpperCase().trim() == r &&
+        latestProfile!.name.trim().isNotEmpty) {
       return latestProfile;
     }
+    return null;
+  }
+
+  /// Persists student profile details to SharedPreferences for instant 0ms offline and cold-start access
+  Future<void> saveCachedProfile(StudentProfileDetails profile) async {
+    try {
+      final safeRoll = profile.rollNo.toUpperCase().trim();
+      if (safeRoll.isEmpty || profile.name.trim().isEmpty) return;
+      final prefs = await SharedPreferences.getInstance();
+      final jsonString = jsonEncode(profile.toJson());
+      await prefs.setString('hitam_cached_profile_$safeRoll', jsonString);
+    } catch (_) {}
+  }
+
+  /// Loads persisted student profile details from SharedPreferences
+  Future<StudentProfileDetails?> loadCachedProfile(String rollNo) async {
+    try {
+      final safeRoll = rollNo.toUpperCase().trim();
+      if (safeRoll.isEmpty) return null;
+      final prefs = await SharedPreferences.getInstance();
+      final jsonString = prefs.getString('hitam_cached_profile_$safeRoll');
+      if (jsonString != null && jsonString.isNotEmpty) {
+        final Map<String, dynamic> data = jsonDecode(jsonString);
+        final profile = StudentProfileDetails.fromJson(data);
+        if (profile.name.trim().isNotEmpty) {
+          latestProfile = profile;
+          return profile;
+        }
+      }
+    } catch (_) {}
     return null;
   }
 
@@ -464,7 +600,7 @@ class HitamScraperService {
           '/hitam/ajax/StudentAttendance,App_Web_studentattendance.aspx.a2a1b31c.ashx';
 
       try {
-        final probeResponse = await http.get(
+        final probeResponse = await _client.get(
           Uri.parse(attendancePageUrl),
           headers: {
             'Cookie': authService.cookieHeader,
@@ -495,7 +631,7 @@ class HitamScraperService {
       final String requestBody =
           'rollNo=$rollNo\r\nfromDate=\r\ntoDate=\r\nsubjecttype=B';
 
-      final response = await http.post(
+      var response = await _client.post(
         Uri.parse(fullEndpoint),
         headers: {
           'Cookie': authService.cookieHeader,
@@ -506,6 +642,24 @@ class HitamScraperService {
         },
         body: requestBody,
       );
+
+      // If session expired or redirected, renew session and retry immediately
+      if (response.statusCode == 302 ||
+          response.body.contains('default.aspx') ||
+          response.body.contains('Object moved')) {
+        await authService.ensureAuthenticated();
+        response = await _client.post(
+          Uri.parse(fullEndpoint),
+          headers: {
+            'Cookie': authService.cookieHeader,
+            'Content-Type': 'text/plain; charset=utf-8',
+            'User-Agent':
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Referer': attendancePageUrl,
+          },
+          body: requestBody,
+        );
+      }
 
       if (response.statusCode != 200 || response.body.trim().isEmpty) {
         return null;
@@ -592,7 +746,7 @@ class HitamScraperService {
       // If AJAX returned no subjects, attempt fallback to StudentMaster.aspx
       if (results.isEmpty) {
         try {
-          final masterRes = await http.get(
+          final masterRes = await _client.get(
             Uri.parse('https://www.webprosindia.com/hitam/StudentMaster.aspx'),
             headers: {
               'Cookie': authService.cookieHeader,
@@ -682,7 +836,7 @@ class HitamScraperService {
           '/hitam/ajax/Academics_StudentMarksReport,App_Web_studentmarksreport.aspx.a2a1b31c.ashx';
 
       try {
-        final probeResponse = await http.get(
+        final probeResponse = await _client.get(
           Uri.parse(marksPageUrl),
           headers: {
             'Cookie': authService.cookieHeader,
@@ -711,7 +865,7 @@ class HitamScraperService {
               ? 'https://www.webprosindia.com$ashxUrl?_method=ShowMarks&_session=r'
               : 'https://www.webprosindia.com/hitam/Academics/$ashxUrl?_method=ShowMarks&_session=r';
 
-      final response = await http.post(
+      var response = await _client.post(
         Uri.parse(endpoint),
         headers: {
           'Cookie': authService.cookieHeader,
@@ -720,6 +874,22 @@ class HitamScraperService {
         },
         body: '',
       );
+
+      // If session expired or redirected, renew session and retry immediately
+      if (response.statusCode == 302 ||
+          response.body.contains('default.aspx') ||
+          response.body.contains('Object moved')) {
+        await authService.ensureAuthenticated();
+        response = await _client.post(
+          Uri.parse(endpoint),
+          headers: {
+            'Cookie': authService.cookieHeader,
+            'Content-Type': 'text/plain; charset=utf-8',
+            'Referer': marksPageUrl,
+          },
+          body: '',
+        );
+      }
 
       if (response.statusCode != 200 || response.body.trim().isEmpty) {
         return null;
@@ -826,7 +996,7 @@ class HitamScraperService {
           '/hitam/ajax/Feepayments_studentpayments,App_Web_studentpayments.aspx.c49df9d1.ashx';
 
       try {
-        final probeResponse = await http.get(
+        final probeResponse = await _client.get(
           Uri.parse(feePageUrl),
           headers: {
             'Cookie': authService.cookieHeader,
@@ -855,7 +1025,7 @@ class HitamScraperService {
               ? 'https://www.webprosindia.com$ashxUrl?_method=ShowPaymentsReport&_session=no'
               : 'https://www.webprosindia.com/hitam/FeePayments/$ashxUrl?_method=ShowPaymentsReport&_session=no';
 
-      final response = await http.post(
+      var response = await _client.post(
         Uri.parse(endpoint),
         headers: {
           'Cookie': authService.cookieHeader,
@@ -865,6 +1035,22 @@ class HitamScraperService {
         body: 'rollNo=$rollNo',
       );
 
+      // If session expired or redirected, renew session and retry immediately
+      if (response.statusCode == 302 ||
+          response.body.contains('default.aspx') ||
+          response.body.contains('Object moved')) {
+        await authService.ensureAuthenticated();
+        response = await _client.post(
+          Uri.parse(endpoint),
+          headers: {
+            'Cookie': authService.cookieHeader,
+            'Content-Type': 'text/plain; charset=utf-8',
+            'Referer': feePageUrl,
+          },
+          body: 'rollNo=$rollNo',
+        );
+      }
+
       if (response.statusCode != 200 || response.body.trim().isEmpty) {
         return null;
       }
@@ -873,22 +1059,55 @@ class HitamScraperService {
       final soup = html_parser.parse(rawHtml);
 
       final List<FeeItem> items = [];
+      final Set<String> seenSlNos = <String>{};
       double totalPayable = 0.0;
       double totalPaid = 0.0;
       double totalDue = 0.0;
       String balanceText = '';
+      String currentYear = '';
 
-      for (var tr in soup.querySelectorAll('table tr')) {
+      // Find innermost target table that has fee headers
+      final tables = soup.querySelectorAll('table');
+      html_dom.Element? targetTable;
+      for (final tbl in tables) {
+        if (tbl.querySelector('table') == null) {
+          final hasFeeHeaders = tbl.querySelectorAll('tr').any((r) {
+            final t = r.text;
+            return t.contains('Sl.No') && t.contains('Fee') && t.contains('Payable');
+          });
+          if (hasFeeHeaders) {
+            targetTable = tbl;
+            break;
+          }
+        }
+      }
+
+      targetTable ??= tables.firstWhere(
+        (t) => t.querySelectorAll('tr').any((r) {
+          final txt = r.text;
+          return txt.contains('Sl.No') && txt.contains('Fee') && txt.contains('Payable');
+        }),
+        orElse: () => soup.querySelector('table') ?? soup.body!,
+      );
+
+      final rows = targetTable.querySelectorAll('tr');
+      for (var tr in rows) {
         final cols =
             tr.querySelectorAll('th, td').map((c) => c.text.trim()).toList();
         if (cols.isEmpty) continue;
 
-        if (cols[0] == 'Balance' && cols.length > 1) {
-          balanceText = cols[1];
-        }
+        final first = cols[0];
 
-        if (cols[0].contains(RegExp(r'^\d+$')) && cols.length >= 6) {
-          final sl = cols[0];
+        if (first == 'Balance' && cols.length > 1) {
+          balanceText = cols[1];
+        } else if (cols.length == 1 &&
+            RegExp(r'(I|II|III|IV|V)\s*Year', caseSensitive: false).hasMatch(first)) {
+          currentYear = first;
+        } else if (RegExp(r'^\d+$').hasMatch(first) && cols.length >= 6) {
+          final sl = first;
+          if (seenSlNos.contains(sl)) continue;
+          seenSlNos.add(sl);
+
           final feeName = cols[1];
           final payable = double.tryParse(cols.length > 4 ? cols[4].replaceAll(',', '') : '0') ?? 0.0;
           final paid = double.tryParse(cols.length > 5 ? cols[5].replaceAll(',', '') : '0') ?? 0.0;
@@ -897,15 +1116,41 @@ class HitamScraperService {
           items.add(FeeItem(
             slNo: sl,
             feeName: feeName,
+            academicYear: currentYear,
             payable: payable,
             paid: paid,
             due: due,
           ));
-        } else if (cols[0].toLowerCase().contains('totals')) {
+        } else if (cols.length == 3 && items.isNotEmpty) {
+          // Additional payment installment receipt row (e.g. ['35000', 'A/37962', '24/08/2026'])
+          final cleanVal = cols[0].replaceAll(',', '').replaceAll('.', '');
+          if (RegExp(r'^\d+$').hasMatch(cleanVal)) {
+            final extraPaid = double.tryParse(cols[0].replaceAll(',', '')) ?? 0.0;
+            if (extraPaid > 0) {
+              final last = items.last;
+              final updatedPaid = last.paid + extraPaid;
+              final updatedDue = (last.payable - updatedPaid).clamp(0.0, double.infinity);
+              items[items.length - 1] = FeeItem(
+                slNo: last.slNo,
+                feeName: last.feeName,
+                academicYear: last.academicYear,
+                payable: last.payable,
+                paid: updatedPaid,
+                due: updatedDue,
+              );
+            }
+          }
+        } else if (first.toLowerCase().contains('grand totals')) {
           totalPayable = double.tryParse(cols.length > 3 ? cols[3].replaceAll(',', '') : '0') ?? 0.0;
           totalPaid = double.tryParse(cols.length > 4 ? cols[4].replaceAll(',', '') : '0') ?? 0.0;
           totalDue = double.tryParse(cols.length > 7 ? cols[7].replaceAll(',', '') : '0') ?? 0.0;
         }
+      }
+
+      if (totalPayable == 0.0 && items.isNotEmpty) {
+        totalPayable = items.fold(0.0, (sum, it) => sum + it.payable);
+        totalPaid = items.fold(0.0, (sum, it) => sum + it.paid);
+        totalDue = items.fold(0.0, (sum, it) => sum + it.due);
       }
 
       final report = StudentFeeReport(
@@ -925,7 +1170,7 @@ class HitamScraperService {
   /// 4. Fetches student backlogs history
   Future<StudentBacklogsReport?> fetchStudentBacklogs(String rollNo) async {
     try {
-      final response = await http.get(
+      var response = await _client.get(
         Uri.parse(backlogsPageUrl),
         headers: {
           'Cookie': authService.cookieHeader,
@@ -934,6 +1179,22 @@ class HitamScraperService {
           'Referer': 'https://www.webprosindia.com/hitam/StudentMaster.aspx',
         },
       );
+
+      // If session expired or redirected, renew session and retry immediately
+      if (response.statusCode == 302 ||
+          response.body.contains('default.aspx') ||
+          response.body.contains('Object moved')) {
+        await authService.ensureAuthenticated();
+        response = await _client.get(
+          Uri.parse(backlogsPageUrl),
+          headers: {
+            'Cookie': authService.cookieHeader,
+            'User-Agent':
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Referer': 'https://www.webprosindia.com/hitam/StudentMaster.aspx',
+          },
+        );
+      }
 
       if (response.statusCode != 200) return null;
 
@@ -973,13 +1234,20 @@ class HitamScraperService {
   Future<StudentProfileDetails?> fetchStudentProfile(String rollNo) async {
     try {
       final safeRoll = rollNo.trim();
+      if (safeRoll.isEmpty) return null;
+
+      // Ensure session cookies are available; if not, authenticate first
+      if (authService.sessionCookies.isEmpty) {
+        await authService.ensureAuthenticated();
+      }
+
       String ashxUrl =
           '/hitam/ajax/StudentProfile,App_Web_studentprofile.aspx.a2a1b31c.ashx';
       String? probedPhotoUrl;
 
       // Stage 1: Probe StudentProfile.aspx to dynamically discover the current AjaxPro handler
       try {
-        final probeResponse = await http.get(
+        final probeResponse = await _client.get(
           Uri.parse(profilePageUrl),
           headers: {
             'Cookie': authService.cookieHeader,
@@ -1010,7 +1278,7 @@ class HitamScraperService {
               ? 'https://www.webprosindia.com$ashxUrl?_method=ShowStudentProfileNew&_session=rw'
               : 'https://www.webprosindia.com/hitam/Academics/$ashxUrl?_method=ShowStudentProfileNew&_session=rw';
 
-      final response = await http.post(
+      var response = await _client.post(
         Uri.parse(fullEndpoint),
         headers: {
           'Cookie': authService.cookieHeader,
@@ -1019,6 +1287,22 @@ class HitamScraperService {
         },
         body: 'RollNo=$safeRoll\r\nisImageDisplay=true',
       ).timeout(const Duration(seconds: 6));
+
+      // If session expired or redirected to login, renew session and retry once
+      if (response.statusCode == 302 ||
+          response.body.contains('default.aspx') ||
+          response.body.contains('Object moved')) {
+        await authService.ensureAuthenticated();
+        response = await _client.post(
+          Uri.parse(fullEndpoint),
+          headers: {
+            'Cookie': authService.cookieHeader,
+            'Content-Type': 'text/plain; charset=utf-8',
+            'Referer': profilePageUrl,
+          },
+          body: 'RollNo=$safeRoll\r\nisImageDisplay=true',
+        ).timeout(const Duration(seconds: 6));
+      }
 
       String? photoUrl = probedPhotoUrl;
       html_dom.Document? doc;
@@ -1035,7 +1319,7 @@ class HitamScraperService {
       // Stage 3: If photo is still missing, check #imgstudent on StudentMaster.aspx
       if (photoUrl == null || photoUrl.isEmpty) {
         try {
-          final masterRes = await http.get(
+          final masterRes = await _client.get(
             Uri.parse('https://www.webprosindia.com/hitam/StudentMaster.aspx'),
             headers: {
               'Cookie': authService.cookieHeader,
@@ -1112,7 +1396,7 @@ class HitamScraperService {
       // Stage 6: Pre-cache image bytes as persistent data URI so it renders instantly and offline
       if (photoUrl != null && photoUrl.startsWith('http') && !_isBlacklistedPhotoUrl(photoUrl)) {
         try {
-          final imgRes = await http.get(
+          final imgRes = await _client.get(
             Uri.parse(photoUrl),
             headers: {
               'Cookie': authService.cookieHeader,
@@ -1252,9 +1536,16 @@ class HitamScraperService {
       }
       latestSpfBands = parsedSpfBands;
 
+      final resolvedName = studentName.isNotEmpty ? studentName : (kv['name'] ?? '');
+
+      // Guard against invalid/empty scrape: never overwrite with an empty skeleton
+      if (resolvedName.trim().isEmpty && kv.isEmpty && cgpa.isEmpty) {
+        return getProfileFor(safeRoll) ?? await loadCachedProfile(safeRoll);
+      }
+
       final profile = StudentProfileDetails(
         rollNo: kv['rollno'] ?? kv['roll no'] ?? safeRoll,
-        name: studentName.isNotEmpty ? studentName : (kv['name'] ?? ''),
+        name: resolvedName,
         admissionNo: kv['admission.no'] ?? kv['admission no'] ?? '',
         course: kv['course'] ?? '',
         branch: kv['branch'] ?? '',
@@ -1288,25 +1579,111 @@ class HitamScraperService {
         extraDetails: kv,
         spfBands: parsedSpfBands,
       );
-      latestProfile = profile;
+
+      if (profile.name.trim().isNotEmpty) {
+        latestProfile = profile;
+        unawaited(saveCachedProfile(profile));
+
+        // Sync essential dashboard fields to SharedPreferences
+        SharedPreferences.getInstance().then((prefs) {
+          prefs.setString('hitam_student_name', profile.name);
+          if (profile.branch.isNotEmpty) prefs.setString('hitam_student_branch', profile.branch);
+          if (profile.semester.isNotEmpty) prefs.setString('hitam_student_semester', profile.semester);
+          if (profile.course.isNotEmpty) prefs.setString('hitam_student_course', profile.course);
+        }).catchError((_) {});
+      }
+
       final pUrl = profile.photoUrl;
-      if (pUrl != null && pUrl.isNotEmpty) {
+      if (pUrl != null && pUrl.isNotEmpty && !isBlacklistedPhoto(pUrl)) {
         SharedPreferences.getInstance().then((prefs) {
           prefs.setString(
               'hitam_student_photo_url_${safeRoll.toUpperCase()}', pUrl);
           // Purge stale unscoped key to prevent cross-account pollution
           prefs.remove('hitam_student_photo_url');
         }).catchError((_) {});
-      } else {
-        SharedPreferences.getInstance().then((prefs) {
-          prefs.remove('hitam_student_photo_url_${safeRoll.toUpperCase()}');
-          prefs.remove('hitam_student_photo_url');
-        }).catchError((_) {});
       }
       return profile;
     } catch (_) {
-      return null;
+      return getProfileFor(rollNo) ?? await loadCachedProfile(rollNo);
     }
+  }
+
+  /// Converts long department / branch names to clean standard abbreviations (e.g. CSE, CSM, CSD, ECE, MECH)
+  static String formatShortBranch(String? rawBranch, {String? rollNo}) {
+    final b = (rawBranch ?? '').trim();
+    if (b.isEmpty && rollNo != null && rollNo.isNotEmpty) {
+      final upper = rollNo.toUpperCase();
+      if (upper.contains('66')) return 'CSM';
+      if (upper.contains('67')) return 'CSD';
+      if (upper.contains('69')) return 'CS-IOT';
+      if (upper.contains('70')) return 'CS-CS';
+      if (upper.contains('05')) return 'CSE';
+      if (upper.contains('04')) return 'ECE';
+      if (upper.contains('03')) return 'MECH';
+      if (upper.contains('02')) return 'EEE';
+      if (upper.contains('01')) return 'CIVIL';
+      return '';
+    }
+
+    final lower = b.toLowerCase();
+
+    // Specific branch specializations first
+    if (lower.contains('artificial intelligence') ||
+        (lower.contains('ai') && lower.contains('ml')) ||
+        lower.contains('machine learning')) {
+      return 'CSM';
+    }
+    if (lower.contains('data science')) {
+      return 'CSD';
+    }
+    if (lower.contains('cyber security') || lower.contains('cybersecurity')) {
+      return 'CS-CS';
+    }
+    if (lower.contains('internet of things') || lower.contains('iot')) {
+      return 'CS-IOT';
+    }
+    if (lower.contains('computer') &&
+        (lower.contains('science') ||
+            lower.contains('engineering') ||
+            lower.contains('eng'))) {
+      return 'CSE';
+    }
+    if (lower.contains('electronics') && lower.contains('communication')) {
+      return 'ECE';
+    }
+    if (lower.contains('electrical') && lower.contains('electronics')) {
+      return 'EEE';
+    }
+    if (lower.contains('mechanical')) {
+      return 'MECH';
+    }
+    if (lower.contains('civil')) {
+      return 'CIVIL';
+    }
+    if (lower.contains('information technology')) {
+      return 'IT';
+    }
+
+    // If it's already a short abbreviation (e.g. "CSE", "ECE", "MECH")
+    if (b.length <= 6) {
+      return b.toUpperCase();
+    }
+
+    // Fallback: derive from rollNo if available
+    if (rollNo != null && rollNo.isNotEmpty) {
+      final upper = rollNo.toUpperCase();
+      if (upper.contains('66')) return 'CSM';
+      if (upper.contains('67')) return 'CSD';
+      if (upper.contains('69')) return 'CS-IOT';
+      if (upper.contains('70')) return 'CS-CS';
+      if (upper.contains('05')) return 'CSE';
+      if (upper.contains('04')) return 'ECE';
+      if (upper.contains('03')) return 'MECH';
+      if (upper.contains('02')) return 'EEE';
+      if (upper.contains('01')) return 'CIVIL';
+    }
+
+    return b;
   }
 
   /// Returns true if the image URL or base64 data URI corresponds to a college
@@ -1328,7 +1705,11 @@ class HitamScraperService {
         lower.contains('header') ||
         lower.contains('footer') ||
         lower.contains('spacer') ||
-        lower.contains('dot.gif')) {
+        lower.contains('dot.gif') ||
+        lower.contains('hitamexams.org') ||
+        lower.contains('images/student.png') ||
+        lower.contains('no_photo') ||
+        lower.contains('blank')) {
       return true;
     }
 
@@ -1426,10 +1807,40 @@ class HitamScraperService {
   /// 6. Fetches student weekly period timetable and faculty allocation
   Future<StudentTimeTableReport?> fetchStudentTimeTable() async {
     try {
-      final String endpoint =
-          'https://www.webprosindia.com/hitam/ajax/Academics_TimeTableReport,App_Web_timetablereport.aspx.a2a1b31c.ashx?_method=getTimeTableReport&_session=r';
+      String ashxUrl =
+          '/hitam/ajax/Academics_TimeTableReport,App_Web_timetablereport.aspx.a2a1b31c.ashx';
 
-      final response = await http.post(
+      try {
+        final probeResponse = await _client.get(
+          Uri.parse(timetablePageUrl),
+          headers: {
+            'Cookie': authService.cookieHeader,
+            'User-Agent':
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Referer': 'https://www.webprosindia.com/hitam/StudentMaster.aspx',
+          },
+        );
+
+        if (probeResponse.statusCode == 200) {
+          final probeDoc = html_parser.parse(probeResponse.body);
+          for (var script in probeDoc.querySelectorAll('script')) {
+            final src = script.attributes['src'] ?? '';
+            if (src.toLowerCase().contains('timetablereport') &&
+                src.toLowerCase().contains('.ashx')) {
+              ashxUrl = src;
+              break;
+            }
+          }
+        }
+      } catch (_) {}
+
+      final String endpoint = ashxUrl.startsWith('http')
+          ? '$ashxUrl?_method=getTimeTableReport&_session=r'
+          : ashxUrl.startsWith('/')
+              ? 'https://www.webprosindia.com$ashxUrl?_method=getTimeTableReport&_session=r'
+              : 'https://www.webprosindia.com/hitam/Academics/$ashxUrl?_method=getTimeTableReport&_session=r';
+
+      var response = await _client.post(
         Uri.parse(endpoint),
         headers: {
           'Cookie': authService.cookieHeader,
@@ -1437,6 +1848,21 @@ class HitamScraperService {
           'Referer': timetablePageUrl,
         },
       );
+
+      // If session expired or redirected, renew session and retry immediately
+      if (response.statusCode == 302 ||
+          response.body.contains('default.aspx') ||
+          response.body.contains('Object moved')) {
+        await authService.ensureAuthenticated();
+        response = await _client.post(
+          Uri.parse(endpoint),
+          headers: {
+            'Cookie': authService.cookieHeader,
+            'Content-Type': 'text/plain; charset=utf-8',
+            'Referer': timetablePageUrl,
+          },
+        );
+      }
 
       if (response.statusCode != 200 || response.body.trim().isEmpty) return null;
 
@@ -1508,7 +1934,7 @@ class HitamScraperService {
   /// 7. Fetches comprehensive academic day-by-day attendance and CIE register
   Future<StudentAcademicRegisterReport?> fetchStudentAcademicRegister(String rollNo) async {
     try {
-      final response = await http.get(
+      var response = await _client.get(
         Uri.parse(academicRegisterPageUrl),
         headers: {
           'Cookie': authService.cookieHeader,
@@ -1517,6 +1943,22 @@ class HitamScraperService {
           'Referer': 'https://www.webprosindia.com/hitam/StudentMaster.aspx',
         },
       );
+
+      // If session expired or redirected, renew session and retry immediately
+      if (response.statusCode == 302 ||
+          response.body.contains('default.aspx') ||
+          response.body.contains('Object moved')) {
+        await authService.ensureAuthenticated();
+        response = await _client.get(
+          Uri.parse(academicRegisterPageUrl),
+          headers: {
+            'Cookie': authService.cookieHeader,
+            'User-Agent':
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Referer': 'https://www.webprosindia.com/hitam/StudentMaster.aspx',
+          },
+        );
+      }
 
       if (response.statusCode != 200) return null;
 

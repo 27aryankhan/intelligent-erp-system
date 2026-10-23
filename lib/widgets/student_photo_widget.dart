@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../services/hitam_auth_service.dart';
-import 'animated_rays.dart';
 
 /// Universal, robust widget to display student profile pictures
 /// Handles:
@@ -60,7 +59,11 @@ class StudentPhotoWidget extends StatelessWidget {
         lower.contains('header') ||
         lower.contains('footer') ||
         lower.contains('spacer') ||
-        lower.contains('dot.gif')) {
+        lower.contains('dot.gif') ||
+        lower.contains('hitamexams.org') ||
+        lower.contains('images/student.png') ||
+        lower.contains('no_photo') ||
+        lower.contains('blank')) {
       return true;
     }
 
@@ -154,6 +157,8 @@ class StudentPhotoWidget extends StatelessWidget {
       return _buildFallback();
     }
 
+    final int memCacheDim = (size * 2.5).round();
+
     // 1. Base64 / Data URI image
     if (_isBase64) {
       final bytes = _decodeBase64(rawUrl);
@@ -162,6 +167,8 @@ class StudentPhotoWidget extends StatelessWidget {
           bytes,
           width: size,
           height: size,
+          cacheWidth: memCacheDim > 0 ? memCacheDim : null,
+          cacheHeight: memCacheDim > 0 ? memCacheDim : null,
           fit: fit,
           errorBuilder: (context, error, stackTrace) => _buildFallback(),
         );
@@ -185,6 +192,8 @@ class StudentPhotoWidget extends StatelessWidget {
         rawUrl,
         width: size,
         height: size,
+        cacheWidth: memCacheDim > 0 ? memCacheDim : null,
+        cacheHeight: memCacheDim > 0 ? memCacheDim : null,
         fit: fit,
         headers: headers,
         loadingBuilder: (context, child, progress) {
@@ -284,16 +293,26 @@ void showStudentPhotoPreviewDialog(
   showDialog(
     context: context,
     barrierDismissible: true,
+    barrierColor: Colors.black.withValues(alpha: 0.80),
     builder: (ctx) => Dialog(
       backgroundColor: Colors.transparent,
       elevation: 0,
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
-      child: AnimatedRays(
-        borderRadius: 24,
-        backgroundColor: const Color(0xFF070B14),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.20),
-          width: 1.0,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.black,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.20),
+            width: 1.0,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.65),
+              blurRadius: 30,
+              spreadRadius: 4,
+            ),
+          ],
         ),
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -321,18 +340,16 @@ void showStudentPhotoPreviewDialog(
                   child: bytes != null
                       ? Image.memory(
                           bytes,
+                          cacheWidth: 800,
+                          cacheHeight: 800,
                           fit: BoxFit.contain,
                           errorBuilder: (context, error, stackTrace) =>
-                              const SizedBox(
-                            height: 200,
-                            child: Center(
-                              child: Icon(Icons.broken_image_rounded,
-                                  color: Colors.white70, size: 48),
-                            ),
-                          ),
+                              _buildDialogFallback(name, rollNo),
                         )
                       : Image.network(
                           rawUrl,
+                          cacheWidth: 800,
+                          cacheHeight: 800,
                           fit: BoxFit.contain,
                           headers: HitamAuthService().sessionCookies.isNotEmpty
                               ? {
@@ -343,13 +360,7 @@ void showStudentPhotoPreviewDialog(
                                 }
                               : null,
                           errorBuilder: (context, error, stackTrace) =>
-                              const SizedBox(
-                            height: 200,
-                            child: Center(
-                              child: Icon(Icons.broken_image_rounded,
-                                  color: Colors.white70, size: 48),
-                            ),
-                          ),
+                              _buildDialogFallback(name, rollNo),
                         ),
                 ),
               ),
@@ -381,6 +392,52 @@ void showStudentPhotoPreviewDialog(
             ],
           ],
         ),
+      ),
+    ),
+  );
+}
+
+Widget _buildDialogFallback(String name, String? rollNo) {
+  final letter = name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : 'S';
+  return Container(
+    height: 220,
+    width: 220,
+    color: const Color(0xFF0F172A),
+    child: Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: const Color(0xFF1E293B),
+              border: Border.all(
+                color: const Color(0xFF38BDF8).withValues(alpha: 0.5),
+                width: 2,
+              ),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              letter,
+              style: const TextStyle(
+                color: Color(0xFF38BDF8),
+                fontSize: 30,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Photo Preview Unavailable',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.7),
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     ),
   );

@@ -51,7 +51,13 @@ android {
 
     packaging {
         resources {
-            excludes += listOf("/META-INF/{AL2.0,LGPL2.1}")
+            excludes += listOf(
+                "/META-INF/{AL2.0,LGPL2.1}",
+                "META-INF/DEPENDENCIES",
+                "META-INF/LICENSE*",
+                "META-INF/NOTICE*",
+                "org/apache/commons/codec/language/bm/*.txt"
+            )
         }
         jniLibs {
             excludes += listOf("lib/x86/**", "lib/x86_64/**")

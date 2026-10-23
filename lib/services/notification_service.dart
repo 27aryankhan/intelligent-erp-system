@@ -30,6 +30,12 @@ class NotificationService {
       StreamController<String?>.broadcast();
   Stream<String?> get onNotificationTap => _payloadStreamController.stream;
 
+  // Stream controller to broadcast real-time attendance updates to active screens
+  final StreamController<StudentAttendanceReport> _attendanceUpdateController =
+      StreamController<StudentAttendanceReport>.broadcast();
+  Stream<StudentAttendanceReport> get onAttendanceUpdated =>
+      _attendanceUpdateController.stream;
+
   static const String channelId = 'intelligent_erp_urgent_channel';
   static const String channelName = 'HITAM Campus Alerts & Deadlines';
   static const String channelDescription =
@@ -376,12 +382,12 @@ class NotificationService {
       await syncTimetableAndReminders();
     });
 
-    // Check periodically every 10 minutes for live attendance updates
+    // Check periodically every 2 minutes for real-time live attendance updates
     _attendanceWatcherTimer =
-        Timer.periodic(const Duration(minutes: 10), (_) async {
+        Timer.periodic(const Duration(minutes: 2), (_) async {
       await syncAttendanceNow();
     });
-    debugPrint('NotificationService: Attendance watcher active for roll: $rollNo');
+    debugPrint('NotificationService: Real-time attendance watcher active for roll: $rollNo');
   }
 
   /// Stop attendance watcher
@@ -390,7 +396,7 @@ class NotificationService {
     _attendanceWatcherTimer = null;
   }
 
-  /// Trigger an immediate silent sync and diff of attendance
+  /// Trigger an immediate silent sync and diff of attendance from live WebPros portal
   Future<void> syncAttendanceNow() async {
     String roll = _activeWatchingRoll.isNotEmpty
         ? _activeWatchingRoll
@@ -415,6 +421,8 @@ class NotificationService {
       final scraper = HitamScraperService();
       final report = await scraper.fetchStudentAttendanceReport(roll);
       if (report != null && report.subjects.isNotEmpty) {
+        // Broadcast real-time live report immediately so UI screens update with 0ms delay
+        _attendanceUpdateController.add(report);
         await checkAndNotifyAttendance(report);
         await checkShortageWarning(report);
         // Automatically check if evening attendance summary should be pushed
@@ -425,13 +433,46 @@ class NotificationService {
     }
   }
 
+  /// Triggers an immediate silent real-time refresh of all student modules from WebPros
+  Future<void> syncAllStudentDataNow([String? rollNo]) async {
+    final roll = (rollNo != null && rollNo.isNotEmpty)
+        ? rollNo
+        : (_activeWatchingRoll.isNotEmpty
+            ? _activeWatchingRoll
+            : (HitamAuthService().activeUserId ?? ''));
+    if (roll.isEmpty) return;
+
+    await syncAttendanceNow();
+    try {
+      final scraper = HitamScraperService();
+      await Future.wait([
+        scraper.fetchStudentFees(roll),
+        scraper.fetchStudentMarks(roll),
+        scraper.fetchStudentTimeTable(),
+        scraper.fetchStudentBacklogs(roll),
+        scraper.fetchStudentAcademicRegister(roll),
+      ]);
+    } catch (_) {}
+  }
+
+  /// Formats attendance percentage safely avoiding rounding up to 75.0% when below cutoff
+  static String formatReportPercentage(double pct) {
+    if (pct < 75.0 && pct.toStringAsFixed(1) == '75.0') {
+      final f2 = pct.toStringAsFixed(2);
+      return (double.tryParse(f2) ?? 0.0) >= 75.0 ? '74.99' : f2;
+    }
+    return pct.toStringAsFixed(1);
+  }
+
   /// Checks whether overall attendance is below the mandatory 75% cutoff
   /// and automatically pushes an urgent notification to the student's status bar.
   Future<void> checkShortageWarning(
     StudentAttendanceReport report, {
     bool force = false,
   }) async {
-    if (report.overallPercentage >= 75.0) return;
+    if (report.overallPercentage >= 75.0) {
+      return;
+    }
 
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -458,10 +499,12 @@ class NotificationService {
             ? 'Need to attend ${report.classesNeeded} consecutive classes to reach 75%.'
             : 'Attend upcoming classes to reach 75%.';
 
+        final pctFormatted = formatReportPercentage(report.overallPercentage);
+
         await showNotification(
           id: notifId,
-          title: 'Attendance Shortage: ${report.overallPercentage.toStringAsFixed(1)}%',
-          body: 'Your attendance is ${report.overallPercentage.toStringAsFixed(1)}%, which is below the mandatory 75% cutoff (${report.totalAttended}/${report.totalHeld} classes).\n'
+          title: 'Attendance Shortage: $pctFormatted%',
+          body: 'Your attendance is $pctFormatted%, which is below the mandatory 75% cutoff (${report.totalAttended}/${report.totalHeld} classes).\n'
               '$classesNeeded Tap to view subject-wise breakdown.',
           payload: 'attendance',
           type: 'attendance',
@@ -474,8 +517,8 @@ class NotificationService {
             Uri.parse('${ApiConfig.baseUrl}/api/notifications'),
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({
-              'title': 'Attendance Shortage: ${report.overallPercentage.toStringAsFixed(1)}%',
-              'body': 'Your aggregate attendance is ${report.overallPercentage.toStringAsFixed(1)}%, which is below the mandatory 75% cutoff (${report.totalAttended}/${report.totalHeld} classes).\n$classesNeeded',
+              'title': 'Attendance Shortage: $pctFormatted%',
+              'body': 'Your aggregate attendance is $pctFormatted%, which is below the mandatory 75% cutoff (${report.totalAttended}/${report.totalHeld} classes).\n$classesNeeded',
               'targetRole': 'student',
               'senderRole': 'admin',
               'senderName': 'HITAM Academic Cell',
@@ -490,8 +533,8 @@ class NotificationService {
             Uri.parse('${ApiConfig.baseUrl}/api/notifications'),
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({
-              'title': 'Ward Attendance Shortage Alert: ${report.overallPercentage.toStringAsFixed(1)}%',
-              'body': 'Your ward (${report.studentName.isNotEmpty ? report.studentName : report.rollNo}) is at ${report.overallPercentage.toStringAsFixed(1)}% attendance (${report.totalAttended}/${report.totalHeld} classes), below the mandatory 75% cutoff.',
+              'title': 'Ward Attendance Shortage Alert: $pctFormatted%',
+              'body': 'Your ward (${report.studentName.isNotEmpty ? report.studentName : report.rollNo}) is at $pctFormatted% attendance (${report.totalAttended}/${report.totalHeld} classes), below the mandatory 75% cutoff.',
               'targetRole': 'parent',
               'senderRole': 'admin',
               'senderName': 'HITAM Administration',
@@ -1092,10 +1135,12 @@ class NotificationService {
     final int notifId =
         ('summary_${report.rollNo}_${DateTime.now().minute}'.hashCode).abs().remainder(100000);
 
+    final pctFormatted = formatReportPercentage(report.overallPercentage);
+
     await showNotification(
       id: notifId,
-      title: '$statusEmoji Total Attendance: ${report.overallPercentage.toStringAsFixed(1)}% (${report.academicStatus})',
-      body: 'Classes Attended: ${report.totalAttended} / ${report.totalHeld} (${report.overallPercentage.toStringAsFixed(1)}%)\n'
+      title: '$statusEmoji Total Attendance: $pctFormatted% (${report.academicStatus})',
+      body: 'Classes Attended: ${report.totalAttended} / ${report.totalHeld} ($pctFormatted%)\n'
           '$standingAdvice across ${report.subjects.length} subjects.\n'
           'Tap to view subject-wise breakdown.',
       payload: 'attendance',
@@ -1465,5 +1510,6 @@ class NotificationService {
     stopAttendanceWatcher();
     stopRealtimePulse();
     _payloadStreamController.close();
+    _attendanceUpdateController.close();
   }
 }

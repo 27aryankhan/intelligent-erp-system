@@ -1,12 +1,15 @@
 {
-  "latest_version": "1.2.5",
-  "version_code": 18,
+  "latest_version": "1.3.0",
+  "version_code": 19,
   "min_supported_version_code": 11,
   "download_url": "https://github.com/27aryankhan/intelligent-erp-system/releases/latest/download/Intelligent.ERP.apk",
-  "file_size": "38 MB",
+  "file_size": "38.9 MB",
   "release_notes": [
-    "Touch Protection: Eliminated accidental barrier touch dismissals to ensure deliberate cancellation",
-    "Timetable Accuracy: Fixed 6-period daily schedule with accurate multi-period lab and project allocations"
+    "Zero-Delay Real-Time WebPros Sync: Instant period-by-period attendance reflection as soon as faculty updates the portal",
+    "Self-Healing Session Re-Auth: Automatic silent re-authentication on session expiration with zero interrupted requests",
+    "Instant Pull-to-Refresh: Real-time WebPros portal sync indicators on Student Dashboard & Attendance Details",
+    "Live Stream Broadcast: Attendance updates reflect across all screens immediately without app restart",
+    "Instant App-Resume Sync: Background refresh of all student data whenever the app is reopened or resumed"
   ],
   "is_critical": false
 }
