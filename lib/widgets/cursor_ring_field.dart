@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
 // ============================================================================
-// CURSOR RING FIELD — ORIGINKIT FLUTTER NATIVE PORT
-// High-performance particle ring field with interactive cursor & touch dynamics
-// Presets: white particles (#FFFFFF), midnight background (#04050A)
+// CURSOR RING FIELD — ORIGINKIT REFINED CIRCULAR FIELD
+// High-performance particle ring field with automatic center -> left -> right
+// cyclic trajectory, aspect-ratio corrected perfect circle geometry, and
+// sleek white micro-capsule particles.
 // ============================================================================
 
 /// 3D Simplex Noise implementation for organic turbulence and shimmer
@@ -136,7 +137,7 @@ class SimplexNoise {
   }
 }
 
-/// 1D Value noise for organic idle wandering
+/// 1D Value noise for organic drift
 double valueNoise1D(double x, double seed) {
   final i = x.floor();
   final f = x - i;
@@ -153,7 +154,7 @@ double smoothstep(double edge0, double edge1, double x) {
   return t * t * (3.0 - 2.0 * t);
 }
 
-/// Individual Particle state in normalized [-1, 1] coordinate field
+/// Individual Particle state in normalized coordinate field
 class _Particle {
   final double refX;
   final double refY;
@@ -171,13 +172,14 @@ class _Particle {
         currentY = refY;
 }
 
-/// Originkit-style interactive Cursor Ring Field Widget
+/// Originkit-style interactive & automatic Cursor Ring Field Widget
 class CursorRingField extends StatefulWidget {
   final Color backgroundColor;
   final Color particleColor;
   final int density;
   final double dotSize;
   final double speed;
+  final double autoSpeed;
   final double cameraDistance;
   final double ringRadius;
   final double ringWidth;
@@ -190,13 +192,14 @@ class CursorRingField extends StatefulWidget {
     this.backgroundColor = const Color(0xFF04050A),
     this.particleColor = Colors.white,
     this.density = 300,
-    this.dotSize = 120.0,
-    this.speed = 6.0,
+    this.dotSize = 95.0,
+    this.speed = 5.0,
+    this.autoSpeed = 0.88,
     this.cameraDistance = 160.0,
-    this.ringRadius = 12.0,
-    this.ringWidth = 9.0,
-    this.ringPush = 50.0,
-    this.turbulence = 100.0,
+    this.ringRadius = 36.0,
+    this.ringWidth = 8.5,
+    this.ringPush = 45.0,
+    this.turbulence = 80.0,
     this.child,
   });
 
@@ -209,13 +212,11 @@ class _CursorRingFieldState extends State<CursorRingField>
   late Ticker _ticker;
   final List<_Particle> _particles = [];
 
-  // Pointer & Physics Constants (OriginKit standard values)
-  static const double cursorReach = 0.45;
+  // Physics & Follow Constants
   static const double cursorLerp = 0.12;
-  static const double wanderLerp = 0.01;
+  static const double autoLerp = 0.05;
   static const double handoverLerp = 0.08;
-  static const double cursorJitter = 0.01;
-  static const double ringEdge = 0.04;
+  static const double ringEdge = 0.035;
 
   // Normalized Coordinates [-1, 1]
   double _pointerX = 0.0;
@@ -226,7 +227,8 @@ class _CursorRingFieldState extends State<CursorRingField>
   double _ringPosY = 0.0;
   double _follow = 0.0;
   double _simTime = 0.0;
-  double _wander = 0.0;
+  double _autoTime = 0.0;
+  double _aspectRatio = 1.35;
   Duration _lastElapsed = Duration.zero;
 
   @override
@@ -238,8 +240,8 @@ class _CursorRingFieldState extends State<CursorRingField>
 
   void _initParticles() {
     _particles.clear();
-    // Deterministic pseudo-random generation with Poisson-like stratification
-    final count = (widget.density * 1.25).clamp(200, 480).toInt();
+    // Stratified grid generation with organic jitter
+    final count = (widget.density * 1.2).clamp(240, 420).toInt();
     final cols = math.sqrt(count).ceil();
     final rows = (count / cols).ceil();
 
@@ -249,8 +251,8 @@ class _CursorRingFieldState extends State<CursorRingField>
         if (_particles.length >= count) break;
         final cellW = 2.0 / cols;
         final cellH = 2.0 / rows;
-        final jx = (rand.nextDouble() - 0.5) * cellW * 0.75;
-        final jy = (rand.nextDouble() - 0.5) * cellH * 0.75;
+        final jx = (rand.nextDouble() - 0.5) * cellW * 0.8;
+        final jy = (rand.nextDouble() - 0.5) * cellH * 0.8;
         final x = (-1.0 + (c + 0.5) * cellW + jx).clamp(-1.0, 1.0);
         final y = (-1.0 + (r + 0.5) * cellH + jy).clamp(-1.0, 1.0);
         _particles.add(_Particle(refX: x, refY: y));
@@ -282,55 +284,61 @@ class _CursorRingFieldState extends State<CursorRingField>
 
     final speedNorm = widget.speed / 50.0;
     _simTime = (_simTime + dt * speedNorm) % 3600.0;
-    _wander += dt * speedNorm;
+    _autoTime += dt * widget.autoSpeed;
 
-    // Follow handover
+    // Smooth handover between touch and automatic motion
     _follow += ((_pointerOver ? 1.0 : 0.0) - _follow) *
         (1.0 - math.pow(1.0 - handoverLerp, dt * 60.0));
 
-    final wx = (valueNoise1D(_wander * 0.66, 94.234) - 0.5) * 2.0;
-    final wy = (valueNoise1D(_wander * 0.75, 21.028) - 0.5) * 2.0;
-    final wanderX = wx * 0.2;
-    final wanderY = wy * 0.1;
+    // =========================================================================
+    // AUTOMATIC TRAJECTORY:
+    // Starts at center (0, 0), sweeps center -> left -> center -> right -> center
+    // with subtle organic vertical breathing
+    // =========================================================================
+    final autoX = -math.sin(_autoTime) * 0.44;
+    final autoY = math.sin(_autoTime * 2.0) * 0.06;
 
-    double targetX = wanderX;
-    double targetY = wanderY;
+    double targetX = autoX;
+    double targetY = autoY;
+
     if (_follow > 0.0001) {
-      final cx = _pointerX * cursorReach + wx * cursorJitter;
-      final cy = _pointerY * cursorReach + wy * cursorJitter;
-      targetX = wanderX + (cx - wanderX) * _follow;
-      targetY = wanderY + (cy - wanderY) * _follow;
+      targetX = autoX + (_pointerX - autoX) * _follow;
+      targetY = autoY + (_pointerY - autoY) * _follow;
     }
 
-    final lerpRate = wanderLerp + (cursorLerp - wanderLerp) * _follow;
+    final lerpRate = autoLerp + (cursorLerp - autoLerp) * _follow;
     final rk = 1.0 - math.pow(1.0 - lerpRate, dt * 60.0);
     _ringPosX += (targetX - _ringPosX) * rk;
     _ringPosY += (targetY - _ringPosY) * rk;
 
+    // Aspect-ratio-calibrated true circle radius
     final normRadius = widget.ringRadius / 100.0;
     final radius = normRadius +
-        math.sin(_simTime * 3.0) * 0.025 +
-        math.cos(_simTime * 6.0) * 0.015;
+        math.sin(_simTime * 2.5) * 0.02 +
+        math.cos(_simTime * 5.0) * 0.01;
 
     final normWidth = math.max(widget.ringWidth, 1.0) / 100.0;
     final normPush = widget.ringPush / 100.0;
     final normTurb = widget.turbulence / 100.0;
     final halfTime = _simTime * 0.5;
 
-    // Particle field updates
+    final aspect = _aspectRatio;
+
+    // Particle field simulation with aspect ratio correction for a perfect circle
     for (int i = 0; i < _particles.length; i++) {
       final p = _particles[i];
       final rx = p.refX;
       final ry = p.refY;
 
-      final dx = rx - _ringPosX;
+      // Aspect-corrected distance ensures a 100% true circular shape on screen
+      final dx = (rx - _ringPosX) * aspect;
       final dy = ry - _ringPosY;
       final dist = math.sqrt(dx * dx + dy * dy);
 
-      // Edge noise deformation
+      // Edge noise wobble
       final n0 = SimplexNoise.noise3D(rx * 0.2 + 18.4924, ry * 0.2 + 72.9744, halfTime);
       final dist1 = math.sqrt(
-        math.pow(rx + (n0 * 0.005) - _ringPosX, 2) +
+        math.pow((rx + (n0 * 0.005) - _ringPosX) * aspect, 2) +
         math.pow(ry + (n0 * 0.005) - _ringPosY, 2),
       );
 
@@ -343,33 +351,33 @@ class _CursorRingFieldState extends State<CursorRingField>
       t = math.pow(math.max(t, 0.0), 2.0).toDouble();
       t2 = math.pow(math.max(t2, 0.0), 3.0).toDouble();
 
-      t += t2 * 3.0; // hot core
-      t += t3 * 0.4; // interior lift
-      t += SimplexNoise.noise3D(rx * 30.0 + 11.4924, ry * 30.0 + 12.9744, halfTime) * t3 * 0.5;
+      t += t2 * 2.5; // luminous ring core
+      t += t3 * 0.3; // interior ambient lift
+      t += SimplexNoise.noise3D(rx * 25.0 + 11.4924, ry * 25.0 + 12.9744, halfTime) * t3 * 0.4;
 
-      // Ambient baseline simmer
+      // Ambient baseline shimmer across far field
       final nS = SimplexNoise.noise3D(rx * 2.0 + 18.4924, ry * 2.0 + 72.9744, halfTime);
-      t += math.pow((nS + 1.5) * 0.5, 2.0) * 0.6;
+      t += math.pow((nS + 1.5) * 0.5, 2.0) * 0.5;
 
       // Drift & wave turbulence
       final n1 = SimplexNoise.noise3D(rx * 4.0 + 88.494, ry * 4.0 + 32.4397, halfTime * 0.7);
       final n2 = SimplexNoise.noise3D(rx * 4.0 + 50.904, ry * 4.0 + 120.947, halfTime * 0.7);
-      final n3 = SimplexNoise.noise3D(rx * 20.0 + 18.4924, ry * 20.0 + 72.9744, halfTime);
-      final n4 = SimplexNoise.noise3D(rx * 20.0 + 50.904, ry * 20.0 + 120.947, halfTime);
+      final n3 = SimplexNoise.noise3D(rx * 18.0 + 18.4924, ry * 18.0 + 72.9744, halfTime);
+      final n4 = SimplexNoise.noise3D(rx * 18.0 + 50.904, ry * 18.0 + 120.947, halfTime);
 
-      double dispX = (n1 * 0.03 + n3 * 0.005) * normTurb;
-      double dispY = (n2 * 0.03 + n4 * 0.005) * normTurb;
+      double dispX = (n1 * 0.025 + n3 * 0.004) * normTurb;
+      double dispY = (n2 * 0.025 + n4 * 0.004) * normTurb;
       final clampedDist = dist.clamp(0.0, 1.0);
-      dispX += math.sin((rx * 20.0) + (halfTime * 8.0)) * 0.02 * clampedDist * normTurb;
-      dispY += math.cos((ry * 20.0) + (halfTime * 6.0)) * 0.02 * clampedDist * normTurb;
+      dispX += math.sin((rx * 18.0) + (halfTime * 6.0)) * 0.015 * clampedDist * normTurb;
+      dispY += math.cos((ry * 18.0) + (halfTime * 5.0)) * 0.015 * clampedDist * normTurb;
 
       // Elastic push memory
       final pushFactor = math.pow(math.max(t2, 0.0), 0.75) * normPush;
       p.memX = (p.memX * 0.8) - (_ringPosX - (rx + dispX)) * pushFactor;
       p.memY = (p.memY * 0.8) - (_ringPosY - (ry + dispY)) * pushFactor;
 
-      p.scale += (t - p.scale) * 0.2;
-      p.energy = p.energy * 0.5 + p.scale * 0.25;
+      p.scale += (t - p.scale) * 0.22;
+      p.energy = p.energy * 0.55 + p.scale * 0.22;
 
       p.currentX = rx + dispX + (p.memX * 0.25);
       p.currentY = ry + dispY + (p.memY * 0.25);
@@ -390,6 +398,10 @@ class _CursorRingFieldState extends State<CursorRingField>
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = Size(constraints.maxWidth, constraints.maxHeight);
+        if (size.height > 0) {
+          _aspectRatio = size.width / size.height;
+        }
+
         return Container(
           color: widget.backgroundColor,
           child: MouseRegion(
@@ -414,6 +426,7 @@ class _CursorRingFieldState extends State<CursorRingField>
                         ringPosY: _ringPosY,
                         particleColor: widget.particleColor,
                         dotSize: widget.dotSize,
+                        aspectRatio: _aspectRatio,
                         simTime: _simTime,
                       ),
                     ),
@@ -435,6 +448,7 @@ class _CursorRingFieldPainter extends CustomPainter {
   final double ringPosY;
   final Color particleColor;
   final double dotSize;
+  final double aspectRatio;
   final double simTime;
 
   final Paint _paint = Paint()..isAntiAlias = true;
@@ -445,6 +459,7 @@ class _CursorRingFieldPainter extends CustomPainter {
     required this.ringPosY,
     required this.particleColor,
     required this.dotSize,
+    required this.aspectRatio,
     required this.simTime,
   });
 
@@ -454,9 +469,10 @@ class _CursorRingFieldPainter extends CustomPainter {
 
     final w = size.width;
     final h = size.height;
-    final baseScale = (w / 650.0).clamp(0.65, 1.35) * (dotSize / 100.0);
-    final dotW = 6.8 * baseScale;
-    final dotH = 2.4 * baseScale;
+    // Sleek micro-scale dots that don't obscure text or avatar
+    final baseScale = (w / 700.0).clamp(0.55, 1.05) * (dotSize / 100.0);
+    final dotW = 3.8 * baseScale;
+    final dotH = 1.4 * baseScale;
 
     for (int i = 0; i < particles.length; i++) {
       final p = particles[i];
@@ -469,24 +485,28 @@ class _CursorRingFieldPainter extends CustomPainter {
 
       if (px < -20 || px > w + 20 || py < -20 || py > h + 20) continue;
 
-      // Tangential vector orientation relative to cursor ring
-      final angle = math.atan2(p.currentY - ringPosY, p.currentX - ringPosX);
+      // Aspect-corrected tangent orientation ensures alignment with true circle
+      final angle = math.atan2(
+        p.currentY - ringPosY,
+        (p.currentX - ringPosX) * aspectRatio,
+      );
       final noiseAngle = SimplexNoise.noise3D(
         p.currentX * 10.0 + 18.4924,
         p.currentY * 10.0 + 72.9744,
         simTime * 0.85,
       );
 
-      final alpha = (smoothstep(0.1, 0.22, scale) * p.energy.clamp(0.0, 1.0))
-          .clamp(0.0, 1.0);
+      final alpha = (smoothstep(0.08, 0.22, scale) * p.energy.clamp(0.2, 1.0))
+          .clamp(0.0, 0.85);
       if (alpha < 0.02) continue;
 
-      final capW = math.max(dotW * scale, 2.2);
-      final capH = math.max(dotH * scale, 1.2);
+      final displayScale = scale.clamp(0.0, 1.6);
+      final capW = (dotW * displayScale).clamp(1.5, 6.5);
+      final capH = (dotH * displayScale).clamp(0.8, 1.8);
 
       canvas.save();
       canvas.translate(px, py);
-      canvas.rotate(-angle + (noiseAngle * 0.45));
+      canvas.rotate(-angle + (noiseAngle * 0.4));
 
       _paint.color = particleColor.withValues(alpha: alpha);
       final rrect = RRect.fromRectAndRadius(

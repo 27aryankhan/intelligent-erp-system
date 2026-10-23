@@ -1325,19 +1325,20 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                       borderRadius: BorderRadius.circular(28),
                       child: Stack(
                         children: [
-                          // 1. Interactive Cursor Ring Field Animation
+                          // 1. Interactive & Automatic Circular Cursor Ring Field Animation
                           const Positioned.fill(
                             child: CursorRingField(
                               backgroundColor: Color(0xFF04050A),
                               particleColor: Colors.white,
                               density: 300,
-                              dotSize: 120.0,
-                              speed: 6.0,
+                              dotSize: 95.0,
+                              speed: 5.0,
+                              autoSpeed: 0.88,
                               cameraDistance: 160.0,
-                              ringRadius: 28.0,
-                              ringWidth: 9.0,
-                              ringPush: 50.0,
-                              turbulence: 100.0,
+                              ringRadius: 36.0,
+                              ringWidth: 8.5,
+                              ringPush: 45.0,
+                              turbulence: 80.0,
                             ),
                           ),
                           // 2. Subtle glassmorphism vignette for optimal text readability
@@ -1348,8 +1349,8 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                                   center: Alignment.center,
                                   radius: 0.95,
                                   colors: [
-                                    const Color(0xFF04050A).withValues(alpha: 0.15),
-                                    const Color(0xFF04050A).withValues(alpha: 0.60),
+                                    const Color(0xFF04050A).withValues(alpha: 0.08),
+                                    const Color(0xFF04050A).withValues(alpha: 0.48),
                                   ],
                                 ),
                               ),
