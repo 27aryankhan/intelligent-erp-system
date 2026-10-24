@@ -2384,7 +2384,6 @@ class _StudentDashboardState extends State<StudentDashboard> {
     required BuildContext context,
     required String title,
     required String subtitle,
-    required IconData icon,
     required VoidCallback onTap,
   }) {
     return _buildGlassContainer(
@@ -2396,58 +2395,22 @@ class _StudentDashboardState extends State<StudentDashboard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Colors.white.withValues(alpha: 0.22),
-                      Colors.white.withValues(alpha: 0.08),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(11),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.35),
-                    width: 0.9,
-                  ),
-                ),
-                child: Icon(
-                  icon,
-                  size: 18,
-                  color: Colors.white,
-                ),
-              ),
-              Icon(
-                Icons.arrow_forward_ios_rounded,
-                size: 12,
-                color: Colors.white.withValues(alpha: 0.38),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
           Text(
             title,
             style: const TextStyle(
-              fontSize: 15.5,
+              fontSize: 16.5,
               fontWeight: FontWeight.w700,
               color: Colors.white,
               letterSpacing: -0.2,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(
             subtitle,
             style: TextStyle(
-              fontSize: 11.0,
-              color: Colors.white.withValues(alpha: 0.72),
-              height: 1.20,
+              fontSize: 11.5,
+              color: Colors.white.withValues(alpha: 0.76),
+              height: 1.30,
               letterSpacing: -0.1,
               fontWeight: FontWeight.w400,
             ),
@@ -2464,7 +2427,6 @@ class _StudentDashboardState extends State<StudentDashboard> {
       context: context,
       title: 'Backlogs',
       subtitle: 'Arrears & history schedule',
-      icon: Icons.history_edu_rounded,
       onTap: () {
         Navigator.push(
           context,
@@ -2481,7 +2443,6 @@ class _StudentDashboardState extends State<StudentDashboard> {
       context: context,
       title: 'Fee Details',
       subtitle: 'Academic ledger & dues receipts',
-      icon: Icons.receipt_long_rounded,
       onTap: () {
         Navigator.push(
           context,
@@ -2498,7 +2459,6 @@ class _StudentDashboardState extends State<StudentDashboard> {
       context: context,
       title: 'Time table',
       subtitle: 'Day-wise period timings & faculty',
-      icon: Icons.calendar_month_rounded,
       onTap: () {
         Navigator.push(
           context,
@@ -2515,7 +2475,6 @@ class _StudentDashboardState extends State<StudentDashboard> {
       context: context,
       title: 'Marks',
       subtitle: 'CIE internals & semester SGPA/CGPA',
-      icon: Icons.insights_rounded,
       onTap: () {
         Navigator.push(
           context,
@@ -2532,7 +2491,6 @@ class _StudentDashboardState extends State<StudentDashboard> {
       context: context,
       title: 'Profile',
       subtitle: 'Personal bio-data & academic info',
-      icon: Icons.person_outline_rounded,
       onTap: () {
         final activeRoll = (widget.studentId ??
                 HitamAuthService().activeUserId ??
@@ -2557,7 +2515,6 @@ class _StudentDashboardState extends State<StudentDashboard> {
       context: context,
       title: 'Register',
       subtitle: 'Day-by-day attendance & session log',
-      icon: Icons.fact_check_outlined,
       onTap: () {
         Navigator.push(
           context,
@@ -2583,67 +2540,29 @@ class _StudentDashboardState extends State<StudentDashboard> {
           ),
         );
       },
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Colors.white.withValues(alpha: 0.22),
-                  Colors.white.withValues(alpha: 0.08),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.35),
-                width: 0.9,
-              ),
-            ),
-            child: const Icon(
-              Icons.auto_graph_rounded,
-              size: 20,
+          const Text(
+            'SPF Performance',
+            style: TextStyle(
+              fontSize: 15.5,
+              fontWeight: FontWeight.w700,
               color: Colors.white,
+              letterSpacing: -0.2,
             ),
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'SPF Performance',
-                  style: TextStyle(
-                    fontSize: 15.5,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                    letterSpacing: -0.2,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Student Performance Framework cycle & tier',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.white.withValues(alpha: 0.72),
-                    height: 1.25,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+          const SizedBox(height: 6),
+          Text(
+            'Student Performance Framework cycle & tier',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.white.withValues(alpha: 0.76),
+              height: 1.25,
             ),
-          ),
-          const SizedBox(width: 8),
-          Icon(
-            Icons.arrow_forward_ios_rounded,
-            size: 13,
-            color: Colors.white.withValues(alpha: 0.38),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -2682,67 +2601,29 @@ class _StudentDashboardState extends State<StudentDashboard> {
           ),
         );
       },
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Colors.white.withValues(alpha: 0.22),
-                  Colors.white.withValues(alpha: 0.08),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.35),
-                width: 0.9,
-              ),
-            ),
-            child: const Icon(
-              Icons.assignment_outlined,
-              size: 20,
+          const Text(
+            'HITAM Exam',
+            style: TextStyle(
+              fontSize: 15.5,
+              fontWeight: FontWeight.w700,
               color: Colors.white,
+              letterSpacing: -0.2,
             ),
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'HITAM Exam',
-                  style: TextStyle(
-                    fontSize: 15.5,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                    letterSpacing: -0.2,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Exam fees, hall tickets, marks & circulars',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.white.withValues(alpha: 0.72),
-                    height: 1.25,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+          const SizedBox(height: 6),
+          Text(
+            'Exam fees, hall tickets, marks & circulars',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.white.withValues(alpha: 0.76),
+              height: 1.25,
             ),
-          ),
-          const SizedBox(width: 8),
-          Icon(
-            Icons.arrow_forward_ios_rounded,
-            size: 13,
-            color: Colors.white.withValues(alpha: 0.28),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
