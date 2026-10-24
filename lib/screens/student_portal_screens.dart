@@ -1330,7 +1330,6 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                             child: CursorRingField(
                               backgroundColor: Color(0xFF04050A),
                               particleColor: Colors.white,
-                              density: 480,
                               speed: 5.0,
                               autoSpeed: 0.85,
                               ringRadius: 65.0,
@@ -1426,71 +1425,74 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                                   ),
                                 ],
                                 const SizedBox(height: 16),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    if (p?.cgpa != null && p!.cgpa.isNotEmpty)
-                                      GlassCapsulePill(
-                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                        borderRadius: 22,
-                                        child: RichText(
-                                          text: TextSpan(
-                                            children: [
-                                              TextSpan(
-                                                text: 'CGPA: ',
-                                                style: TextStyle(
-                                                  color: Colors.white.withValues(alpha: 0.65),
-                                                  fontSize: 12.5,
-                                                  fontWeight: FontWeight.w600,
-                                                  letterSpacing: 0.3,
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      if (p?.cgpa != null && p!.cgpa.isNotEmpty)
+                                        GlassCapsulePill(
+                                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                                          borderRadius: 22,
+                                          child: RichText(
+                                            text: TextSpan(
+                                              children: [
+                                                TextSpan(
+                                                  text: 'CGPA: ',
+                                                  style: TextStyle(
+                                                    color: Colors.white.withValues(alpha: 0.65),
+                                                    fontSize: 12.5,
+                                                    fontWeight: FontWeight.w600,
+                                                    letterSpacing: 0.3,
+                                                  ),
                                                 ),
-                                              ),
-                                              TextSpan(
-                                                text: p.cgpa,
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 13.5,
-                                                  fontWeight: FontWeight.w800,
-                                                  letterSpacing: 0.3,
+                                                TextSpan(
+                                                  text: p.cgpa,
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 13.5,
+                                                    fontWeight: FontWeight.w800,
+                                                    letterSpacing: 0.3,
+                                                  ),
                                                 ),
-                                              ),
-                                            ],
+                                              ],
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                    if ((p?.cgpa.isNotEmpty ?? false) &&
-                                        (p?.credits.isNotEmpty ?? false))
-                                      const SizedBox(width: 12),
-                                    if (p?.credits.isNotEmpty ?? false)
-                                      GlassCapsulePill(
-                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                        borderRadius: 22,
-                                        child: RichText(
-                                          text: TextSpan(
-                                            children: [
-                                              TextSpan(
-                                                text: 'Credits: ',
-                                                style: TextStyle(
-                                                  color: Colors.white.withValues(alpha: 0.65),
-                                                  fontSize: 12.5,
-                                                  fontWeight: FontWeight.w600,
-                                                  letterSpacing: 0.3,
+                                      if ((p?.cgpa.isNotEmpty ?? false) &&
+                                          (p?.credits.isNotEmpty ?? false))
+                                        const SizedBox(width: 10),
+                                      if (p?.credits.isNotEmpty ?? false)
+                                        GlassCapsulePill(
+                                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                                          borderRadius: 22,
+                                          child: RichText(
+                                            text: TextSpan(
+                                              children: [
+                                                TextSpan(
+                                                  text: 'Credits: ',
+                                                  style: TextStyle(
+                                                    color: Colors.white.withValues(alpha: 0.65),
+                                                    fontSize: 12.5,
+                                                    fontWeight: FontWeight.w600,
+                                                    letterSpacing: 0.3,
+                                                  ),
                                                 ),
-                                              ),
-                                              TextSpan(
-                                                text: p?.credits,
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 13.5,
-                                                  fontWeight: FontWeight.w800,
-                                                  letterSpacing: 0.3,
+                                                TextSpan(
+                                                  text: p?.credits,
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 13.5,
+                                                    fontWeight: FontWeight.w800,
+                                                    letterSpacing: 0.3,
+                                                  ),
                                                 ),
-                                              ),
-                                            ],
+                                              ],
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),

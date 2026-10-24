@@ -3,14 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
 // ============================================================================
-// CURSOR RING FIELD — REFINED FLUTTER CIRCULAR FORCE FIELD
-// - 100% Euclidean circular shape (measured in canvas screen pixels, no oval)
-// - Automatic trajectory: Center -> Left -> Center -> Right -> Center
-// - Bold, radiant white (#FFFFFF) capsule particles matching Originkit
-// - Smooth organic simplex noise turbulence & ambient starfield shimmer
+// CURSOR RING FIELD — REFINED ORIGINKIT CIRCULAR FORCE FIELD
+// - Poisson-disk stochastic distribution (guarantees NO particle clumping/blobs)
+// - True Euclidean circular geometry in canvas pixel space
+// - Aerodynamic, slender rounded micro-capsules matching Originkit reference
+// - Automated trajectory: Center -> Left -> Center -> Right -> Center
 // ============================================================================
 
-/// 3D Simplex Noise implementation for organic turbulence and shimmer
+/// 3D Simplex Noise implementation for smooth organic turbulence
 class SimplexNoise {
   static final List<int> _p = [
     151, 160, 137, 91, 90, 15, 131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140,
@@ -145,8 +145,8 @@ double smoothstep(double edge0, double edge1, double x) {
 
 /// Particle representation in relative [0.0, 1.0] unit box
 class _Particle {
-  final double u; // [0, 1] relative X
-  final double v; // [0, 1] relative Y
+  final double u;
+  final double v;
   double currentX = 0.0;
   double currentY = 0.0;
   double scale = 0.0;
@@ -160,8 +160,7 @@ class _Particle {
 class CursorRingField extends StatefulWidget {
   final Color backgroundColor;
   final Color particleColor;
-  final int density;
-  final double dotSize;
+  final int? density;
   final double speed;
   final double autoSpeed;
   final double ringRadius;
@@ -171,11 +170,10 @@ class CursorRingField extends StatefulWidget {
     super.key,
     this.backgroundColor = const Color(0xFF04050A),
     this.particleColor = Colors.white,
-    this.density = 480,
-    this.dotSize = 100.0,
+    this.density,
     this.speed = 5.0,
-    this.autoSpeed = 0.85,
-    this.ringRadius = 65.0,
+    this.autoSpeed = 0.82,
+    this.ringRadius = 66.0,
     this.child,
   });
 
@@ -188,16 +186,16 @@ class _CursorRingFieldState extends State<CursorRingField>
   late Ticker _ticker;
   final List<_Particle> _particles = [];
 
-  // Smooth handover and physics
+  // Physics constants
   static const double cursorLerp = 0.12;
   static const double autoLerp = 0.045;
   static const double handoverLerp = 0.08;
 
-  // Touch coordinates in pixels
+  // Touch & Tracking
   Offset _pointerPx = Offset.zero;
   bool _pointerOver = false;
 
-  // Ring center in pixels
+  // Ring center in screen pixels
   Offset _ringCenterPx = Offset.zero;
   double _follow = 0.0;
   double _simTime = 0.0;
@@ -209,51 +207,88 @@ class _CursorRingFieldState extends State<CursorRingField>
   @override
   void initState() {
     super.initState();
-    _initParticles();
+    _initPoissonField(const Size(380, 280));
     _ticker = createTicker(_onTick)..start();
   }
 
-  void _initParticles() {
+  /// Bridson's Poisson Disk Sampling: Guarantees NO particle clumping or overlap
+  void _initPoissonField(Size size) {
     _particles.clear();
-    final rand = math.Random(0x429E37);
-    final count = widget.density.clamp(320, 650);
+    final w = math.max(size.width, 240.0);
+    final h = math.max(size.height, 200.0);
+    const minD = 13.5; // Minimum 13.5px distance between any two particle centers
+    final cellSize = minD / math.sqrt(2);
+    final gridW = (w / cellSize).ceil() + 1;
+    final gridH = (h / cellSize).ceil() + 1;
+    final grid = List<int>.filled(gridW * gridH, -1);
+    final points = <Offset>[];
+    final active = <int>[];
 
-    // 1. Cluster particles along the central sweep zone for dense ring presence
-    final ringClusterCount = (count * 0.45).round();
-    for (int i = 0; i < ringClusterCount; i++) {
-      // Sweep zone: X from 0.15 to 0.85, Y from 0.10 to 0.70
-      final cx = 0.20 + rand.nextDouble() * 0.60;
-      final cy = 0.15 + rand.nextDouble() * 0.50;
-      final ang = rand.nextDouble() * math.pi * 2.0;
-      final rad = (widget.ringRadius * (0.6 + rand.nextDouble() * 0.8)) / 300.0;
-      final u = (cx + math.cos(ang) * rad).clamp(0.02, 0.98);
-      final v = (cy + math.sin(ang) * rad).clamp(0.02, 0.98);
-      _particles.add(_Particle(u: u, v: v));
+    final rand = math.Random(0x429E37);
+
+    void addPoint(Offset p) {
+      final idx = points.length;
+      points.add(p);
+      active.add(idx);
+      final gx = (p.dx / cellSize).floor().clamp(0, gridW - 1);
+      final gy = (p.dy / cellSize).floor().clamp(0, gridH - 1);
+      grid[gy * gridW + gx] = idx;
     }
 
-    // 2. Uniform ambient starfield for the rest of the canvas
-    final ambientCount = count - _particles.length;
-    final cols = math.sqrt(ambientCount).ceil();
-    final rows = (ambientCount / cols).ceil();
-    for (int r = 0; r < rows; r++) {
-      for (int c = 0; c < cols; c++) {
-        if (_particles.length >= count) break;
-        final cellW = 1.0 / cols;
-        final cellH = 1.0 / rows;
-        final jx = (rand.nextDouble() - 0.5) * cellW * 0.85;
-        final jy = (rand.nextDouble() - 0.5) * cellH * 0.85;
-        final u = ((c + 0.5) * cellW + jx).clamp(0.01, 0.99);
-        final v = ((r + 0.5) * cellH + jy).clamp(0.01, 0.99);
-        _particles.add(_Particle(u: u, v: v));
+    // Seed point near center
+    addPoint(Offset(w * 0.5, h * 0.36));
+
+    const minD2 = minD * minD;
+
+    while (active.isNotEmpty && points.length < 420) {
+      final randIdx = rand.nextInt(active.length);
+      final pointIdx = active[randIdx];
+      final basePoint = points[pointIdx];
+      bool found = false;
+
+      for (int attempts = 0; attempts < 24; attempts++) {
+        final angle = rand.nextDouble() * math.pi * 2.0;
+        final dist = minD + rand.nextDouble() * minD;
+        final nx = basePoint.dx + math.cos(angle) * dist;
+        final ny = basePoint.dy + math.sin(angle) * dist;
+
+        if (nx < 6 || nx > w - 6 || ny < 6 || ny > h - 6) continue;
+
+        final gx = (nx / cellSize).floor();
+        final gy = (ny / cellSize).floor();
+
+        bool ok = true;
+        for (int dy = -2; dy <= 2 && ok; dy++) {
+          for (int dx = -2; dx <= 2 && ok; dx++) {
+            final cx = gx + dx;
+            final cy = gy + dy;
+            if (cx < 0 || cx >= gridW || cy < 0 || cy >= gridH) continue;
+            final neighborIdx = grid[cy * gridW + cx];
+            if (neighborIdx >= 0) {
+              final neighbor = points[neighborIdx];
+              final d2 = (neighbor.dx - nx) * (neighbor.dx - nx) +
+                         (neighbor.dy - ny) * (neighbor.dy - ny);
+              if (d2 < minD2) {
+                ok = false;
+              }
+            }
+          }
+        }
+
+        if (ok) {
+          addPoint(Offset(nx, ny));
+          found = true;
+          break;
+        }
+      }
+
+      if (!found) {
+        active.removeAt(randIdx);
       }
     }
-  }
 
-  @override
-  void didUpdateWidget(covariant CursorRingField oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.density != widget.density) {
-      _initParticles();
+    for (final pt in points) {
+      _particles.add(_Particle(u: pt.dx / w, v: pt.dy / h));
     }
   }
 
@@ -279,8 +314,8 @@ class _CursorRingFieldState extends State<CursorRingField>
     _follow += ((_pointerOver ? 1.0 : 0.0) - _follow) *
         (1.0 - math.pow(1.0 - handoverLerp, dt * 60.0));
 
-    final w = _lastSize.width > 0 ? _lastSize.width : 360.0;
-    final h = _lastSize.height > 0 ? _lastSize.height : 260.0;
+    final w = _lastSize.width > 0 ? _lastSize.width : 380.0;
+    final h = _lastSize.height > 0 ? _lastSize.height : 280.0;
 
     // =========================================================================
     // AUTOMATIC TRAJECTORY:
@@ -289,7 +324,7 @@ class _CursorRingFieldState extends State<CursorRingField>
     final sweepProgress = -math.sin(_autoTime); // 0 -> -1 (left) -> 0 -> +1 (right) -> 0
     final sweepDistanceX = w * 0.28;
     final autoTargetX = (w * 0.5) + sweepProgress * sweepDistanceX;
-    final autoTargetY = (h * 0.36) + math.sin(_autoTime * 2.0) * (h * 0.04);
+    final autoTargetY = (h * 0.36) + math.sin(_autoTime * 2.0) * (h * 0.035);
 
     double targetX = autoTargetX;
     double targetY = autoTargetY;
@@ -310,51 +345,46 @@ class _CursorRingFieldState extends State<CursorRingField>
       _ringCenterPx.dy + (targetY - _ringCenterPx.dy) * rk,
     );
 
-    // True circular radius in screen pixels
+    // True Euclidean circular radius in screen pixels
     final ringRadiusPx = widget.ringRadius +
-        math.sin(_simTime * 3.0) * 3.5 +
-        math.cos(_simTime * 6.0) * 2.0;
+        math.sin(_simTime * 2.5) * 2.5 +
+        math.cos(_simTime * 5.0) * 1.5;
 
-    final ringBandWidthPx = ringRadiusPx * 0.32; // ~21px band width
-    final ringCoreWidthPx = ringRadiusPx * 0.12; // ~8px hot core
+    final ringBandWidthPx = ringRadiusPx * 0.28; // ~18px clean band width
     final halfTime = _simTime * 0.5;
 
-    // Update particles in Euclidean screen pixels for a 100% true circle
+    // Particle field physics in Euclidean screen pixels
     for (int i = 0; i < _particles.length; i++) {
       final p = _particles[i];
       final baseX = p.u * w;
       final baseY = p.v * h;
 
-      // Distance in actual canvas pixels ensures a geometrically perfect circle
       final dx = baseX - _ringCenterPx.dx;
       final dy = baseY - _ringCenterPx.dy;
       final distPx = math.sqrt(dx * dx + dy * dy);
 
       p.distFromRing = (distPx - ringRadiusPx).abs();
 
-      // Ring band intensity
-      final t1 = smoothstep(ringRadiusPx - ringBandWidthPx * 1.5, ringRadiusPx, distPx) -
-                 smoothstep(ringRadiusPx, ringRadiusPx + ringBandWidthPx, distPx);
-      final t2 = smoothstep(ringRadiusPx - ringCoreWidthPx * 1.8, ringRadiusPx, distPx) -
-                 smoothstep(ringRadiusPx, ringRadiusPx + ringCoreWidthPx, distPx);
-      final t3 = smoothstep(ringRadiusPx + ringCoreWidthPx, ringRadiusPx, distPx);
+      // Band intensity
+      final t = smoothstep(ringRadiusPx - ringBandWidthPx, ringRadiusPx, distPx) -
+                smoothstep(ringRadiusPx, ringRadiusPx + ringBandWidthPx, distPx);
+      final tInside = smoothstep(ringRadiusPx + ringBandWidthPx * 0.5, ringRadiusPx, distPx);
 
-      double intensity = math.pow(math.max(t1, 0.0), 2.0).toDouble();
-      intensity += math.pow(math.max(t2, 0.0), 3.0).toDouble() * 3.0; // hot core
-      intensity += t3 * 0.35; // gentle interior halo
+      double intensity = math.pow(math.max(t, 0.0), 2.0).toDouble() * 3.5;
+      intensity += tInside * 0.3;
 
-      // Ambient baseline simmer
+      // Ambient baseline shimmer across far field
       final nS = SimplexNoise.noise3D(p.u * 3.0 + 18.49, p.v * 3.0 + 72.97, halfTime);
-      intensity += math.pow((nS + 1.5) * 0.5, 2.0) * 0.45;
+      intensity += math.pow((nS + 1.5) * 0.5, 2.0) * 0.35;
 
-      // Organic drift and turbulence
-      final n1 = SimplexNoise.noise3D(p.u * 5.0 + 88.49, p.v * 5.0 + 32.43, halfTime * 0.7);
-      final n2 = SimplexNoise.noise3D(p.u * 5.0 + 50.90, p.v * 5.0 + 120.94, halfTime * 0.7);
-      final dispX = n1 * 5.0 + math.sin((p.u * 16.0) + (halfTime * 6.0)) * 2.5;
-      final dispY = n2 * 5.0 + math.cos((p.v * 16.0) + (halfTime * 5.0)) * 2.5;
+      // Organic gentle wave drift
+      final n1 = SimplexNoise.noise3D(p.u * 4.0 + 88.49, p.v * 4.0 + 32.43, halfTime * 0.6);
+      final n2 = SimplexNoise.noise3D(p.u * 4.0 + 50.90, p.v * 4.0 + 120.94, halfTime * 0.6);
+      final dispX = n1 * 3.5;
+      final dispY = n2 * 3.5;
 
-      p.scale += (intensity - p.scale) * 0.25;
-      p.energy = p.energy * 0.6 + p.scale * 0.25;
+      p.scale += (intensity - p.scale) * 0.28;
+      p.energy = p.energy * 0.65 + p.scale * 0.22;
 
       p.currentX = baseX + dispX;
       p.currentY = baseY + dispY;
@@ -373,7 +403,10 @@ class _CursorRingFieldState extends State<CursorRingField>
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = Size(constraints.maxWidth, constraints.maxHeight);
-        _lastSize = size;
+        if (_lastSize != size) {
+          _lastSize = size;
+          _initPoissonField(size);
+        }
 
         return Container(
           color: widget.backgroundColor,
@@ -436,7 +469,7 @@ class _CursorRingFieldPainter extends CustomPainter {
 
     final w = size.width;
     final h = size.height;
-    final bandThreshold = ringRadius * 0.38;
+    final bandThreshold = ringRadius * 0.32;
 
     for (int i = 0; i < particles.length; i++) {
       final p = particles[i];
@@ -449,7 +482,6 @@ class _CursorRingFieldPainter extends CustomPainter {
       final dy = py - ringCenter.dy;
       final distFromBand = p.distFromRing;
 
-      // Distinguish ring particles from ambient background particles
       final isNearRing = distFromBand < bandThreshold;
 
       double alpha;
@@ -457,32 +489,32 @@ class _CursorRingFieldPainter extends CustomPainter {
       double capH;
 
       if (isNearRing) {
-        // Bright radiant white particles forming the circular ring
+        // Luminous, slender aerodynamic capsules tracing the true circle
         final proximity = (1.0 - (distFromBand / bandThreshold)).clamp(0.0, 1.0);
-        alpha = (0.75 + proximity * 0.25).clamp(0.0, 1.0);
-        capW = 7.5 + proximity * 6.5; // 7.5px to 14.0px length
-        capH = 2.4 + proximity * 1.2; // 2.4px to 3.6px thickness
+        alpha = (0.78 + proximity * 0.22).clamp(0.0, 1.0);
+        capW = 6.8 + proximity * 3.4; // 6.8px to 10.2px slender length
+        capH = 1.9 + proximity * 0.6; // 1.9px to 2.5px thickness
       } else {
         // Ambient background stars
-        alpha = (0.20 + p.energy.clamp(0.0, 0.45)).clamp(0.15, 0.60);
-        capW = 3.6 + (p.energy.clamp(0.0, 1.0)) * 2.2;
-        capH = 1.6;
+        alpha = (0.18 + p.energy.clamp(0.0, 0.35)).clamp(0.12, 0.48);
+        capW = 3.2 + (p.energy.clamp(0.0, 0.8)) * 1.5;
+        capH = 1.4;
       }
 
-      if (alpha < 0.04) continue;
+      if (alpha < 0.03) continue;
 
-      // Tangential alignment along the circular circumference
+      // Clean tangential rotation along the circle circumference
       final angle = math.atan2(dy, dx);
       final noiseAngle = SimplexNoise.noise3D(
-        (px / w) * 10.0 + 18.49,
-        (py / h) * 10.0 + 72.97,
-        simTime * 0.85,
+        (px / w) * 8.0 + 18.49,
+        (py / h) * 8.0 + 72.97,
+        simTime * 0.7,
       );
 
       canvas.save();
       canvas.translate(px, py);
-      // Rotate by angle + pi/2 so the capsule length aligns along the circumference of the circle
-      canvas.rotate((angle + math.pi / 2.0) + (noiseAngle * 0.25));
+      // Rotate by angle + pi/2 so the capsule aligns smoothly along the circular arc
+      canvas.rotate((angle + math.pi / 2.0) + (noiseAngle * 0.12));
 
       _paint.color = particleColor.withValues(alpha: alpha);
       final rrect = RRect.fromRectAndRadius(
