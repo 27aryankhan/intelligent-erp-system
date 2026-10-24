@@ -4467,7 +4467,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             'targetRole': 'student',
             'senderRole': 'admin',
             'senderName': 'HITAM Academic Cell',
-            'title': 'Attendance in Good Standing: ${pct.toStringAsFixed(1)}%',
+            'title': 'Attendance: ${pct.toStringAsFixed(1)}%',
             'body': 'You are currently in the safe zone with ${pct.toStringAsFixed(1)}% attendance ($attended/$held classes attended). '
                 '${safeBunks > 0 ? "You have $safeBunks safe classes margin remaining." : "Maintain regular attendance."}',
             'type': 'attendance',
@@ -4477,21 +4477,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             'timeAgo': 'Live Status',
           });
         }
-
-        alerts.add({
-          'id': 'notif_summary_${roll}_$held',
-          'userId': roll,
-          'targetRole': 'student',
-          'senderRole': 'faculty',
-          'senderName': 'Faculty Department',
-          'title': 'Attendance Record: $attended/$held Classes Attended',
-          'body': 'Overall aggregate: ${pct.toStringAsFixed(1)}% • Status: ${report.academicStatus}. Tap to view your subject-wise attendance breakdown.',
-          'type': 'attendance',
-          'targetScreen': 'attendance',
-          'priority': 'normal',
-          'isRead': false,
-          'timeAgo': 'Today',
-        });
       } else if (activeRole == 'parent') {
         final name = studentName.isNotEmpty ? studentName : roll;
         if (pct < 75.0) {
@@ -4519,7 +4504,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             'targetRole': 'parent',
             'senderRole': 'admin',
             'senderName': 'HITAM Administration',
-            'title': 'Ward Attendance in Good Standing: ${pct.toStringAsFixed(1)}%',
+            'title': 'Ward Attendance: ${pct.toStringAsFixed(1)}%',
             'body': 'Your ward ($name) has an aggregate attendance of ${pct.toStringAsFixed(1)}% ($attended/$held classes) and is eligible for semester end examinations.',
             'type': 'attendance',
             'targetScreen': 'attendance',
