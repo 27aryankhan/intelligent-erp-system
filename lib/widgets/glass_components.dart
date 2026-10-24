@@ -172,13 +172,16 @@ class FrostedGlassAppBar extends StatelessWidget implements PreferredSizeWidget 
         ),
       ),
       title: titleWidget ??
-          Text(
-            title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18.5,
-              fontWeight: FontWeight.w700,
-              letterSpacing: -0.4,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18.5,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.4,
+              ),
             ),
           ),
       actions: actions,

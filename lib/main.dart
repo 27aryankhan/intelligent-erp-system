@@ -1942,7 +1942,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
                         ),
                       )
                     : RefreshIndicator(
-                        color: const Color(0xFF38BDF8),
+                        color: const Color(0xFF10B981),
                         backgroundColor: const Color(0xFF1E293B),
                         onRefresh: () => fetchStudentData(forceLive: true),
                         child: SingleChildScrollView(
@@ -2514,7 +2514,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
     return _buildBentoCard(
       context: context,
       title: 'Register',
-      subtitle: 'Day-by-day attendance & session log',
+      subtitle: 'Daily attendance & session logs',
       onTap: () {
         Navigator.push(
           context,
