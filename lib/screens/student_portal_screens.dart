@@ -193,25 +193,16 @@ class _StudentBacklogsScreenState extends State<StudentBacklogsScreen> {
                                     margin: const EdgeInsets.symmetric(vertical: 4),
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 14, vertical: 12),
-                                    child: Row(
-                                      crossAxisAlignment: CrossAxisAlignment.center,
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            subj,
-                                            style: const TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w600,
-                                              color: Colors.white,
-                                            ),
-                                          ),
+                                    child: SizedBox(
+                                      width: double.infinity,
+                                      child: Text(
+                                        subj,
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white,
                                         ),
-                                        const SizedBox(width: 8),
-                                        GlassStatusPill(
-                                          label: 'Arrear',
-                                          isWarning: true,
-                                        ),
-                                      ],
+                                      ),
                                     ),
                                   );
                                 }),
