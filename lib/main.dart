@@ -1872,13 +1872,17 @@ class _StudentDashboardState extends State<StudentDashboard> {
             child: Container(color: Colors.transparent),
           ),
         ),
-        title: const Text(
-          'Student Dashboard',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.4,
+        title: const FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            'Student Dashboard',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18.5,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.3,
+            ),
           ),
         ),
         titleSpacing: 16,
@@ -2112,82 +2116,20 @@ class _StudentDashboardState extends State<StudentDashboard> {
     Border? border,
     List<Color>? gradientColors,
     Color? backgroundColor,
-    bool enableBlur = false,
+    bool enableBlur = true,
     double? width,
   }) {
-    final rradius = BorderRadius.circular(borderRadius);
-
-    Widget cardContent = Container(
+    return GlassContainer(
+      borderRadius: borderRadius,
+      padding: padding,
+      onTap: onTap,
+      border: border,
+      gradientColors: gradientColors,
+      color: backgroundColor,
+      enableBlur: enableBlur,
       width: width,
-      padding: padding ?? const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        borderRadius: rradius,
-        gradient: gradientColors != null
-            ? LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: gradientColors,
-              )
-            : null,
-      ),
       child: child,
     );
-
-    if (onTap != null) {
-      cardContent = Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: rradius,
-          splashColor: Colors.white.withValues(alpha: 0.08),
-          highlightColor: Colors.white.withValues(alpha: 0.04),
-          child: cardContent,
-        ),
-      );
-    }
-
-    Widget containerSurface = Container(
-      width: width,
-      decoration: BoxDecoration(
-        borderRadius: rradius,
-        color: backgroundColor ?? const Color(0xFF141720).withValues(alpha: 0.88),
-        border: border ??
-            Border.all(
-              color: Colors.white.withValues(alpha: 0.08),
-              width: 1.0,
-            ),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x38000000), // black 22%
-            blurRadius: 16,
-            offset: Offset(0, 4),
-          ),
-          BoxShadow(
-            color: Color(0x15000000), // black 8%
-            blurRadius: 6,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: rradius,
-        clipBehavior: Clip.antiAlias,
-        child: cardContent,
-      ),
-    );
-
-    if (enableBlur) {
-      containerSurface = ClipRRect(
-        borderRadius: rradius,
-        clipBehavior: Clip.antiAlias,
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-          child: containerSurface,
-        ),
-      );
-    }
-
-    return RepaintBoundary(child: containerSurface);
   }
 
   Widget _buildCapsulePill(String label) {
@@ -2215,11 +2157,6 @@ class _StudentDashboardState extends State<StudentDashboard> {
       borderRadius: 28,
       padding: EdgeInsets.zero,
       enableBlur: true,
-      backgroundColor: const Color(0xFF141720).withValues(alpha: 0.72),
-      border: Border.all(
-        color: Colors.white.withValues(alpha: 0.12),
-        width: 1.0,
-      ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -2447,16 +2384,54 @@ class _StudentDashboardState extends State<StudentDashboard> {
     required BuildContext context,
     required String title,
     required String subtitle,
+    required IconData icon,
     required VoidCallback onTap,
   }) {
     return _buildGlassContainer(
       borderRadius: 26,
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       onTap: onTap,
+      enableBlur: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Colors.white.withValues(alpha: 0.22),
+                      Colors.white.withValues(alpha: 0.08),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(11),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.35),
+                    width: 0.9,
+                  ),
+                ),
+                child: Icon(
+                  icon,
+                  size: 18,
+                  color: Colors.white,
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 12,
+                color: Colors.white.withValues(alpha: 0.38),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
           Text(
             title,
             style: const TextStyle(
@@ -2466,13 +2441,14 @@ class _StudentDashboardState extends State<StudentDashboard> {
               letterSpacing: -0.2,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           Text(
             subtitle,
             style: TextStyle(
-              fontSize: 11.5,
-              color: Colors.white.withValues(alpha: 0.76),
-              height: 1.30,
+              fontSize: 11.0,
+              color: Colors.white.withValues(alpha: 0.72),
+              height: 1.20,
+              letterSpacing: -0.1,
               fontWeight: FontWeight.w400,
             ),
             maxLines: 2,
@@ -2488,6 +2464,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
       context: context,
       title: 'Backlogs',
       subtitle: 'Arrears & history schedule',
+      icon: Icons.history_edu_rounded,
       onTap: () {
         Navigator.push(
           context,
@@ -2504,6 +2481,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
       context: context,
       title: 'Fee Details',
       subtitle: 'Academic ledger & dues receipts',
+      icon: Icons.receipt_long_rounded,
       onTap: () {
         Navigator.push(
           context,
@@ -2520,6 +2498,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
       context: context,
       title: 'Time table',
       subtitle: 'Day-wise period timings & faculty',
+      icon: Icons.calendar_month_rounded,
       onTap: () {
         Navigator.push(
           context,
@@ -2536,6 +2515,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
       context: context,
       title: 'Marks',
       subtitle: 'CIE internals & semester SGPA/CGPA',
+      icon: Icons.insights_rounded,
       onTap: () {
         Navigator.push(
           context,
@@ -2552,6 +2532,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
       context: context,
       title: 'Profile',
       subtitle: 'Personal bio-data & academic info',
+      icon: Icons.person_outline_rounded,
       onTap: () {
         final activeRoll = (widget.studentId ??
                 HitamAuthService().activeUserId ??
@@ -2576,6 +2557,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
       context: context,
       title: 'Register',
       subtitle: 'Day-by-day attendance & session log',
+      icon: Icons.fact_check_outlined,
       onTap: () {
         Navigator.push(
           context,
@@ -2591,7 +2573,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
     return _buildGlassContainer(
       width: double.infinity,
       borderRadius: 26,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+      enableBlur: true,
       onTap: () {
         Navigator.push(
           context,
@@ -2600,29 +2583,67 @@ class _StudentDashboardState extends State<StudentDashboard> {
           ),
         );
       },
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const Text(
-            'SPF Performance',
-            style: TextStyle(
-              fontSize: 15.5,
-              fontWeight: FontWeight.w700,
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white.withValues(alpha: 0.22),
+                  Colors.white.withValues(alpha: 0.08),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.35),
+                width: 0.9,
+              ),
+            ),
+            child: const Icon(
+              Icons.auto_graph_rounded,
+              size: 20,
               color: Colors.white,
-              letterSpacing: -0.2,
             ),
           ),
-          const SizedBox(height: 6),
-          Text(
-            'Student Performance Framework cycle & tier',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.white.withValues(alpha: 0.76),
-              height: 1.25,
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'SPF Performance',
+                  style: TextStyle(
+                    fontSize: 15.5,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Student Performance Framework cycle & tier',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.white.withValues(alpha: 0.72),
+                    height: 1.25,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(width: 8),
+          Icon(
+            Icons.arrow_forward_ios_rounded,
+            size: 13,
+            color: Colors.white.withValues(alpha: 0.38),
           ),
         ],
       ),
@@ -2645,7 +2666,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
     return _buildGlassContainer(
       width: double.infinity,
       borderRadius: 26,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+      enableBlur: true,
       onTap: () {
         Navigator.push(
           context,
@@ -2660,29 +2682,67 @@ class _StudentDashboardState extends State<StudentDashboard> {
           ),
         );
       },
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const Text(
-            'HITAM Exam',
-            style: TextStyle(
-              fontSize: 15.5,
-              fontWeight: FontWeight.w700,
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white.withValues(alpha: 0.22),
+                  Colors.white.withValues(alpha: 0.08),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.35),
+                width: 0.9,
+              ),
+            ),
+            child: const Icon(
+              Icons.assignment_outlined,
+              size: 20,
               color: Colors.white,
-              letterSpacing: -0.2,
             ),
           ),
-          const SizedBox(height: 6),
-          Text(
-            'Exam fees, hall tickets, marks & circulars',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.white.withValues(alpha: 0.76),
-              height: 1.25,
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'HITAM Exam',
+                  style: TextStyle(
+                    fontSize: 15.5,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Exam fees, hall tickets, marks & circulars',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.white.withValues(alpha: 0.72),
+                    height: 1.25,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(width: 8),
+          Icon(
+            Icons.arrow_forward_ios_rounded,
+            size: 13,
+            color: Colors.white.withValues(alpha: 0.28),
           ),
         ],
       ),

@@ -14,17 +14,10 @@ class LuminousSilkAuroraPainter extends CustomPainter {
     final w = size.width;
     final h = size.height;
 
-    // 1. Clean, deep One UI midnight obsidian backdrop (#07080B)
+    // Pure, deep OLED black canvas (#000000)
     final bgRect = Rect.fromLTWH(0, 0, w, h);
-    final bgPaint = Paint()..color = const Color(0xFF07080B);
+    final bgPaint = Paint()..color = Colors.black;
     canvas.drawRect(bgRect, bgPaint);
-
-    // 2. Subtle One UI calm atmospheric ambient depth (top vignette)
-    final ambientRect = Rect.fromLTWH(0, -h * 0.05, w, h * 0.48);
-    final ambientPaint = Paint()
-      ..color = const Color(0xFF0D1527).withValues(alpha: 0.35)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 85);
-    canvas.drawOval(ambientRect, ambientPaint);
   }
 
   @override
@@ -245,7 +238,65 @@ class FrostedAppBarAction extends StatelessWidget {
 }
 
 // ============================================================================
-// 5. GLASS CONTAINER (SIGNATURE FROSTED CARD)
+// 5. AUTHENTIC APPLE iOS GLASS SPECULAR BORDER PAINTER
+// ============================================================================
+class IosGlassBorderPainter extends CustomPainter {
+  final double borderRadius;
+  final Color? borderColor;
+  final double strokeWidth;
+
+  const IosGlassBorderPainter({
+    required this.borderRadius,
+    this.borderColor,
+    this.strokeWidth = 1.0,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.width <= 0 || size.height <= 0) return;
+    final r = math.max(0.0, borderRadius - strokeWidth / 2);
+    final rect = Rect.fromLTWH(
+      strokeWidth / 2,
+      strokeWidth / 2,
+      size.width - strokeWidth,
+      size.height - strokeWidth,
+    );
+    final rrect = RRect.fromRectAndRadius(rect, Radius.circular(r));
+
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth;
+
+    if (borderColor != null) {
+      paint.color = borderColor!;
+    } else {
+      // Authentic Apple iOS Glass Specular Rim:
+      // Crisp white highlight on the top & upper-left rim, smoothly fading to soft subtle rim on sides & bottom
+      paint.shader = ui.Gradient.linear(
+        Offset(size.width * 0.15, 0),
+        Offset(size.width * 0.85, size.height),
+        [
+          Colors.white.withValues(alpha: 0.65), // Crisp white top-left specular rim
+          Colors.white.withValues(alpha: 0.28), // Smooth side edge reflection
+          Colors.white.withValues(alpha: 0.10), // Soft lower-left roll-off
+          Colors.white.withValues(alpha: 0.22), // Bottom subtle bounce light
+        ],
+        const [0.0, 0.32, 0.70, 1.0],
+      );
+    }
+
+    canvas.drawRRect(rrect, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant IosGlassBorderPainter oldDelegate) =>
+      oldDelegate.borderRadius != borderRadius ||
+      oldDelegate.borderColor != borderColor ||
+      oldDelegate.strokeWidth != strokeWidth;
+}
+
+// ============================================================================
+// 6. GLASS CONTAINER (SIGNATURE FROSTED + CLEAR iOS HYBRID CARD)
 // ============================================================================
 class GlassContainer extends StatelessWidget {
   final Widget child;
@@ -261,6 +312,8 @@ class GlassContainer extends StatelessWidget {
   final AlignmentGeometry? alignment;
   final List<Color>? gradientColors;
   final Clip clipBehavior;
+  final bool enableBlur;
+  final double blurSigma;
 
   const GlassContainer({
     super.key,
@@ -277,53 +330,144 @@ class GlassContainer extends StatelessWidget {
     this.alignment,
     this.gradientColors,
     this.clipBehavior = Clip.antiAlias,
+    this.enableBlur = true,
+    this.blurSigma = 24.0,
   });
 
   @override
   Widget build(BuildContext context) {
     final rradius = BorderRadius.circular(borderRadius);
-    final effectiveBorder = border ??
-        (borderColor != null
-            ? Border.all(color: borderColor!, width: 1.0)
-            : Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1.0));
 
-    Widget card = Container(
+    Widget content = Container(
       width: width,
       height: height,
       alignment: alignment,
       padding: padding ?? const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color ?? const Color(0xFF141720).withValues(alpha: 0.88),
-        borderRadius: rradius,
-        border: effectiveBorder,
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x38000000), // black 22%
-            blurRadius: 16,
-            offset: Offset(0, 4),
-          ),
-          BoxShadow(
-            color: Color(0x15000000), // black 8%
-            blurRadius: 6,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
       child: child,
     );
 
     if (onTap != null) {
-      card = Material(
+      content = Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
           borderRadius: rradius,
           splashColor: Colors.white.withValues(alpha: 0.08),
           highlightColor: Colors.white.withValues(alpha: 0.04),
-          child: card,
+          child: content,
         ),
       );
     }
+
+    // Authentic Frosted + Clear iOS Hybrid Glass Layering:
+    // 1. Soft physical ambient elevation shadows
+    // 2. Hardware-accelerated BackdropFilter blur
+    // 3. Translucent optical gradient fill (specular top entry down to deep obsidian glass)
+    // 4. Top specular glass refraction sheen
+    // 5. Custom specular highlight border rim
+    Widget cardBody = CustomPaint(
+      foregroundPainter: border != null
+          ? null
+          : IosGlassBorderPainter(
+              borderRadius: borderRadius,
+              borderColor: borderColor,
+            ),
+      child: Stack(
+        fit: StackFit.passthrough,
+        children: [
+          // 1. Frosted Translucent Glass Fill
+          Container(
+            decoration: BoxDecoration(
+              border: border,
+              gradient: gradientColors != null
+                  ? LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: gradientColors!,
+                    )
+                  : (color != null
+                      ? null
+                      : const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Color(0x35FFFFFF), // 21% crisp optical white entry (visible frosted translucency)
+                            Color(0x18FFFFFF), // 9.5% soft frosted body
+                            Color(0x301E222A), // neutral smoked obsidian glass
+                            Color(0x52101318), // deep neutral glass base
+                          ],
+                          stops: [0.0, 0.22, 0.65, 1.0],
+                        )),
+              color: color,
+            ),
+          ),
+
+          // 2. Clear iOS Top Specular Sheen (simulates real physical glass surface refraction)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 52,
+            child: IgnorePointer(
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(borderRadius),
+                    topRight: Radius.circular(borderRadius),
+                  ),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.white.withValues(alpha: 0.14),
+                      Colors.white.withValues(alpha: 0.04),
+                      Colors.transparent,
+                    ],
+                    stops: const [0.0, 0.40, 1.0],
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // 3. Card Content
+          content,
+        ],
+      ),
+    );
+
+    Widget card = Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        borderRadius: rradius,
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x40000000), // black 25%
+            blurRadius: 22,
+            offset: Offset(0, 7),
+          ),
+          BoxShadow(
+            color: Color(0x14000000), // black 8%
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: rradius,
+        clipBehavior: clipBehavior,
+        child: enableBlur
+            ? BackdropFilter(
+                filter: ui.ImageFilter.blur(
+                  sigmaX: blurSigma,
+                  sigmaY: blurSigma,
+                ),
+                child: cardBody,
+              )
+            : cardBody,
+      ),
+    );
 
     if (margin != null) {
       card = Padding(padding: margin!, child: card);
@@ -334,7 +478,7 @@ class GlassContainer extends StatelessWidget {
 }
 
 // ============================================================================
-// 6. GLASS SUB-CARD (INNER LIST ITEM / DETAILS BOX)
+// 7. GLASS SUB-CARD (INNER LIST ITEM / DETAILS BOX)
 // ============================================================================
 class GlassSubCard extends StatelessWidget {
   final Widget child;
@@ -358,32 +502,39 @@ class GlassSubCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget card = Container(
+    final rradius = BorderRadius.circular(borderRadius);
+
+    Widget content = Container(
       padding: padding ?? const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: backgroundColor ?? const Color(0xFF1E222C).withValues(alpha: 0.60),
-        borderRadius: BorderRadius.circular(borderRadius),
+        color: backgroundColor ?? const Color(0xFF1E2430).withValues(alpha: 0.45),
+        borderRadius: rradius,
         border: Border.all(
-          color: borderColor ?? Colors.white.withValues(alpha: 0.08),
-          width: 1.0,
+          color: borderColor ?? Colors.white.withValues(alpha: 0.12),
+          width: 0.9,
         ),
       ),
       child: child,
     );
 
     if (onTap != null) {
-      card = InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(borderRadius),
-        child: card,
+      content = Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: rradius,
+          splashColor: Colors.white.withValues(alpha: 0.08),
+          highlightColor: Colors.white.withValues(alpha: 0.04),
+          child: content,
+        ),
       );
     }
 
     if (margin != null) {
-      card = Padding(padding: margin!, child: card);
+      content = Padding(padding: margin!, child: content);
     }
 
-    return card;
+    return content;
   }
 }
 
