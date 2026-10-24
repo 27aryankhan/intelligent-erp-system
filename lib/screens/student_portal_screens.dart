@@ -3164,43 +3164,24 @@ class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
       );
     }
 
-    Color bg;
-    Color border;
-    Color textColor;
-
-    if (b.startsWith('A')) {
-      bg = const Color(0xFF10B981).withValues(alpha: 0.16);
-      border = const Color(0xFF34D399).withValues(alpha: 0.38);
-      textColor = const Color(0xFF6EE7B7);
-    } else if (b.startsWith('B')) {
-      bg = Colors.white.withValues(alpha: 0.10);
-      border = Colors.white.withValues(alpha: 0.24);
-      textColor = Colors.white;
-    } else if (b.startsWith('C')) {
-      bg = const Color(0xFFF59E0B).withValues(alpha: 0.16);
-      border = const Color(0xFFFBBF24).withValues(alpha: 0.38);
-      textColor = const Color(0xFFFDE68A);
-    } else {
-      bg = Colors.white.withValues(alpha: 0.08);
-      border = Colors.white.withValues(alpha: 0.18);
-      textColor = Colors.white70;
-    }
-
     return Container(
       constraints: const BoxConstraints(minWidth: 32),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: bg,
+        color: Colors.white.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: border, width: 0.9),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.18),
+          width: 0.9,
+        ),
       ),
       child: Text(
         b,
         textAlign: TextAlign.center,
-        style: TextStyle(
+        style: const TextStyle(
           fontSize: 12.5,
           fontWeight: FontWeight.w700,
-          color: textColor,
+          color: Colors.white,
           letterSpacing: 0.2,
         ),
       ),
@@ -3527,7 +3508,7 @@ class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
                                     const Icon(
                                       Icons.info_outline_rounded,
                                       size: 16,
-                                      color: Color(0xFF34D399),
+                                      color: Color(0xFF94A3B8),
                                     ),
                                     const SizedBox(width: 10),
                                     Expanded(
