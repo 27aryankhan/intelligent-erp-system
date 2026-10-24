@@ -908,10 +908,10 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
 
       subjectBadges.add(
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5.5),
           decoration: BoxDecoration(
             color: bg,
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(10),
             border: Border.all(color: border, width: 0.9),
           ),
           child: Text(
@@ -927,11 +927,10 @@ class _GithubAttendanceHeatmapState extends State<GithubAttendanceHeatmap> {
     });
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+        color: Colors.white.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
