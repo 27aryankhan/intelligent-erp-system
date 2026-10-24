@@ -3624,7 +3624,7 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
               subtitle,
               style: const TextStyle(
                 fontSize: 11,
-                color: Color(0xFF6EE7B7),
+                color: Color(0xFF94A3B8),
                 fontWeight: FontWeight.w500,
               ),
             ),
