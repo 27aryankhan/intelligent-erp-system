@@ -3730,7 +3730,9 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
               ),
               const SizedBox(width: 8),
               Text(
-                '${overallAttendance.toStringAsFixed(2)}% (Target: 75%)',
+                (overallAttendance < 75.0)
+                    ? '${overallAttendance.toStringAsFixed(2)}% (Target: 75%)'
+                    : '${overallAttendance.toStringAsFixed(2)}%',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: (overallAttendance >= 75.0)
@@ -3769,12 +3771,16 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
                   color: Colors.white.withValues(alpha: 0.60),
                 ),
               ),
-              const Text(
-                '+10% Safe Margin',
+              Text(
+                (overallAttendance >= 75.0)
+                    ? '+${(overallAttendance - 75.0).toStringAsFixed(1)}% Safe Margin'
+                    : '-${(75.0 - overallAttendance).toStringAsFixed(1)}% Shortage',
                 style: TextStyle(
                   fontSize: 11.5,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF6EE7B7),
+                  color: (overallAttendance >= 75.0)
+                      ? const Color(0xFF6EE7B7)
+                      : const Color(0xFFFCA5A5),
                 ),
               ),
             ],
