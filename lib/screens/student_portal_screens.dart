@@ -819,6 +819,50 @@ class _StudentMarksScreenState extends State<StudentMarksScreen>
     }
   }
 
+  String _resolveSubjectName(String code) {
+    if (code.isEmpty || code == '-' || code == '&nbsp;') return code;
+    final clean = code.trim();
+    final upper = clean.toUpperCase();
+
+    const known = {
+      'CV': 'Computer Vision',
+      'NP': 'Network Programming',
+      'FSWD': 'Full Stack Web Development',
+      'BCT': 'Blockchain Technology',
+      'NNDL': 'Neural Networks & Deep Learning',
+      'IPR': 'Intellectual Property Rights',
+      'MINI': 'Mini Project / Internship',
+      'CDCP': 'Career Development & Personality',
+      'PS-1': 'Problem Solving & Coding Skills',
+      'YSML': 'Yoga, Sports & Mandatory Learning',
+      'OH': 'Office Hours / Mentoring',
+      'SPRTS/AFF': 'Sports & Affiliated Activities',
+      'MDP/HCTC': 'Management Development / Tech Club',
+      'NP(R)': 'Network Programming (Remedial)',
+      'BCT(R)': 'Blockchain Technology (Remedial)',
+      'NNDL(R)': 'Neural Networks & Deep Learning (Remedial)',
+      'CV LAB': 'Computer Vision Laboratory',
+      'FSWD LAB': 'Full Stack Web Development Lab',
+    };
+    if (known.containsKey(upper)) return known[upper]!;
+
+    final att = HitamScraperService().latestAttendanceReport?.subjects ?? [];
+    for (final s in att) {
+      if (s.subjectCode.trim().toUpperCase() == upper && s.subjectName.isNotEmpty) {
+        return s.subjectName.trim();
+      }
+    }
+
+    final tt = HitamScraperService().latestTimeTable?.allocations ?? [];
+    for (final a in tt) {
+      if (a.code.trim().toUpperCase() == upper && a.name.isNotEmpty && a.name.trim().toUpperCase() != upper) {
+        return a.name.trim();
+      }
+    }
+
+    return clean;
+  }
+
   @override
   Widget build(BuildContext context) {
     final report = _marksReport;
@@ -883,19 +927,34 @@ class _StudentMarksScreenState extends State<StudentMarksScreen>
                           itemCount: cieList.length,
                           itemBuilder: (context, index) {
                             final item = cieList[index];
+                            final fullName = _resolveSubjectName(item.subject);
+                            final isSame = fullName.toUpperCase().trim() == item.subject.toUpperCase().trim();
+
                             return GlassContainer(
                               margin: const EdgeInsets.only(bottom: 12),
                               padding: const EdgeInsets.all(16),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    item.subject,
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.white,
-                                    ),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          fullName,
+                                          style: const TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w700,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                      if (!isSame) ...[
+                                        const SizedBox(width: 8),
+                                        GlassCapsulePill(
+                                          label: item.subject,
+                                        ),
+                                      ],
+                                    ],
                                   ),
                                   Divider(
                                       height: 20,
@@ -905,8 +964,12 @@ class _StudentMarksScreenState extends State<StudentMarksScreen>
                                     runSpacing: 8,
                                     children:
                                         item.examScores.entries.map((e) {
+                                      final bool hasScore = e.value.trim() != '-';
                                       return GlassSubCard(
                                         borderRadius: 12,
+                                        borderColor: hasScore
+                                            ? const Color(0xFF10B981).withValues(alpha: 0.35)
+                                            : null,
                                         padding: const EdgeInsets.symmetric(
                                             horizontal: 13, vertical: 7.5),
                                         child: Row(
@@ -916,7 +979,7 @@ class _StudentMarksScreenState extends State<StudentMarksScreen>
                                               '${e.key}: ',
                                               style: TextStyle(
                                                 fontSize: 12,
-                                                color: Colors.white.withValues(alpha: 0.75),
+                                                color: Colors.white.withValues(alpha: hasScore ? 0.90 : 0.65),
                                                 fontWeight: FontWeight.w600,
                                               ),
                                             ),
@@ -925,9 +988,9 @@ class _StudentMarksScreenState extends State<StudentMarksScreen>
                                               style: TextStyle(
                                                 fontSize: 13,
                                                 fontWeight: FontWeight.w800,
-                                                color: e.value == '-'
-                                                    ? Colors.white38
-                                                    : Colors.white,
+                                                color: hasScore
+                                                    ? const Color(0xFF6EE7B7)
+                                                    : Colors.white38,
                                               ),
                                             ),
                                           ],
@@ -3095,18 +3158,51 @@ class _StudentSpfBandScreenState extends State<StudentSpfBandScreen> {
       return Text(
         '—',
         style: TextStyle(
-          color: Colors.white.withOpacity(0.4),
+          color: Colors.white.withValues(alpha: 0.35),
           fontWeight: FontWeight.w500,
         ),
       );
     }
 
-    return Text(
-      b,
-      style: const TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w700,
-        color: Colors.white,
+    Color bg;
+    Color border;
+    Color textColor;
+
+    if (b.startsWith('A')) {
+      bg = const Color(0xFF10B981).withValues(alpha: 0.16);
+      border = const Color(0xFF34D399).withValues(alpha: 0.38);
+      textColor = const Color(0xFF6EE7B7);
+    } else if (b.startsWith('B')) {
+      bg = Colors.white.withValues(alpha: 0.10);
+      border = Colors.white.withValues(alpha: 0.24);
+      textColor = Colors.white;
+    } else if (b.startsWith('C')) {
+      bg = const Color(0xFFF59E0B).withValues(alpha: 0.16);
+      border = const Color(0xFFFBBF24).withValues(alpha: 0.38);
+      textColor = const Color(0xFFFDE68A);
+    } else {
+      bg = Colors.white.withValues(alpha: 0.08);
+      border = Colors.white.withValues(alpha: 0.18);
+      textColor = Colors.white70;
+    }
+
+    return Container(
+      constraints: const BoxConstraints(minWidth: 32),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: border, width: 0.9),
+      ),
+      child: Text(
+        b,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontSize: 12.5,
+          fontWeight: FontWeight.w700,
+          color: textColor,
+          letterSpacing: 0.2,
+        ),
       ),
     );
   }
