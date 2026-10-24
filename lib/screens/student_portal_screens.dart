@@ -635,7 +635,9 @@ class _StudentFeeDetailsScreenState extends State<StudentFeeDetailsScreen> {
                                       ),
                                     ),
                                   ]
-                                : filteredItems.map((item) {
+                                : filteredItems.asMap().entries.map((entry) {
+                                    final index = entry.key;
+                                    final item = entry.value;
                                     return GlassContainer(
                                       margin: const EdgeInsets.only(bottom: 12),
                                       padding: const EdgeInsets.all(16),
@@ -645,7 +647,7 @@ class _StudentFeeDetailsScreenState extends State<StudentFeeDetailsScreen> {
                                           Row(
                                             children: [
                                               GlassCapsulePill(
-                                                label: item.slNo.replaceAll('#', '').trim(),
+                                                label: '${index + 1}',
                                                 textColor: Colors.white70,
                                               ),
                                               const SizedBox(width: 10),
@@ -1610,11 +1612,49 @@ class _StudentTimeTableScreenState extends State<StudentTimeTableScreen> {
 
   String _resolveSubjectName(String code) {
     if (code.isEmpty || code == '-' || code == '&nbsp;') return code;
+    final clean = code.trim();
+    final upper = clean.toUpperCase();
+
+    const known = {
+      'CV': 'Computer Vision',
+      'NP': 'Network Programming',
+      'FSWD': 'Full Stack Web Development',
+      'BCT': 'Blockchain Technology',
+      'NNDL': 'Neural Networks & Deep Learning',
+      'IPR': 'Intellectual Property Rights',
+      'MINI': 'Mini Project / Internship',
+      'CDCP': 'Career Development & Personality',
+      'PS-1': 'Problem Solving & Coding Skills',
+      'YSML': 'Yoga, Sports & Mandatory Learning',
+      'OH': 'Office Hours / Mentoring',
+      'SPRTS/AFF': 'Sports & Affiliated Activities',
+      'MDP/HCTC': 'Management Development / Tech Club',
+      'NP(R)': 'Network Programming (Remedial)',
+      'BCT(R)': 'Blockchain Technology (Remedial)',
+      'NNDL(R)': 'Neural Networks & Deep Learning (Remedial)',
+      'CV LAB': 'Computer Vision Laboratory',
+      'FSWD LAB': 'Full Stack Web Development Lab',
+    };
+    if (known.containsKey(upper)) return known[upper]!;
+
     final match = _ttReport?.allocations.firstWhere(
-      (a) => a.code.toLowerCase() == code.toLowerCase(),
-      orElse: () => SubjectFacultyAllocation(code: code, name: code, facultyName: ''),
+      (a) => a.code.toLowerCase() == clean.toLowerCase(),
+      orElse: () => SubjectFacultyAllocation(code: clean, name: clean, facultyName: ''),
     );
-    return match?.name ?? code;
+    if (match != null &&
+        match.name.isNotEmpty &&
+        match.name.trim().toUpperCase() != upper) {
+      return match.name.trim();
+    }
+
+    final att = HitamScraperService().latestAttendanceReport?.subjects ?? [];
+    for (final s in att) {
+      if (s.subjectCode.trim().toUpperCase() == upper && s.subjectName.isNotEmpty) {
+        return s.subjectName.trim();
+      }
+    }
+
+    return clean;
   }
 
   String _resolveFacultyName(String code) {
@@ -1806,13 +1846,14 @@ class _StudentTimeTableScreenState extends State<StudentTimeTableScreen> {
                       if (isBreak) {
                         return GlassContainer(
                           margin: const EdgeInsets.only(bottom: 12),
+                          borderRadius: 20,
                           padding: const EdgeInsets.symmetric(
                               vertical: 13, horizontal: 16),
                           gradientColors: [
-                            const Color(0xFFF59E0B).withValues(alpha: 0.22),
-                            const Color(0xFFF59E0B).withValues(alpha: 0.08),
+                            const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                            const Color(0xFFF59E0B).withValues(alpha: 0.04),
                           ],
-                          borderColor: const Color(0xFFF59E0B).withValues(alpha: 0.45),
+                          borderColor: const Color(0xFFF59E0B).withValues(alpha: 0.28),
                           child: Row(
                             children: [
                               const Icon(Icons.restaurant_rounded,
@@ -2485,13 +2526,13 @@ class _StudentAcademicRegisterScreenState
                               children: [
                                 Expanded(
                                   child: _buildMetricTile(
-                                    title: 'Overall Attendance',
+                                    title: 'Attendance',
                                     value: (overallRegPct < 75.0 &&
                                             overallRegPct.toStringAsFixed(1) == '75.0')
                                         ? '${((double.tryParse(overallRegPct.toStringAsFixed(2)) ?? 0.0) >= 75.0 ? 74.99 : overallRegPct).toStringAsFixed(2)}%'
                                         : '${overallRegPct.toStringAsFixed(1)}%',
                                     subtitle:
-                                        '$totalAttendedAll / $totalHeldAll slots',
+                                        '$totalAttendedAll / $totalHeldAll',
                                     color: _getPercentageColor(
                                         overallRegPct, totalHeldAll),
                                   ),
@@ -2501,7 +2542,7 @@ class _StudentAcademicRegisterScreenState
                                   child: _buildMetricTile(
                                     title: 'Registered',
                                     value: '${entries.length}',
-                                    subtitle: '$activeCount active courses',
+                                    subtitle: '$activeCount Active',
                                     color: const Color(0xFF38BDF8),
                                   ),
                                 ),
@@ -2906,34 +2947,44 @@ class _StudentAcademicRegisterScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: Colors.white.withOpacity(0.6),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              title,
+              style: TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w600,
+                color: Colors.white.withValues(alpha: 0.65),
+                letterSpacing: 0.1,
+              ),
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 3),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-              color: Colors.white,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 15.5,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+                letterSpacing: -0.2,
+              ),
             ),
           ),
           const SizedBox(height: 2),
-          Text(
-            subtitle,
-            style: TextStyle(
-              fontSize: 10,
-              color: Colors.white.withOpacity(0.5),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 10,
+                color: Colors.white.withValues(alpha: 0.55),
+              ),
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
