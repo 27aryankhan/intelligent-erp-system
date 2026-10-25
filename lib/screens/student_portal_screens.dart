@@ -184,10 +184,7 @@ class _StudentBacklogsScreenState extends State<StudentBacklogsScreen> {
                                     ),
                                   ],
                                 ),
-                                Divider(
-                                  height: 24,
-                                  color: Colors.white.withOpacity(0.08),
-                                ),
+                                const SizedBox(height: 12),
                                 ...item.subjects.map((subj) {
                                   return Padding(
                                     padding: const EdgeInsets.symmetric(
