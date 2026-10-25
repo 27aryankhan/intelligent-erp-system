@@ -189,19 +189,15 @@ class _StudentBacklogsScreenState extends State<StudentBacklogsScreen> {
                                   color: Colors.white.withOpacity(0.08),
                                 ),
                                 ...item.subjects.map((subj) {
-                                  return GlassSubCard(
-                                    margin: const EdgeInsets.symmetric(vertical: 4),
+                                  return Padding(
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 14, vertical: 12),
-                                    child: SizedBox(
-                                      width: double.infinity,
-                                      child: Text(
-                                        subj,
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.white,
-                                        ),
+                                        vertical: 4, horizontal: 2),
+                                    child: Text(
+                                      subj,
+                                      style: const TextStyle(
+                                        fontSize: 14.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
                                       ),
                                     ),
                                   );
