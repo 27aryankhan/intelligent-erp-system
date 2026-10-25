@@ -951,9 +951,6 @@ class _StudentMarksScreenState extends State<StudentMarksScreen>
                                       final bool hasScore = e.value.trim() != '-';
                                       return GlassSubCard(
                                         borderRadius: 12,
-                                        borderColor: hasScore
-                                            ? const Color(0xFF10B981).withValues(alpha: 0.35)
-                                            : null,
                                         padding: const EdgeInsets.symmetric(
                                             horizontal: 13, vertical: 7.5),
                                         child: Row(
