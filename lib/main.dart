@@ -3854,10 +3854,10 @@ class _AttendanceDetailsScreenState extends State<AttendanceDetailsScreen> {
               ),
               Text(
                 isSafe ? 'Can miss $bufferOrNeeded more' : 'Must attend next $bufferOrNeeded',
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  color: isSafe ? const Color(0xFF34D399) : const Color(0xFFFBBF24),
+                  color: Color(0xFF94A3B8),
                 ),
               ),
             ],
