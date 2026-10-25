@@ -2745,8 +2745,9 @@ class _StudentAcademicRegisterScreenState
                                   tilePadding: const EdgeInsets.symmetric(
                                       horizontal: 16, vertical: 8),
                                   leading: Container(
-                                    width: 44,
+                                    width: 48,
                                     height: 44,
+                                    padding: const EdgeInsets.symmetric(horizontal: 2.5),
                                     decoration: BoxDecoration(
                                       color: const Color(0xFF1E222C).withValues(alpha: 0.60),
                                       borderRadius: BorderRadius.circular(14),
@@ -2756,20 +2757,25 @@ class _StudentAcademicRegisterScreenState
                                       ),
                                     ),
                                     alignment: Alignment.center,
-                                    child: Text(
-                                      held > 0
-                                          ? (item.percentage < 75.0
-                                              ? (item.percentage >= 74.0
-                                                  ? ((double.tryParse(item.percentage.toStringAsFixed(1)) ?? 0.0) >= 75.0
-                                                      ? '${item.percentage.toStringAsFixed(2)}%'
-                                                      : '${item.percentage.toStringAsFixed(1)}%')
-                                                  : '${item.percentage.toStringAsFixed(0)}%')
-                                              : '${item.percentage.toStringAsFixed(0)}%')
-                                          : '0%',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w800,
-                                        fontSize: 12.5,
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Text(
+                                        held > 0
+                                            ? (item.percentage < 75.0
+                                                ? (item.percentage >= 74.0
+                                                    ? ((double.tryParse(item.percentage.toStringAsFixed(1)) ?? 0.0) >= 75.0
+                                                        ? '${item.percentage.toStringAsFixed(2)}%'
+                                                        : '${item.percentage.toStringAsFixed(1)}%')
+                                                    : '${item.percentage.toStringAsFixed(0)}%')
+                                                : '${item.percentage.toStringAsFixed(0)}%')
+                                            : '0%',
+                                        maxLines: 1,
+                                        softWrap: false,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 12.5,
+                                        ),
                                       ),
                                     ),
                                   ),
